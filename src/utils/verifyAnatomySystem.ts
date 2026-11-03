@@ -34,10 +34,27 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
   for (const organ of ORGANS) {
     const record = graph.organRecords.get(organ.id);
     assert(
-      !!record && record.meshName === organ.meshName && record.meshes.length > 0,
-      `3D Mesh mapped: ${organ.id} -> ${organ.meshName} (${record?.meshes.length || 0} sub-meshes)`
+      !!record &&
+        record.meshName === organ.meshName &&
+        record.meshes.length > 0 &&
+        record.focusRadius > 0 &&
+        record.focusCenter instanceof THREE.Vector3,
+      `3D Mesh mapped: ${organ.id} -> ${organ.meshName} (${record?.meshes.length || 0} sculpted sub-meshes, focusRadius=${record?.focusRadius})`
     );
   }
+
+  // Verify sculpted vertex coloring and shell/vascular layers
+  const brainRecord = graph.organRecords.get('brain')!;
+  const hasVertexColors = brainRecord.meshes.some((m) => !!m.geometry.getAttribute('color'));
+  assert(hasVertexColors, 'Sculpted 3D organ geometries contain multi-toned biological vertex color attributes');
+
+  graph.setShellMode('solid');
+  assert(graph.bodyShellGroup.visible === true, 'Body shell switches to solid skin mode');
+  graph.setShellMode('hidden');
+  assert(graph.bodyShellGroup.visible === false, 'Body shell hides cleanly in hidden/isolate mode');
+  graph.setShellMode('xray');
+  assert(graph.bodyShellGroup.visible === true, 'Body shell restores X-ray translucent silhouette mode');
+  assert(graph.vascularGroup.children.length > 0, `Systemic 3D vascular tree built (${graph.vascularGroup.children.length} vessels)`);
 
   // 3. Verify Non-Destructive Material Highlighting & Restoration
   const heartRecord = graph.organRecords.get('heart')!;

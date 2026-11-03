@@ -10,15 +10,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { theme } from '../theme';
 import { ORGANS, BODY_SYSTEMS } from '../data/anatomyData';
 import { useAnatomyStore, CameraPreset } from '../state/useAnatomyStore';
-import { SystemBadge } from '../components/SystemBadge';
-import { Anatomy3DViewport } from '../three/Anatomy3DViewport';
+import {
+  Anatomy3DViewport,
+  ViewMode3D,
+  ShellMode,
+} from '../three/Anatomy3DViewport';
 import { RootStackParamList, TabParamList } from '../types';
 
 type ExplorerRouteProp = RouteProp<TabParamList, 'ExplorerTab'>;
 type ExplorerNavProp = NativeStackNavigationProp<RootStackParamList>;
+
+const CAMERA_SEQUENCE: { preset: CameraPreset; label: string }[] = [
+  { preset: 'front', label: 'FRONT' },
+  { preset: 'side', label: 'SIDE' },
+  { preset: 'back', label: 'BACK' },
+  { preset: 'isometric', label: 'ISO' },
+];
 
 export const ExplorerScreen: React.FC = () => {
   const navigation = useNavigation<ExplorerNavProp>();
@@ -35,11 +44,16 @@ export const ExplorerScreen: React.FC = () => {
     isBookmarked,
   } = useAnatomyStore();
 
+  const [viewMode, setViewMode] = useState<ViewMode3D>('body');
+  const [shellMode, setShellMode] = useState<ShellMode>('xray');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
-  const [showBodyShell, setShowBodyShell] = useState<boolean>(true);
   const [showSkeletal, setShowSkeletal] = useState<boolean>(true);
   const [showMuscular, setShowMuscular] = useState<boolean>(false);
+  const [showVascular, setShowVascular] = useState<boolean>(true);
   const [animatePhysiology, setAnimatePhysiology] = useState<boolean>(true);
+  const [showSystemsFilter, setShowSystemsFilter] = useState<boolean>(false);
+  const [isCardMinimized, setIsCardMinimized] = useState<boolean>(false);
+  const [hideInterface, setHideInterface] = useState<boolean>(false);
 
   React.useEffect(() => {
     if (route.params?.targetOrganId) {
@@ -50,342 +64,517 @@ export const ExplorerScreen: React.FC = () => {
     }
   }, [route.params, selectOrgan, selectSystem]);
 
-  // Filter organs based on selected body system
   const visibleOrgans = ORGANS.filter((organ) => {
     if (selectedSystemId === 'all') return true;
     return organ.systemId === selectedSystemId;
   });
 
-  const activeOrgan = ORGANS.find((o) => o.id === selectedOrganId) || ORGANS[0];
+  const activeOrgan =
+    ORGANS.find((o) => o.id === selectedOrganId) || ORGANS[1]; // Default Heart
   const bookmarked = isBookmarked(activeOrgan.id);
 
-  const cameraAngles: {
-    label: string;
-    preset: CameraPreset;
-    icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  }[] = [
-    { label: 'Front', preset: 'front', icon: 'human' },
-    { label: 'Side', preset: 'side', icon: 'human-male' },
-    { label: 'Back', preset: 'back', icon: 'human-child' },
-    { label: '3D Iso', preset: 'isometric', icon: 'axis-arrow' },
-  ];
+  const cycleCameraPreset = () => {
+    const idx = CAMERA_SEQUENCE.findIndex((c) => c.preset === cameraPreset);
+    const next = CAMERA_SEQUENCE[(idx + 1) % CAMERA_SEQUENCE.length];
+    setCameraPreset(next.preset);
+  };
+
+  const cycleShellMode = () => {
+    setShellMode((prev) =>
+      prev === 'xray' ? 'solid' : prev === 'solid' ? 'hidden' : 'xray'
+    );
+  };
+
+  const currentCamLabel =
+    CAMERA_SEQUENCE.find((c) => c.preset === cameraPreset)?.label || 'FRONT';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Top Bar with System Filter Selector */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>3D Human Body Explorer</Text>
-          <View style={styles.meshBadge}>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: activeOrgan.accentColor },
-              ]}
-            />
-            <Text style={styles.meshBadgeText}>{activeOrgan.meshName}</Text>
-          </View>
-        </View>
-
-        {/* System Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScroll}
-        >
-          <TouchableOpacity
-            style={[
-              styles.filterPill,
-              selectedSystemId === 'all' && styles.filterPillActive,
-            ]}
-            onPress={() => selectSystem('all')}
-          >
-            <Text
-              style={[
-                styles.filterPillText,
-                selectedSystemId === 'all' && styles.filterPillTextActive,
-              ]}
-            >
-              All Systems
-            </Text>
-          </TouchableOpacity>
-          {BODY_SYSTEMS.map((system) => {
-            const isActive = selectedSystemId === system.id;
-            return (
-              <TouchableOpacity
-                key={system.id}
-                style={[
-                  styles.filterPill,
-                  isActive && {
-                    backgroundColor: system.color,
-                    borderColor: system.color,
-                  },
-                ]}
-                onPress={() => selectSystem(system.id)}
-              >
-                <Text
-                  style={[
-                    styles.filterPillText,
-                    isActive && styles.filterPillTextActive,
-                  ]}
-                >
-                  {system.name.replace(' System', '')}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* Main 3D Viewport Area */}
-      <View style={styles.viewport}>
-        {/* Real Interactive Three.js + Expo GL 3D Viewport */}
+      <View style={styles.viewportContainer}>
+        {/* Full-Screen Immersive 3D Viewport */}
         <Anatomy3DViewport
-          selectedOrganId={selectedOrganId}
+          selectedOrganId={activeOrgan.id}
           selectedSystemId={selectedSystemId}
           cameraPreset={cameraPreset}
           zoomLevel={zoomLevel}
-          showBodyShell={showBodyShell}
+          viewMode={viewMode}
+          shellMode={shellMode}
           showSkeletal={showSkeletal}
           showMuscular={showMuscular}
+          showVascular={showVascular}
           animatePhysiology={animatePhysiology}
-          onSelectOrgan={(organId) => selectOrgan(organId)}
+          onSelectOrgan={(organId) => {
+            selectOrgan(organId);
+            setIsCardMinimized(false);
+          }}
         />
 
-        {/* Left Overlay: Camera Angle Presets */}
-        <View style={styles.viewportControlsLeft}>
-          {cameraAngles.map((cam) => {
-            const isActive = cameraPreset === cam.preset;
-            return (
+        {/* TOP FLOATING BAR: View Mode Switcher (Full Body vs Isolated Organ) & Systems Button */}
+        {!hideInterface && (
+          <View style={styles.topFloatingContainer}>
+            <View style={styles.topBarRow}>
+              {/* Systems Drawer Toggle Button (Like Image 3 "CONTENTS") */}
               <TouchableOpacity
-                key={cam.preset}
                 style={[
-                  styles.viewControlBtn,
-                  isActive && styles.viewControlBtnActive,
+                  styles.contentsBtn,
+                  showSystemsFilter && styles.contentsBtnActive,
                 ]}
-                onPress={() => setCameraPreset(cam.preset)}
+                onPress={() => setShowSystemsFilter((v) => !v)}
+                activeOpacity={0.85}
               >
                 <MaterialCommunityIcons
-                  name={cam.icon as any}
-                  size={16}
-                  color={isActive ? '#FFFFFF' : theme.colors.textSecondary}
+                  name="layers-triple-outline"
+                  size={17}
+                  color={showSystemsFilter ? '#38BDF8' : '#E2E8F0'}
                 />
                 <Text
                   style={[
-                    styles.viewControlText,
-                    isActive && styles.viewControlTextActive,
+                    styles.contentsBtnText,
+                    showSystemsFilter && { color: '#38BDF8' },
                   ]}
                 >
-                  {cam.label}
+                  {selectedSystemId === 'all'
+                    ? 'Systems'
+                    : selectedSystemId.toUpperCase()}
                 </Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
 
-        {/* Right Overlay: Zoom & Reset Controls */}
-        <View style={styles.viewportControlsRight}>
-          <TouchableOpacity
-            style={styles.zoomBtn}
-            onPress={() => setZoomLevel((z) => Math.min(z + 15, 180))}
-          >
-            <Ionicons name="add" size={20} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.zoomBtn}
-            onPress={() => setZoomLevel((z) => Math.max(z - 15, 60))}
-          >
-            <Ionicons name="remove" size={20} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.zoomBtn}
-            onPress={() => {
-              setZoomLevel(100);
-              setCameraPreset('front');
-            }}
-          >
-            <Ionicons name="refresh" size={18} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Bottom-of-Viewport Layer Visibility Toggles */}
-        <View style={styles.layerBar}>
-          <TouchableOpacity
-            style={[
-              styles.layerToggle,
-              showBodyShell && styles.layerToggleActive,
-            ]}
-            onPress={() => setShowBodyShell((v) => !v)}
-          >
-            <MaterialCommunityIcons
-              name="human-handsdown"
-              size={14}
-              color={showBodyShell ? theme.colors.primary : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.layerToggleText,
-                showBodyShell && styles.layerToggleTextActive,
-              ]}
-            >
-              Body Outline
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.layerToggle,
-              showSkeletal && styles.layerToggleActive,
-            ]}
-            onPress={() => setShowSkeletal((v) => !v)}
-          >
-            <MaterialCommunityIcons
-              name="bone"
-              size={14}
-              color={showSkeletal ? theme.colors.primary : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.layerToggleText,
-                showSkeletal && styles.layerToggleTextActive,
-              ]}
-            >
-              Skeleton
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.layerToggle,
-              showMuscular && styles.layerToggleActive,
-            ]}
-            onPress={() => setShowMuscular((v) => !v)}
-          >
-            <MaterialCommunityIcons
-              name="arm-flex-outline"
-              size={14}
-              color={showMuscular ? theme.colors.primary : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.layerToggleText,
-                showMuscular && styles.layerToggleTextActive,
-              ]}
-            >
-              Muscles
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.layerToggle,
-              animatePhysiology && styles.layerToggleActive,
-            ]}
-            onPress={() => setAnimatePhysiology((v) => !v)}
-          >
-            <MaterialCommunityIcons
-              name="heart-pulse"
-              size={14}
-              color={
-                animatePhysiology ? theme.colors.danger : theme.colors.textMuted
-              }
-            />
-            <Text
-              style={[
-                styles.layerToggleText,
-                animatePhysiology && styles.layerToggleTextActive,
-              ]}
-            >
-              Live Pulse
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Quick Horizontal Organ Selector Carousel */}
-      <View style={styles.organSelectorBar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.organChipsScroll}
-        >
-          {visibleOrgans.map((organ) => {
-            const isSelected = selectedOrganId === organ.id;
-            return (
-              <TouchableOpacity
-                key={organ.id}
-                style={[
-                  styles.organChip,
-                  isSelected && {
-                    borderColor: organ.accentColor,
-                    backgroundColor: `${organ.accentColor}18`,
-                  },
-                ]}
-                onPress={() => selectOrgan(organ.id)}
-              >
-                <MaterialCommunityIcons
-                  name={organ.icon as any}
-                  size={15}
-                  color={organ.accentColor}
-                  style={{ marginRight: 5 }}
-                />
-                <Text
+              {/* 2-Mode 3D Switcher: Full Body vs Isolate Organ */}
+              <View style={styles.modeSegmentedControl}>
+                <TouchableOpacity
                   style={[
-                    styles.organChipText,
-                    isSelected && {
-                      color: organ.accentColor,
-                      fontWeight: '700',
-                    },
+                    styles.modeSegmentBtn,
+                    viewMode === 'body' && styles.modeSegmentBtnActive,
                   ]}
+                  onPress={() => {
+                    setViewMode('body');
+                    setZoomLevel(100);
+                  }}
                 >
-                  {organ.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+                  <MaterialCommunityIcons
+                    name="human"
+                    size={15}
+                    color={viewMode === 'body' ? '#0B0F19' : '#94A3B8'}
+                  />
+                  <Text
+                    style={[
+                      styles.modeSegmentText,
+                      viewMode === 'body' && styles.modeSegmentTextActive,
+                    ]}
+                  >
+                    Full Body
+                  </Text>
+                </TouchableOpacity>
 
-      {/* Selected Organ Information Bottom Drawer */}
-      <View style={styles.bottomDrawer}>
-        <View style={styles.drawerHeader}>
-          <View style={styles.drawerTitleRow}>
-            <Text style={styles.drawerOrganName}>{activeOrgan.name}</Text>
-            <SystemBadge
-              systemId={activeOrgan.systemId}
-              label={activeOrgan.systemName}
-              size="sm"
-            />
+                <TouchableOpacity
+                  style={[
+                    styles.modeSegmentBtn,
+                    viewMode === 'isolate' && styles.modeSegmentBtnActive,
+                  ]}
+                  onPress={() => {
+                    setViewMode('isolate');
+                    setZoomLevel(100);
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name="cube-scan"
+                    size={15}
+                    color={viewMode === 'isolate' ? '#0B0F19' : '#94A3B8'}
+                  />
+                  <Text
+                    style={[
+                      styles.modeSegmentText,
+                      viewMode === 'isolate' && styles.modeSegmentTextActive,
+                    ]}
+                  >
+                    Isolate 3D
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Hide UI Button */}
+              <TouchableOpacity
+                style={styles.iconGlassBtn}
+                onPress={() => setHideInterface(true)}
+              >
+                <Ionicons name="eye-off-outline" size={18} color="#E2E8F0" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Collapsible Compact System Filter Ribbon */}
+            {showSystemsFilter && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.systemsRibbon}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.sysChip,
+                    selectedSystemId === 'all' && styles.sysChipActive,
+                  ]}
+                  onPress={() => {
+                    selectSystem('all');
+                    setViewMode('body');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.sysChipText,
+                      selectedSystemId === 'all' && styles.sysChipTextActive,
+                    ]}
+                  >
+                    All Systems
+                  </Text>
+                </TouchableOpacity>
+                {BODY_SYSTEMS.map((sys) => {
+                  const active = selectedSystemId === sys.id;
+                  return (
+                    <TouchableOpacity
+                      key={sys.id}
+                      style={[
+                        styles.sysChip,
+                        active && {
+                          backgroundColor: sys.color,
+                          borderColor: sys.color,
+                        },
+                      ]}
+                      onPress={() => {
+                        selectSystem(sys.id);
+                        setViewMode('body');
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.sysChipText,
+                          active && styles.sysChipTextActive,
+                        ]}
+                      >
+                        {sys.name.replace(' System', '')}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
           </View>
-          <TouchableOpacity
-            style={styles.drawerBookmark}
-            onPress={() => toggleBookmark(activeOrgan.id)}
-          >
-            <MaterialCommunityIcons
-              name={bookmarked ? 'bookmark' : 'bookmark-outline'}
-              size={22}
-              color={bookmarked ? theme.colors.warning : theme.colors.textMuted}
-            />
-          </TouchableOpacity>
-        </View>
+        )}
 
-        <Text style={styles.drawerFunction} numberOfLines={2}>
-          {activeOrgan.function}
-        </Text>
-
-        <View style={styles.drawerActions}>
+        {/* Restore UI Floating Pill when Interface is Hidden */}
+        {hideInterface && (
           <TouchableOpacity
-            style={styles.exploreMoreBtn}
-            onPress={() =>
-              navigation.navigate('OrganDetails', { organId: activeOrgan.id })
-            }
+            style={styles.restoreUiBtn}
+            onPress={() => setHideInterface(false)}
           >
-            <Text style={styles.exploreMoreText}>
-              View Complete Organ Details & Facts
-            </Text>
-            <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+            <Ionicons name="eye-outline" size={16} color="#38BDF8" />
+            <Text style={styles.restoreUiText}>Show Controls</Text>
           </TouchableOpacity>
-        </View>
+        )}
+
+        {/* LEFT VERTICAL FLOATING TOOL DOCK (Matching Image 1 & Image 3) */}
+        {!hideInterface && (
+          <View style={styles.leftFloatingDock}>
+            {/* Camera View Angle Cycler */}
+            <TouchableOpacity
+              style={styles.dockBtn}
+              onPress={cycleCameraPreset}
+            >
+              <MaterialCommunityIcons
+                name="axis-arrow"
+                size={19}
+                color="#38BDF8"
+              />
+              <Text style={styles.dockTinyLabel}>{currentCamLabel}</Text>
+            </TouchableOpacity>
+
+            {/* Body Shell X-Ray / Solid / Hidden Transparency Toggle */}
+            {viewMode === 'body' && (
+              <TouchableOpacity
+                style={[
+                  styles.dockBtn,
+                  shellMode !== 'hidden' && styles.dockBtnActive,
+                ]}
+                onPress={cycleShellMode}
+              >
+                <MaterialCommunityIcons
+                  name="human-handsdown"
+                  size={19}
+                  color={shellMode !== 'hidden' ? '#38BDF8' : '#64748B'}
+                />
+                <Text style={styles.dockTinyLabel}>
+                  {shellMode.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Skeleton Layer Toggle */}
+            {viewMode === 'body' && (
+              <TouchableOpacity
+                style={[styles.dockBtn, showSkeletal && styles.dockBtnActive]}
+                onPress={() => setShowSkeletal((v) => !v)}
+              >
+                <MaterialCommunityIcons
+                  name="bone"
+                  size={18}
+                  color={showSkeletal ? '#FDE68A' : '#64748B'}
+                />
+                <Text style={styles.dockTinyLabel}>BONE</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Vascular Layer Toggle */}
+            {viewMode === 'body' && (
+              <TouchableOpacity
+                style={[styles.dockBtn, showVascular && styles.dockBtnActive]}
+                onPress={() => setShowVascular((v) => !v)}
+              >
+                <MaterialCommunityIcons
+                  name="source-branch"
+                  size={18}
+                  color={showVascular ? '#F87171' : '#64748B'}
+                />
+                <Text style={styles.dockTinyLabel}>VESSEL</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Muscular Layer Toggle */}
+            {viewMode === 'body' && (
+              <TouchableOpacity
+                style={[styles.dockBtn, showMuscular && styles.dockBtnActive]}
+                onPress={() => setShowMuscular((v) => !v)}
+              >
+                <MaterialCommunityIcons
+                  name="arm-flex-outline"
+                  size={18}
+                  color={showMuscular ? '#F472B6' : '#64748B'}
+                />
+                <Text style={styles.dockTinyLabel}>MUSCLE</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Live Heartbeat & Breathing Pulse */}
+            <TouchableOpacity
+              style={[
+                styles.dockBtn,
+                animatePhysiology && styles.dockBtnActive,
+              ]}
+              onPress={() => setAnimatePhysiology((v) => !v)}
+            >
+              <MaterialCommunityIcons
+                name="heart-pulse"
+                size={18}
+                color={animatePhysiology ? '#EF4444' : '#64748B'}
+              />
+              <Text style={styles.dockTinyLabel}>PULSE</Text>
+            </TouchableOpacity>
+
+            {/* Zoom In */}
+            <TouchableOpacity
+              style={styles.dockBtnSmall}
+              onPress={() => setZoomLevel((z) => Math.min(z + 20, 200))}
+            >
+              <Ionicons name="add" size={19} color="#E2E8F0" />
+            </TouchableOpacity>
+
+            {/* Zoom Out */}
+            <TouchableOpacity
+              style={styles.dockBtnSmall}
+              onPress={() => setZoomLevel((z) => Math.max(z - 20, 60))}
+            >
+              <Ionicons name="remove" size={19} color="#E2E8F0" />
+            </TouchableOpacity>
+
+            {/* Center / Reset Camera */}
+            <TouchableOpacity
+              style={styles.dockBtnSmall}
+              onPress={() => {
+                setZoomLevel(100);
+                setCameraPreset('front');
+              }}
+            >
+              <MaterialCommunityIcons
+                name="crosshairs-gps"
+                size={17}
+                color="#38BDF8"
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* RIGHT VERTICAL ORGAN QUICK-SELECT RAIL (Matching Image 1) */}
+        {!hideInterface && (
+          <View style={styles.rightOrganRailWrapper}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.rightOrganRailScroll}
+            >
+              {(visibleOrgans.length > 0 ? visibleOrgans : ORGANS).map(
+                (organ) => {
+                  const isSelected = activeOrgan.id === organ.id;
+                  return (
+                    <TouchableOpacity
+                      key={organ.id}
+                      style={[
+                        styles.railOrganBtn,
+                        isSelected && {
+                          borderColor: organ.accentColor,
+                          backgroundColor: `${organ.accentColor}28`,
+                        },
+                      ]}
+                      onPress={() => {
+                        selectOrgan(organ.id);
+                        setIsCardMinimized(false);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name={organ.icon as any}
+                        size={20}
+                        color={isSelected ? organ.accentColor : '#CBD5E1'}
+                      />
+                      <Text
+                        style={[
+                          styles.railOrganLabel,
+                          isSelected && {
+                            color: '#FFFFFF',
+                            fontWeight: '700',
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {organ.name.split(' ')[0]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }
+              )}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* FLOATING ORGAN INFORMATION CARD (Matching Image 4 MedRoom Callout Hierarchy) */}
+        {!hideInterface && (
+          <View style={styles.floatingCardWrapper}>
+            {isCardMinimized ? (
+              /* Minimized Compact Pill */
+              <TouchableOpacity
+                style={styles.minimizedCardPill}
+                onPress={() => setIsCardMinimized(false)}
+                activeOpacity={0.9}
+              >
+                <View style={styles.minimizedLeft}>
+                  <View
+                    style={[
+                      styles.organDot,
+                      { backgroundColor: activeOrgan.accentColor },
+                    ]}
+                  />
+                  <Text style={styles.minimizedOrganName}>
+                    {activeOrgan.name}
+                  </Text>
+                  <Text style={styles.minimizedSystemText}>
+                    • {activeOrgan.systemName}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-up" size={18} color="#38BDF8" />
+              </TouchableOpacity>
+            ) : (
+              /* Expanded Floating Glass Medical Info Card */
+              <View style={styles.floatingOrganCard}>
+                <View style={styles.cardTopMetaRow}>
+                  <View style={styles.systemPill}>
+                    <View
+                      style={[
+                        styles.organDot,
+                        { backgroundColor: activeOrgan.accentColor },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.systemPillText,
+                        { color: activeOrgan.accentColor },
+                      ]}
+                    >
+                      {activeOrgan.systemName.toUpperCase()}
+                    </Text>
+                  </View>
+
+                  <View style={styles.cardTopActions}>
+                    <TouchableOpacity
+                      style={styles.cardIconAction}
+                      onPress={() => toggleBookmark(activeOrgan.id)}
+                    >
+                      <MaterialCommunityIcons
+                        name={bookmarked ? 'bookmark' : 'bookmark-outline'}
+                        size={20}
+                        color={bookmarked ? '#FBBF24' : '#94A3B8'}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cardIconAction}
+                      onPress={() => setIsCardMinimized(true)}
+                    >
+                      <Ionicons
+                        name="chevron-down"
+                        size={20}
+                        color="#94A3B8"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <Text style={styles.cardOrganTitle}>{activeOrgan.name}</Text>
+                <Text style={styles.cardLocationText} numberOfLines={1}>
+                  📍 {activeOrgan.location}
+                </Text>
+                <Text style={styles.cardFunctionText} numberOfLines={2}>
+                  {activeOrgan.function}
+                </Text>
+
+                <View style={styles.cardActionRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryActionBtn}
+                    onPress={() =>
+                      setViewMode((m) => (m === 'body' ? 'isolate' : 'body'))
+                    }
+                  >
+                    <MaterialCommunityIcons
+                      name={
+                        viewMode === 'body' ? 'cube-scan' : 'human-handsdown'
+                      }
+                      size={16}
+                      color="#38BDF8"
+                    />
+                    <Text style={styles.secondaryActionText}>
+                      {viewMode === 'body' ? 'Isolate 3D' : 'Full Body'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryActionBtn,
+                      { backgroundColor: activeOrgan.accentColor },
+                    ]}
+                    onPress={() =>
+                      navigation.navigate('OrganDetails', {
+                        organId: activeOrgan.id,
+                      })
+                    }
+                  >
+                    <Text style={styles.primaryActionText}>
+                      Anatomical Guide
+                    </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={15}
+                      color="#FFFFFF"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -394,228 +583,329 @@ export const ExplorerScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#0B0F19',
   },
-  header: {
-    backgroundColor: theme.colors.surface,
-    paddingTop: theme.spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.cardBorder,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.xs,
-  },
-  headerTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.textPrimary,
-  },
-  meshBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surfaceSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: theme.borderRadius.full,
-  },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    marginRight: 5,
-  },
-  meshBadgeText: {
-    ...theme.typography.small,
-    color: theme.colors.textSecondary,
-    fontFamily: 'monospace',
-  },
-  filterScroll: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xs,
-  },
-  filterPill: {
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    marginRight: 6,
-  },
-  filterPillActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  filterPillText: {
-    ...theme.typography.small,
-    color: theme.colors.textSecondary,
-    fontWeight: '600',
-  },
-  filterPillTextActive: {
-    color: '#FFFFFF',
-  },
-  viewport: {
+  viewportContainer: {
     flex: 1,
     position: 'relative',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#0B0F19',
   },
-  viewportControlsLeft: {
+  topFloatingContainer: {
     position: 'absolute',
-    top: theme.spacing.sm,
-    left: theme.spacing.sm,
-    zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderRadius: theme.borderRadius.sm,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    ...theme.shadows.card,
+    top: 10,
+    left: 12,
+    right: 12,
+    zIndex: 20,
   },
-  viewControlBtn: {
+  topBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    marginBottom: 2,
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  viewControlBtnActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  viewControlText: {
-    ...theme.typography.small,
-    color: theme.colors.textSecondary,
-    marginLeft: 5,
-  },
-  viewControlTextActive: {
-    color: '#FFFFFF',
-  },
-  viewportControlsRight: {
-    position: 'absolute',
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
-    zIndex: 10,
-  },
-  zoomBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.borderRadius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-    ...theme.shadows.card,
-  },
-  layerBar: {
-    position: 'absolute',
-    bottom: 8,
-    left: 10,
-    right: 10,
+  contentsBtn: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.25)',
     gap: 6,
-    zIndex: 10,
   },
-  layerToggle: {
+  contentsBtnActive: {
+    borderColor: '#38BDF8',
+    backgroundColor: 'rgba(2, 132, 199, 0.22)',
+  },
+  contentsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#E2E8F0',
+  },
+  modeSegmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.22)',
+  },
+  modeSegmentBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: theme.borderRadius.full,
-    borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
+    borderRadius: 9,
     gap: 4,
   },
-  layerToggleActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: '#E0F2FE',
+  modeSegmentBtnActive: {
+    backgroundColor: '#38BDF8',
   },
-  layerToggleText: {
-    fontSize: 11,
+  modeSegmentText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: theme.colors.textMuted,
+    color: '#94A3B8',
   },
-  layerToggleTextActive: {
-    color: theme.colors.primaryDark,
+  modeSegmentTextActive: {
+    color: '#0B0F19',
+    fontWeight: '700',
   },
-  organSelectorBar: {
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.cardBorder,
+  iconGlassBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  organChipsScroll: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 7,
+  systemsRibbon: {
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 6,
   },
-  organChip: {
+  sysChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.28)',
+    marginRight: 6,
+  },
+  sysChipActive: {
+    backgroundColor: '#0284C7',
+    borderColor: '#38BDF8',
+  },
+  sysChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#CBD5E1',
+  },
+  sysChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  restoreUiBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 25,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.surfaceSubtle,
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    marginRight: 7,
+    borderColor: '#38BDF8',
+    gap: 6,
   },
-  organChipText: {
-    ...theme.typography.caption,
-    color: theme.colors.textPrimary,
+  restoreUiText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#38BDF8',
   },
-  bottomDrawer: {
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.cardBorder,
-    ...theme.shadows.hover,
+  leftFloatingDock: {
+    position: 'absolute',
+    left: 10,
+    top: 64,
+    zIndex: 15,
+    backgroundColor: 'rgba(15, 23, 42, 0.78)',
+    borderRadius: 14,
+    padding: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.18)',
+    alignItems: 'center',
+    gap: 5,
   },
-  drawerHeader: {
+  dockBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.65)',
+  },
+  dockBtnActive: {
+    backgroundColor: 'rgba(56, 189, 248, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.4)',
+  },
+  dockTinyLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  dockBtnSmall: {
+    width: 44,
+    height: 34,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.65)',
+  },
+  rightOrganRailWrapper: {
+    position: 'absolute',
+    right: 10,
+    top: 64,
+    bottom: 185,
+    zIndex: 15,
+    width: 54,
+    backgroundColor: 'rgba(15, 23, 42, 0.78)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.18)',
+    paddingVertical: 6,
+  },
+  rightOrganRailScroll: {
+    alignItems: 'center',
+    gap: 6,
+    paddingBottom: 8,
+  },
+  railOrganBtn: {
+    width: 42,
+    height: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.65)',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingHorizontal: 2,
+  },
+  railOrganLabel: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  floatingCardWrapper: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 10,
+    zIndex: 20,
+  },
+  minimizedCardPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.25)',
+  },
+  minimizedLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  minimizedOrganName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  minimizedSystemText: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  floatingOrganCard: {
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.25)',
+  },
+  cardTopMetaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
   },
-  drawerTitleRow: {
+  systemPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    backgroundColor: 'rgba(30, 41, 59, 0.9)',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    gap: 6,
   },
-  drawerOrganName: {
-    ...theme.typography.h3,
-    color: theme.colors.textPrimary,
+  organDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
-  drawerBookmark: {
+  systemPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  cardTopActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cardIconAction: {
     padding: 2,
   },
-  drawerFunction: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    lineHeight: 17,
-    marginBottom: theme.spacing.sm,
+  cardOrganTitle: {
+    fontSize: 21,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    marginBottom: 2,
   },
-  drawerActions: {
+  cardLocationText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 6,
+  },
+  cardFunctionText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#CBD5E1',
+    marginBottom: 12,
+  },
+  cardActionRow: {
     flexDirection: 'row',
+    gap: 10,
   },
-  exploreMoreBtn: {
+  secondaryActionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 9,
-    borderRadius: theme.borderRadius.sm,
+    backgroundColor: 'rgba(56, 189, 248, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.4)',
+    paddingVertical: 10,
+    borderRadius: 11,
+    gap: 6,
   },
-  exploreMoreText: {
-    ...theme.typography.caption,
-    color: '#FFFFFF',
+  secondaryActionText: {
+    fontSize: 13,
     fontWeight: '700',
-    marginRight: 6,
+    color: '#38BDF8',
+  },
+  primaryActionBtn: {
+    flex: 1.35,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 11,
+    gap: 6,
+  },
+  primaryActionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

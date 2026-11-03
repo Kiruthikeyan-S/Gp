@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { RootStackParamList, TabParamList } from '../types';
@@ -16,23 +17,31 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function BottomTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 10);
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarInactiveTintColor: '#64748B',
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.cardBorder,
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#E2E8F0',
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 6,
+          height: 58 + bottomPad,
+          paddingBottom: bottomPad,
+          paddingTop: 8,
+          elevation: 8,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
+          marginTop: 2,
         },
       }}
     >
@@ -41,8 +50,8 @@ function BottomTabs() {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="home-outline" size={22} color={color} />
           ),
         }}
       />
@@ -50,9 +59,9 @@ function BottomTabs() {
         name="ExplorerTab"
         component={ExplorerScreen}
         options={{
-          tabBarLabel: '3D Explorer',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cube-scan" size={size} color={color} />
+          tabBarLabel: '3D Atlas',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="cube-scan" size={23} color={color} />
           ),
         }}
       />
@@ -61,8 +70,12 @@ function BottomTabs() {
         component={SystemsScreen}
         options={{
           tabBarLabel: 'Systems',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="human-male-height" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons
+              name="human-male-height"
+              size={23}
+              color={color}
+            />
           ),
         }}
       />
@@ -71,8 +84,8 @@ function BottomTabs() {
         component={LearningScreen}
         options={{
           tabBarLabel: 'Learn',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="book-outline" size={22} color={color} />
           ),
         }}
       />
@@ -81,8 +94,12 @@ function BottomTabs() {
         component={QuizScreen}
         options={{
           tabBarLabel: 'Quiz',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="trophy-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons
+              name="trophy-outline"
+              size={22}
+              color={color}
+            />
           ),
         }}
       />

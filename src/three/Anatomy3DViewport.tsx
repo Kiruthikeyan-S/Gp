@@ -19,23 +19,25 @@ import { BodySystemId } from '../types';
 import { CameraPreset } from '../state/useAnatomyStore';
 import { theme } from '../theme';
 
+export type ViewMode3D = 'body' | 'isolate';
+export type ShellMode = 'xray' | 'solid' | 'hidden';
+
 interface Anatomy3DViewportProps {
   selectedOrganId: string | null;
   selectedSystemId: BodySystemId | 'all';
   cameraPreset: CameraPreset;
   zoomLevel: number;
-  showBodyShell: boolean;
+  viewMode: ViewMode3D;
+  shellMode: ShellMode;
   showSkeletal: boolean;
   showMuscular: boolean;
+  showVascular: boolean;
   animatePhysiology: boolean;
   onSelectOrgan: (organId: string) => void;
 }
 
 /**
  * Prepares an ExpoWebGLRenderingContext for Three.js r163+ compatibility on Android/iOS.
- * 1. Detaches WebGL2RenderingContext from WebGLRenderingContext so `gl instanceof WebGLRenderingContext` is false.
- * 2. Attaches a DOM-compatible `canvas` shim onto `gl.canvas` (required by Three.js WebGLState.reset()).
- * 3. Filters unsupported `gl.pixelStorei` parameters in Expo GL.
  */
 export function patchExpoGlForThree(gl: ExpoWebGLRenderingContext) {
   const width = gl.drawingBufferWidth || 360;
@@ -67,7 +69,6 @@ export function patchExpoGlForThree(gl: ExpoWebGLRenderingContext) {
     Object.setPrototypeOf(gl, detachedProto);
   }
 
-  // Filter unsupported pixelStorei parameters in Expo GL C++ bridge
   if (typeof gl.pixelStorei === 'function') {
     const origPixelStorei = gl.pixelStorei.bind(gl);
     gl.pixelStorei = ((pname: number, param: any) => {
@@ -80,7 +81,6 @@ export function patchExpoGlForThree(gl: ExpoWebGLRenderingContext) {
     }) as any;
   }
 
-  // Ensure getContextAttributes always returns a valid object
   if (typeof gl.getContextAttributes !== 'function') {
     (gl as any).getContextAttributes = () => ({
       alpha: true,
@@ -113,9 +113,11 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   selectedSystemId,
   cameraPreset,
   zoomLevel,
-  showBodyShell,
+  viewMode,
+  shellMode,
   showSkeletal,
   showMuscular,
+  showVascular,
   animatePhysiology,
   onSelectOrgan,
 }) => {
@@ -124,7 +126,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const [glKey, setGlKey] = useState<number>(0);
   const layoutRef = useRef<{ width: number; height: number }>({
     width: 360,
-    height: 440,
+    height: 520,
   });
 
   const isMountedRef = useRef<boolean>(true);
@@ -133,30 +135,80 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
-  // Spherical camera orbit coordinates
-  const targetOrbitRef = useRef<{ theta: number; phi: number; radius: number }>({
+  // Spherical camera orbit + lookAt target coordinates
+  const targetOrbitRef = useRef<{
+    theta: number;
+    phi: number;
+    radius: number;
+    lookX: number;
+    lookY: number;
+    lookZ: number;
+  }>({
     theta: 0,
-    phi: Math.PI / 2.1,
-    radius: 3.4,
-  });
-  const currentOrbitRef = useRef<{ theta: number; phi: number; radius: number }>({
-    theta: 0,
-    phi: Math.PI / 2.1,
-    radius: 3.4,
+    phi: Math.PI / 2.05,
+    radius: 2.85,
+    lookX: 0,
+    lookY: 0.12,
+    lookZ: 0,
   });
 
-  // Latest props ref for animation loop & raycaster
+  const currentOrbitRef = useRef<{
+    theta: number;
+    phi: number;
+    radius: number;
+    lookX: number;
+    lookY: number;
+    lookZ: number;
+  }>({
+    theta: 0,
+    phi: Math.PI / 2.05,
+    radius: 2.85,
+    lookX: 0,
+    lookY: 0.12,
+    lookZ: 0,
+  });
+
   const stateRef = useRef({
     selectedOrganId,
     selectedSystemId,
-    showBodyShell,
+    viewMode,
+    shellMode,
     showSkeletal,
     showMuscular,
+    showVascular,
     animatePhysiology,
+    zoomLevel,
     onSelectOrgan,
   });
 
-  // Apply visibility & organ highlighting without mutating original material data
+  const updateCameraFocusForMode = useCallback(() => {
+    const graph = sceneGraphRef.current;
+    const {
+      selectedOrganId: selId,
+      viewMode: mode,
+      zoomLevel: zLevel,
+    } = stateRef.current;
+    const scale = Math.max(0.5, Math.min(2.2, zLevel / 100));
+
+    if (mode === 'isolate' && selId && graph) {
+      const rec = graph.organRecords.get(selId);
+      if (rec) {
+        // World offset includes rootGroup.position.y (-0.58)
+        targetOrbitRef.current.lookX = rec.focusCenter.x;
+        targetOrbitRef.current.lookY = rec.focusCenter.y - 0.58;
+        targetOrbitRef.current.lookZ = rec.focusCenter.z;
+        targetOrbitRef.current.radius = (rec.focusRadius * 1.18) / scale;
+        return;
+      }
+    }
+
+    // Full Body Mode
+    targetOrbitRef.current.lookX = 0;
+    targetOrbitRef.current.lookY = 0.08;
+    targetOrbitRef.current.lookZ = 0;
+    targetOrbitRef.current.radius = 2.75 / scale;
+  }, []);
+
   const applySceneState = useCallback(() => {
     const graph = sceneGraphRef.current;
     if (!graph) return;
@@ -164,103 +216,131 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     const {
       selectedOrganId: activeOrganId,
       selectedSystemId: activeSystemId,
-      showBodyShell: shellVisible,
+      viewMode: mode,
+      shellMode: activeShellMode,
       showSkeletal: skeletalVisible,
       showMuscular: muscularVisible,
+      showVascular: vascularVisible,
     } = stateRef.current;
 
-    // 1. Outer translucent body shell
-    graph.bodyShellGroup.visible = shellVisible;
-
-    // 2. System groups visibility
-    graph.systemGroups.forEach((group, sysId) => {
-      if (sysId === 'skeletal') {
-        group.visible =
-          activeSystemId === 'skeletal' ||
-          (activeSystemId === 'all' && skeletalVisible);
-      } else if (sysId === 'muscular') {
-        group.visible =
-          activeSystemId === 'muscular' ||
-          (activeSystemId === 'all' && muscularVisible);
-      } else {
-        group.visible = activeSystemId === 'all' || activeSystemId === sysId;
-      }
-    });
-
-    // 3. Organ highlighting (non-destructive restoration + emissive highlight)
-    graph.organRecords.forEach((record) => {
-      const isSelected = record.organId === activeOrganId;
-      record.meshes.forEach((mesh) => {
-        const origMat = record.originalMaterials.get(mesh);
-        const currentMat = mesh.material as THREE.MeshStandardMaterial;
-        if (!origMat || !currentMat) return;
-
-        currentMat.color.copy(origMat.color);
-        currentMat.opacity = origMat.opacity;
-        currentMat.transparent = origMat.transparent;
-
-        if (isSelected) {
-          currentMat.emissive.setHex(0x38bdf8);
-          currentMat.emissiveIntensity = 0.55;
-        } else {
+    if (mode === 'isolate' && activeOrganId) {
+      // Isolated 3D Organ Macro View (like Image 4)
+      graph.bodyShellGroup.visible = false;
+      graph.vascularGroup.visible = false;
+      graph.systemGroups.forEach((group) => {
+        group.visible = true;
+      });
+      graph.organRecords.forEach((record) => {
+        const isTarget = record.organId === activeOrganId;
+        record.group.visible = isTarget;
+        record.meshes.forEach((mesh) => {
+          const origMat = record.originalMaterials.get(mesh);
+          const currentMat = mesh.material as THREE.MeshStandardMaterial;
+          if (!origMat || !currentMat) return;
+          currentMat.color.copy(origMat.color);
+          currentMat.opacity = origMat.opacity;
+          currentMat.transparent = origMat.transparent;
           currentMat.emissive.setHex(0x000000);
           currentMat.emissiveIntensity = 0;
+        });
+      });
+    } else {
+      // Full Body 3D View (like Image 1 & Image 3)
+      graph.setShellMode(activeShellMode);
+      graph.vascularGroup.visible =
+        vascularVisible &&
+        (activeSystemId === 'all' || activeSystemId === 'circulatory');
+
+      graph.systemGroups.forEach((group, sysId) => {
+        if (sysId === 'skeletal') {
+          group.visible =
+            activeSystemId === 'skeletal' ||
+            (activeSystemId === 'all' && skeletalVisible);
+        } else if (sysId === 'muscular') {
+          group.visible =
+            activeSystemId === 'muscular' ||
+            (activeSystemId === 'all' && muscularVisible);
+        } else {
+          group.visible =
+            activeSystemId === 'all' || activeSystemId === sysId;
         }
       });
-    });
-  }, []);
+
+      graph.organRecords.forEach((record) => {
+        record.group.visible = true;
+        const isSelected = record.organId === activeOrganId;
+        record.meshes.forEach((mesh) => {
+          const origMat = record.originalMaterials.get(mesh);
+          const currentMat = mesh.material as THREE.MeshStandardMaterial;
+          if (!origMat || !currentMat) return;
+
+          currentMat.color.copy(origMat.color);
+          currentMat.opacity = origMat.opacity;
+          currentMat.transparent = origMat.transparent;
+
+          if (isSelected) {
+            currentMat.emissive.setHex(0x38bdf8);
+            currentMat.emissiveIntensity = 0.38;
+          } else {
+            currentMat.emissive.setHex(0x000000);
+            currentMat.emissiveIntensity = 0;
+          }
+        });
+      });
+    }
+
+    updateCameraFocusForMode();
+  }, [updateCameraFocusForMode]);
 
   useEffect(() => {
     stateRef.current = {
       selectedOrganId,
       selectedSystemId,
-      showBodyShell,
+      viewMode,
+      shellMode,
       showSkeletal,
       showMuscular,
+      showVascular,
       animatePhysiology,
+      zoomLevel,
       onSelectOrgan,
     };
     applySceneState();
   }, [
     selectedOrganId,
     selectedSystemId,
-    showBodyShell,
+    viewMode,
+    shellMode,
     showSkeletal,
     showMuscular,
+    showVascular,
     animatePhysiology,
+    zoomLevel,
     onSelectOrgan,
     applySceneState,
   ]);
 
-  // Update camera target angle when preset changes
   useEffect(() => {
     switch (cameraPreset) {
       case 'front':
         targetOrbitRef.current.theta = 0;
-        targetOrbitRef.current.phi = Math.PI / 2.05;
+        targetOrbitRef.current.phi = Math.PI / 2.02;
         break;
       case 'side':
-        targetOrbitRef.current.theta = Math.PI / 2;
-        targetOrbitRef.current.phi = Math.PI / 2.05;
+        targetOrbitRef.current.theta = Math.PI / 2.2;
+        targetOrbitRef.current.phi = Math.PI / 2.02;
         break;
       case 'back':
         targetOrbitRef.current.theta = Math.PI;
-        targetOrbitRef.current.phi = Math.PI / 2.05;
+        targetOrbitRef.current.phi = Math.PI / 2.02;
         break;
       case 'isometric':
-        targetOrbitRef.current.theta = Math.PI / 4;
-        targetOrbitRef.current.phi = Math.PI / 2.5;
+        targetOrbitRef.current.theta = Math.PI / 4.2;
+        targetOrbitRef.current.phi = Math.PI / 2.35;
         break;
     }
   }, [cameraPreset]);
 
-  // Update camera radius when zoomLevel changes
-  useEffect(() => {
-    const scale = Math.max(0.5, Math.min(1.8, zoomLevel / 100));
-    targetOrbitRef.current.radius = 3.4 / scale;
-  }, [zoomLevel]);
-
-  // Perform 3D Raycasting on tap coordinates
   const handleTapRaycast = useCallback((touchX: number, touchY: number) => {
     const graph = sceneGraphRef.current;
     const camera = cameraRef.current;
@@ -280,7 +360,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     const pickableMeshes: THREE.Mesh[] = [];
     graph.organRecords.forEach((record) => {
       const sysGroup = graph.systemGroups.get(record.systemId);
-      if (sysGroup && sysGroup.visible) {
+      if (sysGroup && sysGroup.visible && record.group.visible) {
         pickableMeshes.push(...record.meshes);
       }
     });
@@ -295,7 +375,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     }
   }, []);
 
-  // Touch gesture tracking for 1-finger orbit & 2-finger pinch zoom
   const gestureStateRef = useRef<{
     startTheta: number;
     startPhi: number;
@@ -303,9 +382,9 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     startRadius: number;
   }>({
     startTheta: 0,
-    startPhi: Math.PI / 2.1,
+    startPhi: Math.PI / 2.05,
     initialPinchDist: null,
-    startRadius: 3.4,
+    startRadius: 2.85,
   });
 
   const panResponder = useRef(
@@ -340,8 +419,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
             const pinchScale = dist / gestureStateRef.current.initialPinchDist;
             const nextRadius = gestureStateRef.current.startRadius / pinchScale;
             targetOrbitRef.current.radius = Math.max(
-              1.8,
-              Math.min(5.5, nextRadius)
+              0.45,
+              Math.min(5.0, nextRadius)
             );
           }
         } else {
@@ -350,8 +429,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           const nextPhi =
             gestureStateRef.current.startPhi - gestureState.dy * 0.008;
           targetOrbitRef.current.phi = Math.max(
-            0.35,
-            Math.min(Math.PI - 0.35, nextPhi)
+            0.32,
+            Math.min(Math.PI - 0.32, nextPhi)
           );
         }
       },
@@ -370,57 +449,76 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       try {
         const { canvasShim, width, height } = patchExpoGlForThree(gl);
 
-        // Create Three.js WebGLRenderer using the patched canvasShim & gl context
         const renderer = new THREE.WebGLRenderer({
           canvas: canvasShim,
           antialias: true,
         });
         renderer.setSize(width, height, false);
-        renderer.setClearColor(0xf1f5f9, 1);
+        // Deep Medical Studio Dark Slate Backdrop (matching Reference Images 1, 3, 4)
+        renderer.setClearColor(0x0b0f19, 1);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.12;
         rendererRef.current = renderer;
 
-        // Create Scene
         const scene = new THREE.Scene();
 
-        // Create Camera
         const camera = new THREE.PerspectiveCamera(
-          45,
+          42,
           width / height,
-          0.1,
+          0.08,
           100
         );
         cameraRef.current = camera;
 
-        // Medical Studio Lighting Setup
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.78);
+        // 4-Point Medical Studio Lighting Setup for Organic Depth & Rim Glow
+        const ambientLight = new THREE.AmbientLight(0xf8fafc, 0.65);
         scene.add(ambientLight);
 
-        const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x94a3b8, 0.55);
-        hemiLight.position.set(0, 5, 0);
+        const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x1e1b4b, 0.58);
+        hemiLight.position.set(0, 6, 0);
         scene.add(hemiLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-        dirLight.position.set(3, 5, 4);
-        scene.add(dirLight);
+        // Warm Surgical Key Light (Front-Right)
+        const keyLight = new THREE.DirectionalLight(0xfff7ed, 1.35);
+        keyLight.position.set(2.8, 4.2, 4.5);
+        scene.add(keyLight);
 
-        const backLight = new THREE.DirectionalLight(0xbae6fd, 0.45);
-        backLight.position.set(-3, 2, -4);
-        scene.add(backLight);
+        // Soft Fill Light (Front-Left)
+        const fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.65);
+        fillLight.position.set(-3.2, 1.8, 3.0);
+        scene.add(fillLight);
 
-        // Subtle anatomical platform ring beneath the model
-        const ringGeo = new THREE.RingGeometry(0.62, 0.68, 36);
-        const ringMat = new THREE.MeshBasicMaterial({
-          color: 0x0284c7,
+        // Medical Rim / Backlight for X-Ray Silhouette Edge Definition
+        const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.95);
+        rimLight.position.set(0, 3.5, -4.5);
+        scene.add(rimLight);
+
+        // Subtle Holographic Medical Pedestal Rings at Feet
+        const outerRingGeo = new THREE.RingGeometry(0.68, 0.71, 48);
+        const outerRingMat = new THREE.MeshBasicMaterial({
+          color: 0x0ea5e9,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.35,
+          opacity: 0.28,
         });
-        const floorRing = new THREE.Mesh(ringGeo, ringMat);
-        floorRing.rotation.x = Math.PI / 2;
-        floorRing.position.set(0, -1.65, 0);
-        scene.add(floorRing);
+        const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
+        outerRing.rotation.x = Math.PI / 2;
+        outerRing.position.set(0, -1.32, 0);
+        scene.add(outerRing);
 
-        // Build 3D Human Anatomy Scene Graph
+        const innerRingGeo = new THREE.RingGeometry(0.42, 0.44, 48);
+        const innerRingMat = new THREE.MeshBasicMaterial({
+          color: 0x38bdf8,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.18,
+        });
+        const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
+        innerRing.rotation.x = Math.PI / 2;
+        innerRing.position.set(0, -1.32, 0);
+        scene.add(innerRing);
+
+        // Build Sculpted 3D Human Anatomy Scene Graph
         const graph = buildAnatomySceneGraph();
         sceneGraphRef.current = graph;
         scene.add(graph.rootGroup);
@@ -441,34 +539,40 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
           const cur = currentOrbitRef.current;
           const tgt = targetOrbitRef.current;
-          cur.theta += (tgt.theta - cur.theta) * 0.15;
-          cur.phi += (tgt.phi - cur.phi) * 0.15;
-          cur.radius += (tgt.radius - cur.radius) * 0.15;
+          cur.theta += (tgt.theta - cur.theta) * 0.14;
+          cur.phi += (tgt.phi - cur.phi) * 0.14;
+          cur.radius += (tgt.radius - cur.radius) * 0.14;
+          cur.lookX += (tgt.lookX - cur.lookX) * 0.14;
+          cur.lookY += (tgt.lookY - cur.lookY) * 0.14;
+          cur.lookZ += (tgt.lookZ - cur.lookZ) * 0.14;
 
           camera.position.x =
-            cur.radius * Math.sin(cur.phi) * Math.sin(cur.theta);
-          camera.position.y = cur.radius * Math.cos(cur.phi) + 0.25;
+            cur.lookX + cur.radius * Math.sin(cur.phi) * Math.sin(cur.theta);
+          camera.position.y = cur.lookY + cur.radius * Math.cos(cur.phi);
           camera.position.z =
-            cur.radius * Math.sin(cur.phi) * Math.cos(cur.theta);
-          camera.lookAt(0, 0.25, 0);
+            cur.lookZ + cur.radius * Math.sin(cur.phi) * Math.cos(cur.theta);
+          camera.lookAt(cur.lookX, cur.lookY, cur.lookZ);
 
           if (sceneGraphRef.current) {
-            const { animatePhysiology: doAnim, selectedOrganId: selId } =
-              stateRef.current;
+            const {
+              animatePhysiology: doAnim,
+              selectedOrganId: selId,
+              viewMode: mode,
+            } = stateRef.current;
 
             if (doAnim) {
               if (sceneGraphRef.current.heartGroup) {
                 const beat =
                   1 +
-                  Math.pow(Math.sin(clock * 2.2), 6) * 0.08 +
-                  Math.pow(Math.sin(clock * 2.2 - 0.4), 8) * 0.04;
+                  Math.pow(Math.sin(clock * 2.2), 6) * 0.065 +
+                  Math.pow(Math.sin(clock * 2.2 - 0.4), 8) * 0.035;
                 sceneGraphRef.current.heartGroup.scale.setScalar(beat);
               }
               if (sceneGraphRef.current.lungsGroup) {
-                const breath = 1 + Math.sin(clock * 0.75) * 0.035;
+                const breath = 1 + Math.sin(clock * 0.75) * 0.028;
                 sceneGraphRef.current.lungsGroup.scale.set(
                   breath,
-                  1 + Math.sin(clock * 0.75) * 0.02,
+                  1 + Math.sin(clock * 0.75) * 0.018,
                   breath
                 );
               }
@@ -477,10 +581,11 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
               sceneGraphRef.current.lungsGroup?.scale.setScalar(1);
             }
 
-            if (selId) {
+            // Subtle emissive highlight pulse only in full body mode so isolated organ retains pure tissue colors
+            if (selId && mode === 'body') {
               const selRecord = sceneGraphRef.current.organRecords.get(selId);
               if (selRecord) {
-                const pulse = 0.45 + Math.sin(clock * 2.5) * 0.25;
+                const pulse = 0.24 + Math.sin(clock * 2.8) * 0.14;
                 selRecord.meshes.forEach((m) => {
                   const mat = m.material as THREE.MeshStandardMaterial;
                   if (mat && mat.emissive) {
@@ -576,9 +681,9 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
       {isLoading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color="#38BDF8" />
           <Text style={styles.loadingText}>
-            Loading 3D Human Anatomy Meshes...
+            Rendering 3D Anatomical Atlas...
           </Text>
         </View>
       )}
@@ -589,7 +694,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#0B0F19',
     overflow: 'hidden',
   },
   glView: {
@@ -601,14 +706,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(248, 250, 252, 0.92)',
+    backgroundColor: 'rgba(11, 15, 25, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.lg,
   },
   loadingText: {
     ...theme.typography.bodyMedium,
-    color: theme.colors.textSecondary,
+    color: '#94A3B8',
     marginTop: theme.spacing.md,
   },
   errorContainer: {
@@ -616,17 +721,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.xl,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#0B0F19',
   },
   errorTitle: {
     ...theme.typography.h3,
-    color: theme.colors.textPrimary,
+    color: '#F8FAFC',
     marginTop: theme.spacing.sm,
     marginBottom: 4,
   },
   errorMessage: {
     ...theme.typography.caption,
-    color: theme.colors.textSecondary,
+    color: '#94A3B8',
     textAlign: 'center',
     marginBottom: theme.spacing.md,
   },
