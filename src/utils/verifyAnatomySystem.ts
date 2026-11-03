@@ -93,7 +93,31 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
     `Validated ${QUIZ_QUESTIONS.length} multiple-choice quiz questions and answer indices`
   );
 
-  // 7. Verify GPU Resource Disposal
+  // 7. Verify Expo GL WebGL2 Prototype Patch for Three.js r163+
+  const g = globalThis as any;
+  g.WebGLRenderingContext = function () {};
+  g.WebGLRenderingContext.prototype.clearColor = () => {};
+  g.WebGL2RenderingContext = function () {};
+  g.WebGL2RenderingContext.prototype = Object.create(g.WebGLRenderingContext.prototype);
+  const mockGl = new g.WebGL2RenderingContext();
+
+  // Before patch: mockGl is instanceof WebGLRenderingContext
+  assert(
+    mockGl instanceof g.WebGLRenderingContext === true,
+    'Simulated Expo Go legacy WebGL2RenderingContext inheriting from WebGLRenderingContext'
+  );
+
+  // Apply prototype detachment patch
+  Object.assign(g.WebGL2RenderingContext.prototype, g.WebGLRenderingContext.prototype);
+  Object.setPrototypeOf(g.WebGL2RenderingContext.prototype, Object.prototype);
+
+  assert(
+    mockGl instanceof g.WebGLRenderingContext === false &&
+      typeof mockGl.clearColor === 'function',
+    'Patched Expo GL context: instanceof WebGLRenderingContext is false while preserving all GL methods'
+  );
+
+  // 8. Verify GPU Resource Disposal
   graph.dispose();
   assert(true, 'Disposed all 3D geometries and materials cleanly');
 

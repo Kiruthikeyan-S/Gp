@@ -31,6 +31,83 @@ interface Anatomy3DViewportProps {
   onSelectOrgan: (organId: string) => void;
 }
 
+/**
+ * Prepares an ExpoWebGLRenderingContext for Three.js r163+ compatibility on Android/iOS.
+ * 1. Detaches WebGL2RenderingContext from WebGLRenderingContext so `gl instanceof WebGLRenderingContext` is false.
+ * 2. Attaches a DOM-compatible `canvas` shim onto `gl.canvas` (required by Three.js WebGLState.reset()).
+ * 3. Filters unsupported `gl.pixelStorei` parameters in Expo GL.
+ */
+export function patchExpoGlForThree(gl: ExpoWebGLRenderingContext) {
+  const width = gl.drawingBufferWidth || 360;
+  const height = gl.drawingBufferHeight || 440;
+
+  const g = globalThis as any;
+  if (g.WebGLRenderingContext && g.WebGL2RenderingContext) {
+    if (g.WebGL2RenderingContext.prototype instanceof g.WebGLRenderingContext) {
+      Object.assign(
+        g.WebGL2RenderingContext.prototype,
+        g.WebGLRenderingContext.prototype
+      );
+      Object.setPrototypeOf(
+        g.WebGL2RenderingContext.prototype,
+        Object.prototype
+      );
+    }
+  }
+
+  if (
+    typeof g.WebGLRenderingContext !== 'undefined' &&
+    gl instanceof g.WebGLRenderingContext
+  ) {
+    const detachedProto = Object.assign(
+      Object.create(Object.prototype),
+      g.WebGLRenderingContext.prototype,
+      Object.getPrototypeOf(gl)
+    );
+    Object.setPrototypeOf(gl, detachedProto);
+  }
+
+  // Filter unsupported pixelStorei parameters in Expo GL C++ bridge
+  if (typeof gl.pixelStorei === 'function') {
+    const origPixelStorei = gl.pixelStorei.bind(gl);
+    gl.pixelStorei = ((pname: number, param: any) => {
+      if (
+        pname === gl.UNPACK_ALIGNMENT ||
+        pname === gl.UNPACK_FLIP_Y_WEBGL
+      ) {
+        return origPixelStorei(pname, param);
+      }
+    }) as any;
+  }
+
+  // Ensure getContextAttributes always returns a valid object
+  if (typeof gl.getContextAttributes !== 'function') {
+    (gl as any).getContextAttributes = () => ({
+      alpha: true,
+      depth: true,
+      stencil: true,
+      antialias: false,
+      premultipliedAlpha: false,
+    });
+  }
+
+  const canvasShim: any = {
+    width,
+    height,
+    clientWidth: width,
+    clientHeight: height,
+    style: {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    setAttribute: () => {},
+    getContext: () => gl,
+  };
+
+  (gl as any).canvas = canvasShim;
+
+  return { canvasShim, width, height };
+}
+
 export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   selectedOrganId,
   selectedSystemId,
@@ -44,6 +121,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [glKey, setGlKey] = useState<number>(0);
   const layoutRef = useRef<{ width: number; height: number }>({
     width: 360,
     height: 440,
@@ -77,54 +155,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     animatePhysiology,
     onSelectOrgan,
   });
-
-  useEffect(() => {
-    stateRef.current = {
-      selectedOrganId,
-      selectedSystemId,
-      showBodyShell,
-      showSkeletal,
-      showMuscular,
-      animatePhysiology,
-      onSelectOrgan,
-    };
-    applySceneState();
-  }, [
-    selectedOrganId,
-    selectedSystemId,
-    showBodyShell,
-    showSkeletal,
-    showMuscular,
-    animatePhysiology,
-  ]);
-
-  // Update camera target angle when preset changes
-  useEffect(() => {
-    switch (cameraPreset) {
-      case 'front':
-        targetOrbitRef.current.theta = 0;
-        targetOrbitRef.current.phi = Math.PI / 2.05;
-        break;
-      case 'side':
-        targetOrbitRef.current.theta = Math.PI / 2;
-        targetOrbitRef.current.phi = Math.PI / 2.05;
-        break;
-      case 'back':
-        targetOrbitRef.current.theta = Math.PI;
-        targetOrbitRef.current.phi = Math.PI / 2.05;
-        break;
-      case 'isometric':
-        targetOrbitRef.current.theta = Math.PI / 4;
-        targetOrbitRef.current.phi = Math.PI / 2.5;
-        break;
-    }
-  }, [cameraPreset]);
-
-  // Update camera radius when zoomLevel changes
-  useEffect(() => {
-    const scale = Math.max(0.5, Math.min(1.8, zoomLevel / 100));
-    targetOrbitRef.current.radius = 3.4 / scale;
-  }, [zoomLevel]);
 
   // Apply visibility & organ highlighting without mutating original material data
   const applySceneState = useCallback(() => {
@@ -165,7 +195,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         const currentMat = mesh.material as THREE.MeshStandardMaterial;
         if (!origMat || !currentMat) return;
 
-        // Restore base color and opacity first
         currentMat.color.copy(origMat.color);
         currentMat.opacity = origMat.opacity;
         currentMat.transparent = origMat.transparent;
@@ -181,6 +210,56 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     });
   }, []);
 
+  useEffect(() => {
+    stateRef.current = {
+      selectedOrganId,
+      selectedSystemId,
+      showBodyShell,
+      showSkeletal,
+      showMuscular,
+      animatePhysiology,
+      onSelectOrgan,
+    };
+    applySceneState();
+  }, [
+    selectedOrganId,
+    selectedSystemId,
+    showBodyShell,
+    showSkeletal,
+    showMuscular,
+    animatePhysiology,
+    onSelectOrgan,
+    applySceneState,
+  ]);
+
+  // Update camera target angle when preset changes
+  useEffect(() => {
+    switch (cameraPreset) {
+      case 'front':
+        targetOrbitRef.current.theta = 0;
+        targetOrbitRef.current.phi = Math.PI / 2.05;
+        break;
+      case 'side':
+        targetOrbitRef.current.theta = Math.PI / 2;
+        targetOrbitRef.current.phi = Math.PI / 2.05;
+        break;
+      case 'back':
+        targetOrbitRef.current.theta = Math.PI;
+        targetOrbitRef.current.phi = Math.PI / 2.05;
+        break;
+      case 'isometric':
+        targetOrbitRef.current.theta = Math.PI / 4;
+        targetOrbitRef.current.phi = Math.PI / 2.5;
+        break;
+    }
+  }, [cameraPreset]);
+
+  // Update camera radius when zoomLevel changes
+  useEffect(() => {
+    const scale = Math.max(0.5, Math.min(1.8, zoomLevel / 100));
+    targetOrbitRef.current.radius = 3.4 / scale;
+  }, [zoomLevel]);
+
   // Perform 3D Raycasting on tap coordinates
   const handleTapRaycast = useCallback((touchX: number, touchY: number) => {
     const graph = sceneGraphRef.current;
@@ -190,7 +269,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     const { width, height } = layoutRef.current;
     if (width <= 0 || height <= 0) return;
 
-    // Convert screen touch to Normalized Device Coordinates (-1 to +1)
     const ndc = new THREE.Vector2(
       (touchX / width) * 2 - 1,
       -(touchY / height) * 2 + 1
@@ -199,7 +277,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(ndc, camera);
 
-    // Collect all meshes belonging to currently visible organs
     const pickableMeshes: THREE.Mesh[] = [];
     graph.organRecords.forEach((record) => {
       const sysGroup = graph.systemGroups.get(record.systemId);
@@ -262,10 +339,12 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           } else if (gestureStateRef.current.initialPinchDist > 10) {
             const pinchScale = dist / gestureStateRef.current.initialPinchDist;
             const nextRadius = gestureStateRef.current.startRadius / pinchScale;
-            targetOrbitRef.current.radius = Math.max(1.8, Math.min(5.5, nextRadius));
+            targetOrbitRef.current.radius = Math.max(
+              1.8,
+              Math.min(5.5, nextRadius)
+            );
           }
         } else {
-          // Single-finger 360° rotation + vertical tilt
           targetOrbitRef.current.theta =
             gestureStateRef.current.startTheta - gestureState.dx * 0.011;
           const nextPhi =
@@ -278,7 +357,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       },
       onPanResponderRelease: (evt, gestureState) => {
         gestureStateRef.current.initialPinchDist = null;
-        // If finger barely moved, treat as a tap for 3D organ raycasting
         if (Math.abs(gestureState.dx) < 8 && Math.abs(gestureState.dy) < 8) {
           const { locationX, locationY } = evt.nativeEvent;
           handleTapRaycast(locationX, locationY);
@@ -290,23 +368,14 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const onContextCreate = useCallback(
     async (gl: ExpoWebGLRenderingContext) => {
       try {
-        const width = gl.drawingBufferWidth;
-        const height = gl.drawingBufferHeight;
+        const { canvasShim, width, height } = patchExpoGlForThree(gl);
 
-        // Create Three.js WebGLRenderer bound to Expo GL context
+        // Create Three.js WebGLRenderer using the patched canvasShim & gl context
         const renderer = new THREE.WebGLRenderer({
-          canvas: {
-            width,
-            height,
-            style: {},
-            addEventListener: () => {},
-            removeEventListener: () => {},
-            clientHeight: height,
-          } as any,
-          context: gl,
+          canvas: canvasShim,
           antialias: true,
         });
-        renderer.setSize(width, height);
+        renderer.setSize(width, height, false);
         renderer.setClearColor(0xf1f5f9, 1);
         rendererRef.current = renderer;
 
@@ -314,11 +383,16 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         const scene = new THREE.Scene();
 
         // Create Camera
-        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+        const camera = new THREE.PerspectiveCamera(
+          45,
+          width / height,
+          0.1,
+          100
+        );
         cameraRef.current = camera;
 
         // Medical Studio Lighting Setup
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.78);
         scene.add(ambientLight);
 
         const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x94a3b8, 0.55);
@@ -359,14 +433,12 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
         let clock = 0;
 
-        // Render Loop
         const animate = () => {
           if (!isMountedRef.current) return;
           rafIdRef.current = requestAnimationFrame(animate);
 
           clock += 0.04;
 
-          // Smoothly interpolate camera spherical coordinates
           const cur = currentOrbitRef.current;
           const tgt = targetOrbitRef.current;
           cur.theta += (tgt.theta - cur.theta) * 0.15;
@@ -380,13 +452,11 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
             cur.radius * Math.sin(cur.phi) * Math.cos(cur.theta);
           camera.lookAt(0, 0.25, 0);
 
-          // Physiological animations (Heartbeat & Lung Respiration + Selected Pulse)
           if (sceneGraphRef.current) {
             const { animatePhysiology: doAnim, selectedOrganId: selId } =
               stateRef.current;
 
             if (doAnim) {
-              // Heartbeat ~72 BPM double-pulse
               if (sceneGraphRef.current.heartGroup) {
                 const beat =
                   1 +
@@ -394,7 +464,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
                   Math.pow(Math.sin(clock * 2.2 - 0.4), 8) * 0.04;
                 sceneGraphRef.current.heartGroup.scale.setScalar(beat);
               }
-              // Lung breathing cycle
               if (sceneGraphRef.current.lungsGroup) {
                 const breath = 1 + Math.sin(clock * 0.75) * 0.035;
                 sceneGraphRef.current.lungsGroup.scale.set(
@@ -408,7 +477,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
               sceneGraphRef.current.lungsGroup?.scale.setScalar(1);
             }
 
-            // Selected organ emissive pulse
             if (selId) {
               const selRecord = sceneGraphRef.current.organRecords.get(selId);
               if (selRecord) {
@@ -431,7 +499,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       } catch (err: any) {
         if (isMountedRef.current) {
           setRenderError(
-            err?.message || 'Unable to initialize 3D WebGL context on this device.'
+            err?.message ||
+              'Unable to initialize 3D WebGL context on this device.'
           );
           setIsLoading(false);
         }
@@ -440,7 +509,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     [applySceneState]
   );
 
-  // Cleanup GPU resources on unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -485,6 +553,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           onPress={() => {
             setRenderError(null);
             setIsLoading(true);
+            setGlKey((k) => k + 1);
           }}
         >
           <Text style={styles.retryBtnText}>Retry 3D Initialization</Text>
@@ -499,12 +568,18 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       onLayout={handleLayout}
       {...panResponder.panHandlers}
     >
-      <GLView style={styles.glView} onContextCreate={onContextCreate} />
+      <GLView
+        key={glKey}
+        style={styles.glView}
+        onContextCreate={onContextCreate}
+      />
 
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading 3D Human Anatomy Meshes...</Text>
+          <Text style={styles.loadingText}>
+            Loading 3D Human Anatomy Meshes...
+          </Text>
         </View>
       )}
     </View>
