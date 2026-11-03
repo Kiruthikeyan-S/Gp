@@ -5,17 +5,21 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { theme } from '../theme';
 import { BODY_SYSTEMS, ORGANS } from '../data/anatomyData';
 import { useAnatomyStore } from '../state/useAnatomyStore';
-import { RootStackParamList, BodySystemId } from '../types';
+import { RootStackParamList, TabParamList, BodySystemId } from '../types';
 
-type SystemsNavProp = NativeStackNavigationProp<RootStackParamList>;
+type SystemsNavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<TabParamList, 'SystemsTab'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 export const SystemsScreen: React.FC = () => {
   const navigation = useNavigation<SystemsNavProp>();
@@ -23,20 +27,15 @@ export const SystemsScreen: React.FC = () => {
 
   const handleSystemPress = (systemId: BodySystemId) => {
     selectSystem(systemId);
-    // If the system has organs, select the first one
     const matchingOrgans = ORGANS.filter((o) => o.systemId === systemId);
     if (matchingOrgans.length > 0) {
       selectOrgan(matchingOrgans[0].id);
     }
-    // Navigate to explorer tab
-    navigation.navigate('MainTabs' as any, {
-      screen: 'ExplorerTab',
-      params: { targetSystemId: systemId },
-    });
+    navigation.navigate('ExplorerTab', { targetSystemId: systemId });
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Human Body Systems</Text>
         <Text style={styles.headerSubtitle}>
@@ -62,7 +61,12 @@ export const SystemsScreen: React.FC = () => {
               ]}
             >
               <View style={styles.cardHeader}>
-                <View style={[styles.iconWrap, { backgroundColor: `${system.color}15` }]}>
+                <View
+                  style={[
+                    styles.iconWrap,
+                    { backgroundColor: `${system.color}15` },
+                  ]}
+                >
                   <MaterialCommunityIcons
                     name={system.icon as any}
                     size={26}
@@ -74,7 +78,7 @@ export const SystemsScreen: React.FC = () => {
                   <Text style={styles.organCount}>
                     {systemOrgans.length > 0
                       ? `${systemOrgans.length} Key Visceral Organs`
-                      : 'Structural & Motor Network'}
+                      : '3D Structural & Motor Layer'}
                   </Text>
                 </View>
               </View>
@@ -84,18 +88,25 @@ export const SystemsScreen: React.FC = () => {
               {/* Organ Chips for this system */}
               {systemOrgans.length > 0 && (
                 <View style={styles.organsContainer}>
-                  <Text style={styles.organsLabel}>Core Anatomical Structures:</Text>
+                  <Text style={styles.organsLabel}>
+                    Core Anatomical Structures:
+                  </Text>
                   <View style={styles.organsChipsWrap}>
                     {systemOrgans.map((organ) => (
                       <TouchableOpacity
                         key={organ.id}
                         style={[
                           styles.organChip,
-                          { borderColor: `${system.color}40`, backgroundColor: `${system.color}10` },
+                          {
+                            borderColor: `${system.color}40`,
+                            backgroundColor: `${system.color}10`,
+                          },
                         ]}
                         onPress={() => {
                           selectOrgan(organ.id);
-                          navigation.navigate('OrganDetails', { organId: organ.id });
+                          navigation.navigate('OrganDetails', {
+                            organId: organ.id,
+                          });
                         }}
                       >
                         <MaterialCommunityIcons
@@ -104,7 +115,9 @@ export const SystemsScreen: React.FC = () => {
                           color={system.color}
                           style={{ marginRight: 4 }}
                         />
-                        <Text style={[styles.organChipText, { color: system.color }]}>
+                        <Text
+                          style={[styles.organChipText, { color: system.color }]}
+                        >
                           {organ.name}
                         </Text>
                       </TouchableOpacity>
@@ -119,7 +132,9 @@ export const SystemsScreen: React.FC = () => {
                 activeOpacity={0.85}
                 onPress={() => handleSystemPress(system.id)}
               >
-                <Text style={styles.exploreBtnText}>Explore in 3D Viewport</Text>
+                <Text style={styles.exploreBtnText}>
+                  Explore in 3D Viewport
+                </Text>
                 <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
               </TouchableOpacity>
             </View>

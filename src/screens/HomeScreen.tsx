@@ -5,8 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -39,9 +39,14 @@ export const HomeScreen: React.FC = () => {
   }, [loadPersistedData]);
 
   const featuredOrgan = ORGANS[1]; // Heart
+  const nextLesson =
+    LESSONS.find((l) => !completedLessonIds.includes(l.id)) || LESSONS[0];
+  const bookmarkedOrgans = ORGANS.filter((o) =>
+    bookmarkedOrganIds.includes(o.id)
+  );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
@@ -51,18 +56,28 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.topHeader}>
           <View style={styles.branding}>
             <View style={styles.logoBadge}>
-              <MaterialCommunityIcons name="cube-scan" size={26} color={theme.colors.primary} />
+              <MaterialCommunityIcons
+                name="cube-scan"
+                size={26}
+                color={theme.colors.primary}
+              />
             </View>
             <View>
-              <Text style={styles.appTitle}>Anatomy 3D</Text>
-              <Text style={styles.appSubtitle}>Interactive Human Body Explorer</Text>
+              <Text style={styles.appTitle}>Anatomy Explorer 3D</Text>
+              <Text style={styles.appSubtitle}>
+                Interactive Human Body Atlas
+              </Text>
             </View>
           </View>
           <TouchableOpacity
             style={styles.iconCircle}
             onPress={() => navigation.navigate('LearnTab')}
           >
-            <Ionicons name="notifications-outline" size={20} color={theme.colors.textPrimary} />
+            <Ionicons
+              name="book-outline"
+              size={20}
+              color={theme.colors.textPrimary}
+            />
           </TouchableOpacity>
         </View>
 
@@ -78,15 +93,20 @@ export const HomeScreen: React.FC = () => {
         >
           <View style={styles.heroContent}>
             <View style={styles.badgePill}>
-              <MaterialCommunityIcons name="axis-arrow" size={14} color={theme.colors.primary} />
-              <Text style={styles.badgePillText}>3D Interactive Model</Text>
+              <MaterialCommunityIcons
+                name="axis-arrow"
+                size={14}
+                color="#7DD3FC"
+              />
+              <Text style={styles.badgePillText}>Interactive 3D WebGL</Text>
             </View>
-            <Text style={styles.heroTitle}>Explore Human Anatomy in 3D</Text>
+            <Text style={styles.heroTitle}>Explore the Human Body in 3D</Text>
             <Text style={styles.heroDescription}>
-              Rotate 360°, inspect organs, and isolate skeletal, muscular, and circulatory systems.
+              Rotate 360°, tap individual 3D organs to highlight them, and
+              filter skeletal, muscular, and visceral layers.
             </Text>
             <View style={styles.heroButton}>
-              <Text style={styles.heroButtonText}>Launch 3D Explorer</Text>
+              <Text style={styles.heroButtonText}>Open 3D Body Explorer</Text>
               <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
             </View>
           </View>
@@ -94,7 +114,7 @@ export const HomeScreen: React.FC = () => {
 
         {/* Learning Progress Summary */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Your Progress</Text>
+          <Text style={styles.sectionTitle}>Your Learning Progress</Text>
         </View>
         <View style={styles.statsRow}>
           <StatCard
@@ -105,8 +125,10 @@ export const HomeScreen: React.FC = () => {
           />
           <View style={{ width: theme.spacing.sm }} />
           <StatCard
-            label="Quiz Score"
-            value={quizStats.attempts > 0 ? `${quizStats.bestScorePercent}%` : '--'}
+            label="Best Quiz"
+            value={
+              quizStats.attempts > 0 ? `${quizStats.bestScorePercent}%` : '--'
+            }
             icon="trophy-outline"
             color={theme.colors.warning}
           />
@@ -119,16 +141,89 @@ export const HomeScreen: React.FC = () => {
           />
         </View>
 
+        {/* Continue Learning Section */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Continue Learning</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('LearnTab')}>
+            <Text style={styles.seeAllText}>All Lessons</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={styles.continueCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('LearnTab')}
+        >
+          <View style={styles.continueIconBox}>
+            <Ionicons
+              name="school-outline"
+              size={24}
+              color={theme.colors.primary}
+            />
+          </View>
+          <View style={styles.continueInfo}>
+            <Text style={styles.continueTag}>
+              NEXT LESSON • {nextLesson.readTimeMinutes} MIN READ
+            </Text>
+            <Text style={styles.continueTitle} numberOfLines={1}>
+              {nextLesson.title}
+            </Text>
+            <Text style={styles.continueSummary} numberOfLines={1}>
+              {nextLesson.summary}
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={theme.colors.textMuted}
+          />
+        </TouchableOpacity>
+
+        {/* Bookmarked Organs (if any) */}
+        {bookmarkedOrgans.length > 0 && (
+          <>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>
+                Bookmarked Organs ({bookmarkedOrgans.length})
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {bookmarkedOrgans.map((organ) => (
+                <TouchableOpacity
+                  key={organ.id}
+                  style={styles.bookmarkChip}
+                  onPress={() => {
+                    selectOrgan(organ.id);
+                    navigation.navigate('OrganDetails', { organId: organ.id });
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name={organ.icon as any}
+                    size={18}
+                    color={organ.accentColor}
+                  />
+                  <Text style={styles.bookmarkChipText}>{organ.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
+
         {/* Featured Organ Spotlight */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Featured Organ Spotlight</Text>
           <TouchableOpacity
             onPress={() => {
               selectOrgan(featuredOrgan.id);
-              navigation.navigate('OrganDetails', { organId: featuredOrgan.id });
+              navigation.navigate('OrganDetails', {
+                organId: featuredOrgan.id,
+              });
             }}
           >
-            <Text style={styles.seeAllText}>Read More</Text>
+            <Text style={styles.seeAllText}>Details</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -139,7 +234,12 @@ export const HomeScreen: React.FC = () => {
             navigation.navigate('OrganDetails', { organId: featuredOrgan.id });
           }}
         >
-          <View style={[styles.featuredIcon, { backgroundColor: `${featuredOrgan.accentColor}18` }]}>
+          <View
+            style={[
+              styles.featuredIcon,
+              { backgroundColor: `${featuredOrgan.accentColor}18` },
+            ]}
+          >
             <MaterialCommunityIcons
               name={featuredOrgan.icon as any}
               size={32}
@@ -149,20 +249,28 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.featuredInfo}>
             <View style={styles.featuredRow}>
               <Text style={styles.featuredName}>{featuredOrgan.name}</Text>
-              <Text style={styles.featuredSystem}>{featuredOrgan.systemName}</Text>
+              <Text style={styles.featuredSystem}>
+                {featuredOrgan.systemName}
+              </Text>
             </View>
             <Text style={styles.featuredSnippet} numberOfLines={2}>
               {featuredOrgan.function}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={theme.colors.textMuted}
+          />
         </TouchableOpacity>
 
         {/* Body Systems Section */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Human Body Systems</Text>
           <TouchableOpacity onPress={() => navigation.navigate('SystemsTab')}>
-            <Text style={styles.seeAllText}>View All ({BODY_SYSTEMS.length})</Text>
+            <Text style={styles.seeAllText}>
+              View All ({BODY_SYSTEMS.length})
+            </Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -180,7 +288,12 @@ export const HomeScreen: React.FC = () => {
                 navigation.navigate('SystemsTab');
               }}
             >
-              <View style={[styles.systemIconCircle, { backgroundColor: `${system.color}15` }]}>
+              <View
+                style={[
+                  styles.systemIconCircle,
+                  { backgroundColor: `${system.color}15` },
+                ]}
+              >
                 <MaterialCommunityIcons
                   name={system.icon as any}
                   size={24}
@@ -191,7 +304,9 @@ export const HomeScreen: React.FC = () => {
                 {system.name}
               </Text>
               <Text style={styles.systemOrgansCount}>
-                {system.organIds.length > 0 ? `${system.organIds.length} Key Organs` : 'Framework'}
+                {system.organIds.length > 0
+                  ? `${system.organIds.length} Key Organs`
+                  : '3D Layer'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -205,16 +320,26 @@ export const HomeScreen: React.FC = () => {
         >
           <View style={styles.quizCalloutLeft}>
             <View style={styles.quizIconWrap}>
-              <MaterialCommunityIcons name="help-circle-outline" size={26} color="#FFFFFF" />
+              <MaterialCommunityIcons
+                name="help-circle-outline"
+                size={26}
+                color="#FFFFFF"
+              />
             </View>
             <View style={{ flex: 1, marginLeft: theme.spacing.md }}>
-              <Text style={styles.quizCalloutTitle}>Test Your Anatomy Knowledge</Text>
+              <Text style={styles.quizCalloutTitle}>
+                Test Your Anatomy Knowledge
+              </Text>
               <Text style={styles.quizCalloutSubtitle}>
-                Instant questions, explanations, and progress metrics.
+                Multiple-choice questions with clinical explanations.
               </Text>
             </View>
           </View>
-          <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
+          <Ionicons
+            name="arrow-forward"
+            size={20}
+            color={theme.colors.primary}
+          />
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -274,7 +399,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
     marginBottom: theme.spacing.lg,
     ...theme.shadows.hover,
   },
@@ -323,7 +448,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
     marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
@@ -338,6 +463,62 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     marginBottom: theme.spacing.lg,
+  },
+  continueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.cardBorder,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  continueIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  continueInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  continueTag: {
+    ...theme.typography.small,
+    color: theme.colors.primary,
+    marginBottom: 2,
+  },
+  continueTitle: {
+    ...theme.typography.bodyMedium,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  continueSummary: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  bookmarkChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.cardBorder,
+    marginRight: 8,
+    gap: 6,
+  },
+  bookmarkChipText: {
+    ...theme.typography.caption,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
   featuredCard: {
     flexDirection: 'row',

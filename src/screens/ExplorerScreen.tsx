@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,7 +14,8 @@ import { theme } from '../theme';
 import { ORGANS, BODY_SYSTEMS } from '../data/anatomyData';
 import { useAnatomyStore, CameraPreset } from '../state/useAnatomyStore';
 import { SystemBadge } from '../components/SystemBadge';
-import { RootStackParamList, TabParamList, BodySystemId } from '../types';
+import { Anatomy3DViewport } from '../three/Anatomy3DViewport';
+import { RootStackParamList, TabParamList } from '../types';
 
 type ExplorerRouteProp = RouteProp<TabParamList, 'ExplorerTab'>;
 type ExplorerNavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -35,8 +36,11 @@ export const ExplorerScreen: React.FC = () => {
   } = useAnatomyStore();
 
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [showBodyShell, setShowBodyShell] = useState<boolean>(true);
+  const [showSkeletal, setShowSkeletal] = useState<boolean>(true);
+  const [showMuscular, setShowMuscular] = useState<boolean>(false);
+  const [animatePhysiology, setAnimatePhysiology] = useState<boolean>(true);
 
-  // If passed from params, select target organ or system
   React.useEffect(() => {
     if (route.params?.targetOrganId) {
       selectOrgan(route.params.targetOrganId);
@@ -55,7 +59,11 @@ export const ExplorerScreen: React.FC = () => {
   const activeOrgan = ORGANS.find((o) => o.id === selectedOrganId) || ORGANS[0];
   const bookmarked = isBookmarked(activeOrgan.id);
 
-  const cameraAngles: { label: string; preset: CameraPreset; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
+  const cameraAngles: {
+    label: string;
+    preset: CameraPreset;
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  }[] = [
     { label: 'Front', preset: 'front', icon: 'human' },
     { label: 'Side', preset: 'side', icon: 'human-male' },
     { label: 'Back', preset: 'back', icon: 'human-child' },
@@ -63,14 +71,19 @@ export const ExplorerScreen: React.FC = () => {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Top Bar with System Filter Selector */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>3D Anatomy Explorer</Text>
-          <View style={styles.zoomBadge}>
-            <Text style={styles.zoomText}>Zoom: {zoomLevel}%</Text>
+          <Text style={styles.headerTitle}>3D Human Body Explorer</Text>
+          <View style={styles.meshBadge}>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: activeOrgan.accentColor },
+              ]}
+            />
+            <Text style={styles.meshBadgeText}>{activeOrgan.meshName}</Text>
           </View>
         </View>
 
@@ -124,9 +137,22 @@ export const ExplorerScreen: React.FC = () => {
         </ScrollView>
       </View>
 
-      {/* Main 3D Viewport Staging Area */}
+      {/* Main 3D Viewport Area */}
       <View style={styles.viewport}>
-        {/* Viewport Overlay Controls (Camera Angles & Zoom) */}
+        {/* Real Interactive Three.js + Expo GL 3D Viewport */}
+        <Anatomy3DViewport
+          selectedOrganId={selectedOrganId}
+          selectedSystemId={selectedSystemId}
+          cameraPreset={cameraPreset}
+          zoomLevel={zoomLevel}
+          showBodyShell={showBodyShell}
+          showSkeletal={showSkeletal}
+          showMuscular={showMuscular}
+          animatePhysiology={animatePhysiology}
+          onSelectOrgan={(organId) => selectOrgan(organId)}
+        />
+
+        {/* Left Overlay: Camera Angle Presets */}
         <View style={styles.viewportControlsLeft}>
           {cameraAngles.map((cam) => {
             const isActive = cameraPreset === cam.preset;
@@ -141,7 +167,7 @@ export const ExplorerScreen: React.FC = () => {
               >
                 <MaterialCommunityIcons
                   name={cam.icon as any}
-                  size={18}
+                  size={16}
                   color={isActive ? '#FFFFFF' : theme.colors.textSecondary}
                 />
                 <Text
@@ -157,16 +183,17 @@ export const ExplorerScreen: React.FC = () => {
           })}
         </View>
 
+        {/* Right Overlay: Zoom & Reset Controls */}
         <View style={styles.viewportControlsRight}>
           <TouchableOpacity
             style={styles.zoomBtn}
-            onPress={() => setZoomLevel((z) => Math.min(z + 10, 180))}
+            onPress={() => setZoomLevel((z) => Math.min(z + 15, 180))}
           >
             <Ionicons name="add" size={20} color={theme.colors.textPrimary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.zoomBtn}
-            onPress={() => setZoomLevel((z) => Math.max(z - 10, 50))}
+            onPress={() => setZoomLevel((z) => Math.max(z - 15, 60))}
           >
             <Ionicons name="remove" size={20} color={theme.colors.textPrimary} />
           </TouchableOpacity>
@@ -181,81 +208,142 @@ export const ExplorerScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* 3D Staging Canvas & Active Mesh Focus */}
-        <View style={styles.canvasContainer}>
-          <View style={styles.gridBackground}>
-            <View style={styles.gridCircleOuter} />
-            <View style={styles.gridCircleInner} />
-          </View>
-
-          {/* Model representation with active mesh focus */}
-          <View style={styles.modelPlaceholderBox}>
-            <View
+        {/* Bottom-of-Viewport Layer Visibility Toggles */}
+        <View style={styles.layerBar}>
+          <TouchableOpacity
+            style={[
+              styles.layerToggle,
+              showBodyShell && styles.layerToggleActive,
+            ]}
+            onPress={() => setShowBodyShell((v) => !v)}
+          >
+            <MaterialCommunityIcons
+              name="human-handsdown"
+              size={14}
+              color={showBodyShell ? theme.colors.primary : theme.colors.textMuted}
+            />
+            <Text
               style={[
-                styles.highlightGazeRing,
-                { borderColor: activeOrgan.accentColor },
+                styles.layerToggleText,
+                showBodyShell && styles.layerToggleTextActive,
               ]}
             >
-              <MaterialCommunityIcons
-                name={activeOrgan.icon as any}
-                size={64}
-                color={activeOrgan.accentColor}
-              />
-            </View>
-            <View style={styles.meshTag}>
-              <View style={[styles.statusDot, { backgroundColor: activeOrgan.accentColor }]} />
-              <Text style={styles.meshNameText}>Selected: {activeOrgan.meshName}</Text>
-            </View>
-            <Text style={styles.viewAngleHint}>
-              Perspective: {cameraPreset.toUpperCase()} • Scale: {(zoomLevel / 100).toFixed(1)}x
+              Body Outline
             </Text>
-            <Text style={styles.gestureHint}>
-              Phase 1 Staging • Drag to rotate 360° • Pinch to zoom
-            </Text>
-          </View>
-        </View>
+          </TouchableOpacity>
 
-        {/* Quick Horizontal Organ Selector Carousel */}
-        <View style={styles.organSelectorBar}>
-          <Text style={styles.organSelectorTitle}>Selectable Organs ({visibleOrgans.length})</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.organChipsScroll}
+          <TouchableOpacity
+            style={[
+              styles.layerToggle,
+              showSkeletal && styles.layerToggleActive,
+            ]}
+            onPress={() => setShowSkeletal((v) => !v)}
           >
-            {visibleOrgans.map((organ) => {
-              const isSelected = selectedOrganId === organ.id;
-              return (
-                <TouchableOpacity
-                  key={organ.id}
+            <MaterialCommunityIcons
+              name="bone"
+              size={14}
+              color={showSkeletal ? theme.colors.primary : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.layerToggleText,
+                showSkeletal && styles.layerToggleTextActive,
+              ]}
+            >
+              Skeleton
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.layerToggle,
+              showMuscular && styles.layerToggleActive,
+            ]}
+            onPress={() => setShowMuscular((v) => !v)}
+          >
+            <MaterialCommunityIcons
+              name="arm-flex-outline"
+              size={14}
+              color={showMuscular ? theme.colors.primary : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.layerToggleText,
+                showMuscular && styles.layerToggleTextActive,
+              ]}
+            >
+              Muscles
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.layerToggle,
+              animatePhysiology && styles.layerToggleActive,
+            ]}
+            onPress={() => setAnimatePhysiology((v) => !v)}
+          >
+            <MaterialCommunityIcons
+              name="heart-pulse"
+              size={14}
+              color={
+                animatePhysiology ? theme.colors.danger : theme.colors.textMuted
+              }
+            />
+            <Text
+              style={[
+                styles.layerToggleText,
+                animatePhysiology && styles.layerToggleTextActive,
+              ]}
+            >
+              Live Pulse
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Quick Horizontal Organ Selector Carousel */}
+      <View style={styles.organSelectorBar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.organChipsScroll}
+        >
+          {visibleOrgans.map((organ) => {
+            const isSelected = selectedOrganId === organ.id;
+            return (
+              <TouchableOpacity
+                key={organ.id}
+                style={[
+                  styles.organChip,
+                  isSelected && {
+                    borderColor: organ.accentColor,
+                    backgroundColor: `${organ.accentColor}18`,
+                  },
+                ]}
+                onPress={() => selectOrgan(organ.id)}
+              >
+                <MaterialCommunityIcons
+                  name={organ.icon as any}
+                  size={15}
+                  color={organ.accentColor}
+                  style={{ marginRight: 5 }}
+                />
+                <Text
                   style={[
-                    styles.organChip,
+                    styles.organChipText,
                     isSelected && {
-                      borderColor: organ.accentColor,
-                      backgroundColor: `${organ.accentColor}18`,
+                      color: organ.accentColor,
+                      fontWeight: '700',
                     },
                   ]}
-                  onPress={() => selectOrgan(organ.id)}
                 >
-                  <MaterialCommunityIcons
-                    name={organ.icon as any}
-                    size={16}
-                    color={organ.accentColor}
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text
-                    style={[
-                      styles.organChipText,
-                      isSelected && { color: organ.accentColor, fontWeight: '700' },
-                    ]}
-                  >
-                    {organ.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+                  {organ.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* Selected Organ Information Bottom Drawer */}
@@ -288,9 +376,13 @@ export const ExplorerScreen: React.FC = () => {
         <View style={styles.drawerActions}>
           <TouchableOpacity
             style={styles.exploreMoreBtn}
-            onPress={() => navigation.navigate('OrganDetails', { organId: activeOrgan.id })}
+            onPress={() =>
+              navigation.navigate('OrganDetails', { organId: activeOrgan.id })
+            }
           >
-            <Text style={styles.exploreMoreText}>View Deep Anatomy & Facts</Text>
+            <Text style={styles.exploreMoreText}>
+              View Complete Organ Details & Facts
+            </Text>
             <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -306,7 +398,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: theme.colors.surface,
-    paddingTop: theme.spacing.sm,
+    paddingTop: theme.spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.cardBorder,
   },
@@ -315,47 +407,55 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   headerTitle: {
-    ...theme.typography.h2,
+    ...theme.typography.h3,
     color: theme.colors.textPrimary,
   },
-  zoomBadge: {
+  meshBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.colors.surfaceSubtle,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.sm,
+    paddingVertical: 3,
+    borderRadius: theme.borderRadius.full,
   },
-  zoomText: {
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    marginRight: 5,
+  },
+  meshBadgeText: {
     ...theme.typography.small,
     color: theme.colors.textSecondary,
+    fontFamily: 'monospace',
   },
   filterScroll: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
+    paddingBottom: theme.spacing.xs,
   },
   filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
     borderRadius: theme.borderRadius.full,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: theme.colors.cardBorder,
-    marginRight: 8,
+    marginRight: 6,
   },
   filterPillActive: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
   filterPillText: {
-    ...theme.typography.caption,
+    ...theme.typography.small,
     color: theme.colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   filterPillTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   viewport: {
     flex: 1,
@@ -364,11 +464,11 @@ const styles = StyleSheet.create({
   },
   viewportControlsLeft: {
     position: 'absolute',
-    top: theme.spacing.md,
-    left: theme.spacing.md,
+    top: theme.spacing.sm,
+    left: theme.spacing.sm,
     zIndex: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.sm,
     padding: 4,
     borderWidth: 1,
     borderColor: theme.colors.cardBorder,
@@ -377,9 +477,9 @@ const styles = StyleSheet.create({
   viewControlBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: theme.borderRadius.sm,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     marginBottom: 2,
   },
   viewControlBtnActive: {
@@ -388,21 +488,20 @@ const styles = StyleSheet.create({
   viewControlText: {
     ...theme.typography.small,
     color: theme.colors.textSecondary,
-    marginLeft: 6,
+    marginLeft: 5,
   },
   viewControlTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   viewportControlsRight: {
     position: 'absolute',
-    top: theme.spacing.md,
-    right: theme.spacing.md,
+    top: theme.spacing.sm,
+    right: theme.spacing.sm,
     zIndex: 10,
   },
   zoomBtn: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: theme.borderRadius.sm,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderWidth: 1,
@@ -412,109 +511,58 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     ...theme.shadows.card,
   },
-  canvasContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gridBackground: {
+  layerBar: {
     position: 'absolute',
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
+    bottom: 8,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
     justifyContent: 'center',
+    gap: 6,
+    zIndex: 10,
   },
-  gridCircleOuter: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
-  },
-  gridCircleInner: {
-    position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  modelPlaceholderBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.lg,
-  },
-  highlightGazeRing: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.hover,
-  },
-  meshTag: {
+  layerToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: theme.borderRadius.full,
     borderWidth: 1,
     borderColor: theme.colors.cardBorder,
-    marginBottom: 6,
+    gap: 4,
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
+  layerToggleActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: '#E0F2FE',
   },
-  meshNameText: {
-    ...theme.typography.small,
-    color: theme.colors.textPrimary,
-    fontFamily: 'monospace',
-  },
-  viewAngleHint: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  gestureHint: {
-    ...theme.typography.small,
+  layerToggleText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: theme.colors.textMuted,
+  },
+  layerToggleTextActive: {
+    color: theme.colors.primaryDark,
   },
   organSelectorBar: {
     backgroundColor: theme.colors.surface,
-    paddingVertical: theme.spacing.xs,
     borderTopWidth: 1,
     borderTopColor: theme.colors.cardBorder,
   },
-  organSelectorTitle: {
-    ...theme.typography.small,
-    color: theme.colors.textMuted,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: 4,
-  },
   organChipsScroll: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 7,
   },
   organChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
     borderRadius: theme.borderRadius.full,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: theme.colors.cardBorder,
-    marginRight: 8,
+    marginRight: 7,
   },
   organChipText: {
     ...theme.typography.caption,
@@ -523,7 +571,7 @@ const styles = StyleSheet.create({
   bottomDrawer: {
     backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderTopWidth: 1,
     borderTopColor: theme.colors.cardBorder,
     ...theme.shadows.hover,
@@ -532,7 +580,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   drawerTitleRow: {
     flexDirection: 'row',
@@ -540,17 +588,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   drawerOrganName: {
-    ...theme.typography.h2,
+    ...theme.typography.h3,
     color: theme.colors.textPrimary,
   },
   drawerBookmark: {
-    padding: 4,
+    padding: 2,
   },
   drawerFunction: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: theme.spacing.md,
+    lineHeight: 17,
+    marginBottom: theme.spacing.sm,
   },
   drawerActions: {
     flexDirection: 'row',
@@ -561,13 +609,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.primary,
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderRadius: theme.borderRadius.sm,
   },
   exploreMoreText: {
-    ...theme.typography.bodyMedium,
+    ...theme.typography.caption,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
     marginRight: 6,
   },
 });
