@@ -132,6 +132,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const isMountedRef = useRef<boolean>(true);
   const rafIdRef = useRef<number | null>(null);
   const sceneGraphRef = useRef<AnatomySceneGraph | null>(null);
+  const pedestalGroupRef = useRef<THREE.Group | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
@@ -193,11 +194,12 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     if (mode === 'isolate' && selId && graph) {
       const rec = graph.organRecords.get(selId);
       if (rec) {
-        // World offset includes rootGroup.position.y (-0.58)
+        // World offset includes rootGroup.position.y (-0.58), shifted slightly so organ sits above bottom card
         targetOrbitRef.current.lookX = rec.focusCenter.x;
-        targetOrbitRef.current.lookY = rec.focusCenter.y - 0.58;
+        targetOrbitRef.current.lookY =
+          rec.focusCenter.y - 0.58 - rec.focusRadius * 0.06;
         targetOrbitRef.current.lookZ = rec.focusCenter.z;
-        targetOrbitRef.current.radius = (rec.focusRadius * 1.18) / scale;
+        targetOrbitRef.current.radius = (rec.focusRadius * 1.12) / scale;
         return;
       }
     }
@@ -224,12 +226,20 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     } = stateRef.current;
 
     if (mode === 'isolate' && activeOrganId) {
-      // Isolated 3D Organ Macro View (like Image 4)
+      // Isolated 3D Organ Macro View — show ONLY the selected organ, hide ALL surroundings!
       graph.bodyShellGroup.visible = false;
       graph.vascularGroup.visible = false;
-      graph.systemGroups.forEach((group) => {
-        group.visible = true;
+      if (pedestalGroupRef.current) {
+        pedestalGroupRef.current.visible = false;
+      }
+
+      const targetRecord = graph.organRecords.get(activeOrganId);
+
+      // Hide skeletal, muscular, and all other system groups; only keep the target organ's parent systemGroup visible
+      graph.systemGroups.forEach((group, sysId) => {
+        group.visible = targetRecord ? sysId === targetRecord.systemId : false;
       });
+
       graph.organRecords.forEach((record) => {
         const isTarget = record.organId === activeOrganId;
         record.group.visible = isTarget;
@@ -246,6 +256,9 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       });
     } else {
       // Full Body 3D View (like Image 1 & Image 3)
+      if (pedestalGroupRef.current) {
+        pedestalGroupRef.current.visible = true;
+      }
       graph.setShellMode(activeShellMode);
       graph.vascularGroup.visible =
         vascularVisible &&
@@ -493,7 +506,10 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         rimLight.position.set(0, 3.5, -4.5);
         scene.add(rimLight);
 
-        // Subtle Holographic Medical Pedestal Rings at Feet
+        // Subtle Holographic Medical Pedestal Rings at Feet (visible only in Full Body mode)
+        const pedestalGroup = new THREE.Group();
+        pedestalGroupRef.current = pedestalGroup;
+
         const outerRingGeo = new THREE.RingGeometry(0.68, 0.71, 48);
         const outerRingMat = new THREE.MeshBasicMaterial({
           color: 0x0ea5e9,
@@ -504,7 +520,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
         outerRing.rotation.x = Math.PI / 2;
         outerRing.position.set(0, -1.32, 0);
-        scene.add(outerRing);
+        pedestalGroup.add(outerRing);
 
         const innerRingGeo = new THREE.RingGeometry(0.42, 0.44, 48);
         const innerRingMat = new THREE.MeshBasicMaterial({
@@ -516,7 +532,9 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
         innerRing.rotation.x = Math.PI / 2;
         innerRing.position.set(0, -1.32, 0);
-        scene.add(innerRing);
+        pedestalGroup.add(innerRing);
+
+        scene.add(pedestalGroup);
 
         // Build Sculpted 3D Human Anatomy Scene Graph
         const graph = buildAnatomySceneGraph();

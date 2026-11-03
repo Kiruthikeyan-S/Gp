@@ -86,9 +86,8 @@ export const HomeScreen: React.FC = () => {
           style={styles.heroBanner}
           activeOpacity={0.9}
           onPress={() => {
-            selectOrgan('heart');
             selectSystem('all');
-            navigation.navigate('ExplorerTab', { targetOrganId: 'heart' });
+            navigation.navigate('ExplorerTab');
           }}
         >
           <View style={styles.heroContent}>

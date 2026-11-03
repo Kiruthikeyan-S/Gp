@@ -58,9 +58,14 @@ export const ExplorerScreen: React.FC = () => {
   React.useEffect(() => {
     if (route.params?.targetOrganId) {
       selectOrgan(route.params.targetOrganId);
+      setViewMode('isolate');
+      setZoomLevel(100);
+      setIsCardMinimized(false);
     }
     if (route.params?.targetSystemId) {
       selectSystem(route.params.targetSystemId);
+      setViewMode('body');
+      setZoomLevel(100);
     }
   }, [route.params, selectOrgan, selectSystem]);
 
@@ -105,6 +110,8 @@ export const ExplorerScreen: React.FC = () => {
           animatePhysiology={animatePhysiology}
           onSelectOrgan={(organId) => {
             selectOrgan(organId);
+            setViewMode('isolate');
+            setZoomLevel(100);
             setIsCardMinimized(false);
           }}
         />
@@ -423,6 +430,8 @@ export const ExplorerScreen: React.FC = () => {
                       ]}
                       onPress={() => {
                         selectOrgan(organ.id);
+                        setViewMode('isolate');
+                        setZoomLevel(100);
                         setIsCardMinimized(false);
                       }}
                       activeOpacity={0.8}

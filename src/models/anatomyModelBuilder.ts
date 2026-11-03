@@ -560,18 +560,17 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   cerebellumMesh.position.set(0, 1.79, -0.12);
   brainGroup.add(cerebellumMesh);
 
-  // Pons, Medulla Oblongata & Spinal Cord
+  // Pons & Medulla Oblongata (Brainstem)
   const brainstemCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 1.84, -0.02),
-    new THREE.Vector3(0, 1.74, -0.04),
-    new THREE.Vector3(0, 1.56, -0.09),
-    new THREE.Vector3(0, 1.15, -0.12),
+    new THREE.Vector3(0, 1.85, -0.02),
+    new THREE.Vector3(0, 1.76, -0.04),
+    new THREE.Vector3(0, 1.64, -0.07),
   ]);
   const stemGeo = createVariableTubeGeometry(
     brainstemCurve,
-    24,
+    20,
     14,
-    (u) => (u < 0.25 ? 0.048 - u * 0.04 : 0.026),
+    (u) => (u < 0.45 ? 0.052 - u * 0.035 : 0.032 * (1 - (u - 0.45) * 0.4)),
     0xf5d0c8,
     0xb87a74
   );
@@ -583,8 +582,8 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'Mesh_Brain',
     'nervous',
     brainGroup,
-    new THREE.Vector3(0, 1.9, 0),
-    0.95,
+    new THREE.Vector3(0, 1.88, 0.0),
+    0.68,
     organRecords
   );
   nervousGroup.add(brainGroup);
@@ -724,8 +723,8 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'Mesh_Heart',
     'circulatory',
     heartGroup,
-    new THREE.Vector3(0.055, 0.88, 0.09),
-    0.72,
+    new THREE.Vector3(0.04, 0.91, 0.08),
+    0.62,
     organRecords
   );
   circulatoryGroup.add(heartGroup);
@@ -754,7 +753,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'circulatory',
     spleenGroup,
     new THREE.Vector3(0.31, 0.46, -0.03),
-    0.65,
+    0.5,
     organRecords
   );
   circulatoryGroup.add(spleenGroup);

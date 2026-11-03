@@ -90,7 +90,7 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
     `3D Raycaster accurately intersected Mesh_Heart at world pos (${heartWorldPos.x.toFixed(2)}, ${heartWorldPos.y.toFixed(2)}, ${heartWorldPos.z.toFixed(2)})`
   );
 
-  // 5. Verify System Layer Filtering
+  // 5. Verify System Layer Filtering & Single-Organ Isolation for All 10 Organs
   const respGroup = graph.systemGroups.get('respiratory')!;
   const digGroup = graph.systemGroups.get('digestive')!;
   respGroup.visible = true;
@@ -99,6 +99,32 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
     respGroup.visible === true && digGroup.visible === false,
     'Anatomical system layer visibility isolation works properly'
   );
+
+  for (const organ of ORGANS) {
+    const targetRecord = graph.organRecords.get(organ.id)!;
+    graph.bodyShellGroup.visible = false;
+    graph.vascularGroup.visible = false;
+    graph.systemGroups.forEach((group, sysId) => {
+      group.visible = sysId === targetRecord.systemId;
+    });
+    graph.organRecords.forEach((rec) => {
+      rec.group.visible = rec.organId === organ.id;
+    });
+
+    const visibleOrganCount = Array.from(graph.organRecords.values()).filter(
+      (r) => r.group.visible && graph.systemGroups.get(r.systemId)?.visible
+    ).length;
+    const surroundingsHidden =
+      !graph.bodyShellGroup.visible &&
+      !graph.vascularGroup.visible &&
+      !graph.systemGroups.get('skeletal')?.visible &&
+      !graph.systemGroups.get('muscular')?.visible;
+
+    assert(
+      visibleOrganCount === 1 && targetRecord.group.visible && surroundingsHidden,
+      `Isolated 3D mode for "${organ.name}" (${organ.meshName}) shows ONLY this organ and hides all surroundings`
+    );
+  }
 
   // 6. Verify Lessons & Quiz Integrity
   assert(LESSONS.length >= 4, `Loaded ${LESSONS.length} structured anatomy lessons`);
