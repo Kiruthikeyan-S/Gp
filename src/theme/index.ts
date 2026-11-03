@@ -1,0 +1,70 @@
+export const theme = {
+  colors: {
+    background: '#F8FAFC',
+    surface: '#FFFFFF',
+    surfaceSubtle: '#F1F5F9',
+    cardBorder: '#E2E8F0',
+    textPrimary: '#0F172A',
+    textSecondary: '#475569',
+    textMuted: '#94A3B8',
+    primary: '#0284C7', // Medical Sky Blue
+    primaryLight: '#E0F2FE',
+    primaryDark: '#0369A1',
+    accent: '#0D9488', // Teal
+    accentLight: '#CCFBF1',
+    success: '#10B981',
+    successLight: '#D1FAE5',
+    warning: '#F59E0B',
+    warningLight: '#FEF3C7',
+    danger: '#EF4444',
+    dangerLight: '#FEE2E2',
+    // System-specific accents
+    systems: {
+      circulatory: '#DC2626',
+      respiratory: '#0284C7',
+      nervous: '#7C3AED',
+      digestive: '#EA580C',
+      urinary: '#CA8A04',
+      skeletal: '#4B5563',
+      muscular: '#BE185D',
+    },
+  },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 14,
+    lg: 20,
+    xl: 28,
+  },
+  borderRadius: {
+    sm: 8,
+    md: 14,
+    lg: 20,
+    full: 9999,
+  },
+  typography: {
+    h1: { fontSize: 26, fontWeight: '700' as const, lineHeight: 32 },
+    h2: { fontSize: 20, fontWeight: '700' as const, lineHeight: 26 },
+    h3: { fontSize: 17, fontWeight: '600' as const, lineHeight: 22 },
+    body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 21 },
+    bodyMedium: { fontSize: 15, fontWeight: '500' as const, lineHeight: 21 },
+    caption: { fontSize: 13, fontWeight: '400' as const, lineHeight: 18 },
+    small: { fontSize: 11, fontWeight: '600' as const, lineHeight: 14 },
+  },
+  shadows: {
+    card: {
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    hover: {
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      elevation: 4,
+    },
+  },
+};
