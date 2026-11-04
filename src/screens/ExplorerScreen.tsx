@@ -49,7 +49,6 @@ export const ExplorerScreen: React.FC = () => {
   const [selectedSubPartId, setSelectedSubPartId] = useState<string | null>(
     null
   );
-  const [showDiagramLabels, setShowDiagramLabels] = useState<boolean>(true);
   const [shellMode, setShellMode] = useState<ShellMode>('xray');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [showSkeletal, setShowSkeletal] = useState<boolean>(true);
@@ -63,15 +62,15 @@ export const ExplorerScreen: React.FC = () => {
   React.useEffect(() => {
     if (route.params?.targetOrganId) {
       selectOrgan(route.params.targetOrganId);
-      setViewMode('isolate');
       setSelectedSubPartId(null);
+      setViewMode('isolate');
       setZoomLevel(100);
       setIsCardMinimized(false);
     }
     if (route.params?.targetSystemId) {
       selectSystem(route.params.targetSystemId);
-      setViewMode('body');
       setSelectedSubPartId(null);
+      setViewMode('body');
       setZoomLevel(100);
     }
   }, [route.params, selectOrgan, selectSystem]);
@@ -87,8 +86,6 @@ export const ExplorerScreen: React.FC = () => {
 
   const organSubParts: OrganSubPart[] =
     ORGAN_SUB_PARTS[activeOrgan.id] || [];
-  const leftSubParts = organSubParts.filter((sp) => sp.side === 'left');
-  const rightSubParts = organSubParts.filter((sp) => sp.side === 'right');
   const activeSubPart =
     organSubParts.find((sp) => sp.id === selectedSubPartId) || null;
 
@@ -122,10 +119,9 @@ export const ExplorerScreen: React.FC = () => {
           showSkeletal={showSkeletal}
           showMuscular={showMuscular}
           showVascular={showVascular}
-          showPinMarkers={showDiagramLabels}
           animatePhysiology={animatePhysiology}
           onSelectOrgan={(organId) => {
-            if (organId !== activeOrgan.id) {
+            if (organId !== activeOrgan.id || viewMode !== 'isolate') {
               setSelectedSubPartId(null);
             }
             selectOrgan(organId);
@@ -177,6 +173,7 @@ export const ExplorerScreen: React.FC = () => {
                     viewMode === 'body' && styles.modeSegmentBtnActive,
                   ]}
                   onPress={() => {
+                    setSelectedSubPartId(null);
                     setViewMode('body');
                     setZoomLevel(100);
                   }}
@@ -202,6 +199,7 @@ export const ExplorerScreen: React.FC = () => {
                     viewMode === 'isolate' && styles.modeSegmentBtnActive,
                   ]}
                   onPress={() => {
+                    setSelectedSubPartId(null);
                     setViewMode('isolate');
                     setZoomLevel(100);
                   }}
@@ -222,117 +220,14 @@ export const ExplorerScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Hide UI / Toggle Diagram Labels */}
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {viewMode === 'isolate' && (
-                  <TouchableOpacity
-                    style={[
-                      styles.pinsToggleBtn,
-                      showDiagramLabels && styles.pinsToggleBtnActive,
-                    ]}
-                    onPress={() => setShowDiagramLabels((v) => !v)}
-                  >
-                    <MaterialCommunityIcons
-                      name="map-marker-path"
-                      size={15}
-                      color={showDiagramLabels ? '#0B0F19' : '#38BDF8'}
-                    />
-                    <Text
-                      style={[
-                        styles.pinsToggleText,
-                        showDiagramLabels && styles.pinsToggleTextActive,
-                      ]}
-                    >
-                      Labels
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.iconGlassBtn}
-                  onPress={() => setHideInterface(true)}
-                >
-                  <Ionicons name="eye-off-outline" size={18} color="#E2E8F0" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Compact Organ & View Controls Ribbon in Isolate Mode */}
-            {viewMode === 'isolate' && !showSystemsFilter && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.isolateOrganRibbon}
+              {/* Hide UI Button */}
+              <TouchableOpacity
+                style={styles.iconGlassBtn}
+                onPress={() => setHideInterface(true)}
               >
-                <TouchableOpacity
-                  style={styles.isolateCamChip}
-                  onPress={cycleCameraPreset}
-                >
-                  <MaterialCommunityIcons
-                    name="axis-arrow"
-                    size={14}
-                    color="#38BDF8"
-                  />
-                  <Text style={styles.isolateCamChipText}>
-                    {currentCamLabel}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.isolateCamChip,
-                    animatePhysiology && {
-                      borderColor: '#EF4444',
-                      backgroundColor: 'rgba(239, 68, 68, 0.18)',
-                    },
-                  ]}
-                  onPress={() => setAnimatePhysiology((v) => !v)}
-                >
-                  <MaterialCommunityIcons
-                    name="heart-pulse"
-                    size={14}
-                    color={animatePhysiology ? '#F87171' : '#94A3B8'}
-                  />
-                  <Text style={styles.isolateCamChipText}>PULSE</Text>
-                </TouchableOpacity>
-
-                {ORGANS.map((organ) => {
-                  const isSel = activeOrgan.id === organ.id;
-                  return (
-                    <TouchableOpacity
-                      key={organ.id}
-                      style={[
-                        styles.isolateOrganChip,
-                        isSel && {
-                          backgroundColor: organ.accentColor,
-                          borderColor: organ.accentColor,
-                        },
-                      ]}
-                      onPress={() => {
-                        selectOrgan(organ.id);
-                        setSelectedSubPartId(null);
-                        setViewMode('isolate');
-                        setZoomLevel(100);
-                        setIsCardMinimized(false);
-                      }}
-                    >
-                      <MaterialCommunityIcons
-                        name={organ.icon as any}
-                        size={14}
-                        color={isSel ? '#FFFFFF' : organ.accentColor}
-                      />
-                      <Text
-                        style={[
-                          styles.isolateOrganChipText,
-                          isSel && { color: '#FFFFFF', fontWeight: '800' },
-                        ]}
-                      >
-                        {organ.name.split(' ')[0]}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
+                <Ionicons name="eye-off-outline" size={18} color="#E2E8F0" />
+              </TouchableOpacity>
+            </View>
 
             {/* Collapsible Compact System Filter Ribbon */}
             {showSystemsFilter && (
@@ -390,6 +285,26 @@ export const ExplorerScreen: React.FC = () => {
                 })}
               </ScrollView>
             )}
+            {/* Touch-Activated 3D Part Name Callout Badge (Shows ONLY when a part is touched on the 3D model) */}
+            {activeSubPart && (
+              <View style={styles.touchedPartBanner}>
+                <View
+                  style={[
+                    styles.organDot,
+                    { backgroundColor: activeSubPart.color },
+                  ]}
+                />
+                <Text style={styles.touchedPartLabel} numberOfLines={1}>
+                  {activeSubPart.name.toUpperCase()}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setSelectedSubPartId(null)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={17} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         )}
 
@@ -404,134 +319,8 @@ export const ExplorerScreen: React.FC = () => {
           </TouchableOpacity>
         )}
 
-        {/* INTERACTIVE ANATOMICAL DIAGRAM CALLOUT LABELS & POINTER LINES (Isolate 3D Mode) */}
-        {!hideInterface &&
-          viewMode === 'isolate' &&
-          showDiagramLabels &&
-          organSubParts.length > 0 && (
-            <>
-              {/* Left Column Anatomical Part Labels with Right-Pointing Leader Lines */}
-              <View style={styles.leftDiagramColumn} pointerEvents="box-none">
-                {leftSubParts.map((sp) => {
-                  const isSelected = selectedSubPartId === sp.id;
-                  return (
-                    <TouchableOpacity
-                      key={sp.id}
-                      style={styles.diagramCalloutRowLeft}
-                      onPress={() => {
-                        setSelectedSubPartId(isSelected ? null : sp.id);
-                        setIsCardMinimized(false);
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <View
-                        style={[
-                          styles.diagramLabelBox,
-                          isSelected && {
-                            borderColor: '#38BDF8',
-                            backgroundColor: 'rgba(2, 132, 199, 0.36)',
-                          },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.diagramColorDot,
-                            { backgroundColor: sp.color },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.diagramLabelText,
-                            isSelected && styles.diagramLabelTextActive,
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {sp.name}
-                        </Text>
-                      </View>
-                      {/* Pointer Leader Line toward 3D Organ */}
-                      <View
-                        style={[
-                          styles.leaderLineHorizontal,
-                          isSelected && styles.leaderLineActive,
-                        ]}
-                      />
-                      <View
-                        style={[
-                          styles.leaderPinTip,
-                          {
-                            backgroundColor: isSelected ? '#FBBF24' : sp.color,
-                          },
-                        ]}
-                      />
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Right Column Anatomical Part Labels with Left-Pointing Leader Lines */}
-              <View style={styles.rightDiagramColumn} pointerEvents="box-none">
-                {rightSubParts.map((sp) => {
-                  const isSelected = selectedSubPartId === sp.id;
-                  return (
-                    <TouchableOpacity
-                      key={sp.id}
-                      style={styles.diagramCalloutRowRight}
-                      onPress={() => {
-                        setSelectedSubPartId(isSelected ? null : sp.id);
-                        setIsCardMinimized(false);
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      {/* Pointer Leader Line from 3D Organ */}
-                      <View
-                        style={[
-                          styles.leaderPinTip,
-                          {
-                            backgroundColor: isSelected ? '#FBBF24' : sp.color,
-                          },
-                        ]}
-                      />
-                      <View
-                        style={[
-                          styles.leaderLineHorizontal,
-                          isSelected && styles.leaderLineActive,
-                        ]}
-                      />
-                      <View
-                        style={[
-                          styles.diagramLabelBox,
-                          isSelected && {
-                            borderColor: '#38BDF8',
-                            backgroundColor: 'rgba(2, 132, 199, 0.36)',
-                          },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.diagramColorDot,
-                            { backgroundColor: sp.color },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.diagramLabelText,
-                            isSelected && styles.diagramLabelTextActive,
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {sp.name}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </>
-          )}
-
-        {/* LEFT VERTICAL FLOATING TOOL DOCK (Full Body Mode or when Labels hidden) */}
-        {!hideInterface && (viewMode === 'body' || !showDiagramLabels) && (
+        {/* LEFT VERTICAL FLOATING TOOL DOCK (Matching Image 1 & Image 3) */}
+        {!hideInterface && (
           <View style={styles.leftFloatingDock}>
             {/* Camera View Angle Cycler */}
             <TouchableOpacity
@@ -660,8 +449,8 @@ export const ExplorerScreen: React.FC = () => {
           </View>
         )}
 
-        {/* RIGHT VERTICAL ORGAN QUICK-SELECT RAIL (Full Body Mode or when Labels hidden) */}
-        {!hideInterface && (viewMode === 'body' || !showDiagramLabels) && (
+        {/* RIGHT VERTICAL ORGAN QUICK-SELECT RAIL (Matching Image 1) */}
+        {!hideInterface && (
           <View style={styles.rightOrganRailWrapper}>
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -714,7 +503,7 @@ export const ExplorerScreen: React.FC = () => {
           </View>
         )}
 
-        {/* FLOATING ORGAN & SUB-PART INFORMATION CARD */}
+        {/* FLOATING ORGAN INFORMATION CARD (Matching Image 4 MedRoom Callout Hierarchy) */}
         {!hideInterface && (
           <View style={styles.floatingCardWrapper}>
             {isCardMinimized ? (
@@ -768,20 +557,12 @@ export const ExplorerScreen: React.FC = () => {
                       ]}
                     >
                       {activeSubPart
-                        ? `${activeOrgan.name.toUpperCase()} • SELECTED PART`
+                        ? `${activeOrgan.name.toUpperCase()} • HIGHLIGHTED 3D PART`
                         : activeOrgan.systemName.toUpperCase()}
                     </Text>
                   </View>
 
                   <View style={styles.cardTopActions}>
-                    {activeSubPart && (
-                      <TouchableOpacity
-                        style={styles.clearSubPartBtn}
-                        onPress={() => setSelectedSubPartId(null)}
-                      >
-                        <Text style={styles.clearSubPartText}>All Parts</Text>
-                      </TouchableOpacity>
-                    )}
                     <TouchableOpacity
                       style={styles.cardIconAction}
                       onPress={() => toggleBookmark(activeOrgan.id)}
@@ -812,7 +593,7 @@ export const ExplorerScreen: React.FC = () => {
                 </Text>
                 <Text style={styles.cardLocationText} numberOfLines={1}>
                   {activeSubPart
-                    ? `🔬 Tap any part or label on the 3D ${activeOrgan.name} to inspect`
+                    ? `🔬 Part of ${activeOrgan.name} (${activeOrgan.location})`
                     : `📍 ${activeOrgan.location}`}
                 </Text>
                 <Text style={styles.cardFunctionText} numberOfLines={2}>
@@ -820,52 +601,6 @@ export const ExplorerScreen: React.FC = () => {
                     ? activeSubPart.description
                     : activeOrgan.function}
                 </Text>
-
-                {/* Horizontal Quick-Select Strip for All Sub-Parts of the Active Organ */}
-                {organSubParts.length > 0 && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.subPartsChipStrip}
-                  >
-                    {organSubParts.map((sp) => {
-                      const isSel = selectedSubPartId === sp.id;
-                      return (
-                        <TouchableOpacity
-                          key={sp.id}
-                          style={[
-                            styles.subPartChip,
-                            isSel && {
-                              borderColor: '#38BDF8',
-                              backgroundColor: 'rgba(56, 189, 248, 0.24)',
-                            },
-                          ]}
-                          onPress={() => {
-                            setSelectedSubPartId(isSel ? null : sp.id);
-                            if (viewMode !== 'isolate') {
-                              setViewMode('isolate');
-                            }
-                          }}
-                        >
-                          <View
-                            style={[
-                              styles.diagramColorDot,
-                              { backgroundColor: sp.color },
-                            ]}
-                          />
-                          <Text
-                            style={[
-                              styles.subPartChipText,
-                              isSel && { color: '#FFFFFF', fontWeight: '700' },
-                            ]}
-                          >
-                            {sp.name}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                )}
 
                 <View style={styles.cardActionRow}>
                   <TouchableOpacity
@@ -1245,168 +980,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  pinsToggleBtn: {
+  touchedPartBanner: {
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: '#38BDF8',
-    gap: 4,
+    marginTop: 8,
+    gap: 8,
   },
-  pinsToggleBtnActive: {
-    backgroundColor: '#38BDF8',
-  },
-  pinsToggleText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#38BDF8',
-  },
-  pinsToggleTextActive: {
-    color: '#0B0F19',
-  },
-  isolateOrganRibbon: {
-    paddingTop: 8,
-    paddingBottom: 2,
-    gap: 6,
-  },
-  isolateCamChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.4)',
-    marginRight: 5,
-    gap: 4,
-  },
-  isolateCamChipText: {
-    fontSize: 10,
+  touchedPartLabel: {
+    fontSize: 12,
     fontWeight: '800',
-    color: '#E2E8F0',
-  },
-  isolateOrganChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: 'rgba(15, 23, 42, 0.88)',
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.28)',
-    marginRight: 5,
-    gap: 5,
-  },
-  isolateOrganChipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#CBD5E1',
-  },
-  leftDiagramColumn: {
-    position: 'absolute',
-    left: 6,
-    top: 98,
-    bottom: 220,
-    width: 126,
-    zIndex: 16,
-    justifyContent: 'space-around',
-  },
-  rightDiagramColumn: {
-    position: 'absolute',
-    right: 6,
-    top: 98,
-    bottom: 220,
-    width: 126,
-    zIndex: 16,
-    justifyContent: 'space-around',
-  },
-  diagramCalloutRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  diagramCalloutRowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  diagramLabelBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.88)',
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.35)',
-    gap: 5,
-  },
-  diagramColorDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  diagramLabelText: {
-    flex: 1,
-    fontSize: 10,
-    lineHeight: 12,
-    fontWeight: '700',
-    color: '#F1F5F9',
-  },
-  diagramLabelTextActive: {
-    color: '#38BDF8',
-    fontWeight: '800',
-  },
-  leaderLineHorizontal: {
-    width: 16,
-    height: 1.5,
-    backgroundColor: 'rgba(203, 213, 225, 0.78)',
-  },
-  leaderLineActive: {
-    height: 2.5,
-    backgroundColor: '#FBBF24',
-  },
-  leaderPinTip: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  clearSubPartBtn: {
-    backgroundColor: 'rgba(56, 189, 248, 0.18)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.45)',
-  },
-  clearSubPartText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#38BDF8',
-  },
-  subPartsChipStrip: {
-    paddingBottom: 10,
-    gap: 6,
-  },
-  subPartChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 41, 59, 0.88)',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.26)',
-    marginRight: 6,
-    gap: 5,
-  },
-  subPartChipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#CBD5E1',
+    color: '#F8FAFC',
+    letterSpacing: 0.4,
   },
 });

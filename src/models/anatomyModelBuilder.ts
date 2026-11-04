@@ -534,9 +534,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
 
     const hemiMesh = new THREE.Mesh(hemiGeo, brainMat.clone());
     hemiMesh.position.set(side * 0.098, 1.98, 0.02);
-    hemiMesh.userData = {
-      subPartId: side === -1 ? 'frontal_lobe' : 'parietal_lobe',
-    };
     brainGroup.add(hemiMesh);
 
     // Temporal Lobe inferior bulge
@@ -549,7 +546,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const tempMesh = new THREE.Mesh(tempGeo, brainMat.clone());
     tempMesh.position.set(side * 0.13, 1.86, 0.05);
     tempMesh.rotation.x = 0.22;
-    tempMesh.userData = { subPartId: 'temporal_lobe' };
     brainGroup.add(tempMesh);
   });
 
@@ -562,7 +558,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   });
   const cerebellumMesh = new THREE.Mesh(cerebellumGeo, brainMat.clone());
   cerebellumMesh.position.set(0, 1.79, -0.12);
-  cerebellumMesh.userData = { subPartId: 'cerebellum' };
   brainGroup.add(cerebellumMesh);
 
   // Pons & Medulla Oblongata (Brainstem)
@@ -580,7 +575,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xb87a74
   );
   const stemMesh = new THREE.Mesh(stemGeo, brainMat.clone());
-  stemMesh.userData = { subPartId: 'pons_medulla' };
   brainGroup.add(stemMesh);
 
   registerOrganGroup(
@@ -595,12 +589,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   nervousGroup.add(brainGroup);
 
   // =========================================================================
-  // 6. CIRCULATORY SYSTEM: 13-PART 3D CROSS-SECTION HEART (Mesh_Heart)
-  //    Matches the exact labeled anatomical cross-section diagram:
-  //    Superior/Inferior Vena Cava (blue), Pulmonary Artery (blue),
-  //    Aorta with 3 branches (red), Pulmonary Veins (red),
-  //    Pink Cutaway Myocardium & Septum, 4 Burgundy Chambers,
-  //    4 White Cardiac Valves & 3D White Blood-Flow Arrows!
+  // 6. CIRCULATORY SYSTEM: ANATOMICAL HEART & CORONARY VESSELS (Mesh_Heart)
   // =========================================================================
   const circulatoryGroup = systemGroups.get('circulatory')!;
   const heartGroup = new THREE.Group();
@@ -608,400 +597,195 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
 
   const heartMat = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.3,
-    metalness: 0.08,
+    roughness: 0.28,
+    metalness: 0.1,
   });
 
-  const addHeartSubMesh = (
-    geo: THREE.BufferGeometry,
-    subPartId: string,
-    pos?: [number, number, number],
-    rot?: [number, number, number],
-    customMat?: THREE.MeshStandardMaterial
-  ) => {
-    const m = new THREE.Mesh(geo, (customMat || heartMat).clone());
-    m.userData = { subPartId };
-    if (pos) m.position.set(pos[0], pos[1], pos[2]);
-    if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
-    heartGroup.add(m);
-    return m;
-  };
-
-  // A. Sculpted Cutaway Myocardial Wall & Interventricular Septum (Pink-Flesh Anterior Cutaway + Crimson Posterior)
-  const ventGeo = new THREE.SphereGeometry(0.162, 42, 36);
+  // Sculpted Asymmetric Ventricular Myocardium (Tapering apex pointing inferior-left)
+  const ventGeo = new THREE.SphereGeometry(0.155, 36, 32);
   const vPos = ventGeo.attributes.position;
   for (let i = 0; i < vPos.count; i++) {
     let x = vPos.getX(i);
     let y = vPos.getY(i);
     let z = vPos.getZ(i);
+    // Taper toward the cardiac apex at bottom-left-anterior
     if (y < 0) {
-      const taper = 1 + y * 1.95;
-      x = x * Math.max(0.32, taper) + (-y) * 0.22;
-      z = z * Math.max(0.35, taper);
-      y *= 1.28;
+      const taper = 1 + y * 2.1;
+      x = x * Math.max(0.28, taper) + (-y) * 0.24;
+      z = z * Math.max(0.32, taper) + (-y) * 0.14;
+      y *= 1.25;
     } else {
-      y *= 0.88;
-    }
-    // Flatten anterior cutaway plane at z > 0.042 to reveal the 4 internal chambers & septum
-    if (z > 0.042) {
-      z = 0.042 + (z - 0.042) * 0.15;
+      y *= 0.95;
     }
     vPos.setXYZ(i, x, y, z);
   }
   ventGeo.computeVertexNormals();
 
-  applyOrganicVertexShading(ventGeo, 0xf6c4be, 0xc83e3b, (_x, _y, z) => {
-    // Anterior cutaway face (z > 0.03) is soft anatomical pink-flesh (#F6C4BE); posterior is crimson myocardium
-    const isCutawayPlane = z > 0.028;
+  applyOrganicVertexShading(ventGeo, 0xc8232c, 0x6e0d14, (x, y, z) => {
+    // Anterior interventricular sulcus groove + myocardial fiber texture
+    const sulcusDist = Math.abs(x - y * 0.18 + 0.01);
+    const groove = sulcusDist < 0.025 ? -0.006 : 0;
+    const fiber = Math.sin((x + y * 1.4) * 45) * 0.002;
+    const isFatSulcus = sulcusDist < 0.022 && z > 0;
     return {
-      offset: 0,
-      colorMix: isCutawayPlane ? 0.96 : 0.22,
+      offset: groove + fiber,
+      colorMix: isFatSulcus ? 0.95 : 0.45 + 0.45 * Math.cos(x * 18 + y * 14),
     };
   });
-  addHeartSubMesh(ventGeo, 'left_ventricle');
 
-  // B. 4 Deep-Burgundy Hollow Cutaway Chambers (Right Atrium, Right Ventricle, Left Atrium, Left Ventricle)
-  const chamberMat = new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    roughness: 0.42,
-    metalness: 0.04,
-  });
+  const ventMesh = new THREE.Mesh(ventGeo, heartMat.clone());
+  ventMesh.userData = { subPartId: 'left_ventricle' };
+  heartGroup.add(ventMesh);
 
-  // 1. Right Atrium (Upper-Left Cavity)
-  const raChamberGeo = new THREE.SphereGeometry(0.056, 26, 22);
-  raChamberGeo.scale(0.82, 1.18, 0.38);
-  applyOrganicVertexShading(raChamberGeo, 0x802432, 0x470e18);
-  addHeartSubMesh(
-    raChamberGeo,
-    'right_atrium',
-    [-0.102, 0.035, 0.042],
-    [0, 0, 0.12],
-    chamberMat
-  );
+  // Right & Left Atria / Auricles
+  const rAtriumGeo = new THREE.SphereGeometry(0.088, 22, 20);
+  rAtriumGeo.scale(0.85, 1.05, 0.85);
+  applyOrganicVertexShading(rAtriumGeo, 0x991b1b, 0x5c0a0a);
+  const rAtrium = new THREE.Mesh(rAtriumGeo, heartMat.clone());
+  rAtrium.position.set(-0.085, 0.075, 0.01);
+  rAtrium.userData = { subPartId: 'right_atrium' };
+  heartGroup.add(rAtrium);
 
-  // 2. Right Ventricle (Lower-Left Crescent Cavity)
-  const rvChamberGeo = new THREE.SphereGeometry(0.068, 28, 24);
-  rvChamberGeo.scale(0.78, 1.32, 0.38);
-  applyOrganicVertexShading(rvChamberGeo, 0x7a202e, 0x420c16);
-  addHeartSubMesh(
-    rvChamberGeo,
-    'right_ventricle',
-    [-0.042, -0.095, 0.044],
-    [0, 0, -0.22],
-    chamberMat
-  );
+  const lAuricleGeo = new THREE.SphereGeometry(0.068, 20, 18);
+  applyOrganicVertexShading(lAuricleGeo, 0xb91c1c, 0x6b0f12);
+  const lAuricle = new THREE.Mesh(lAuricleGeo, heartMat.clone());
+  lAuricle.position.set(0.095, 0.085, 0.02);
+  lAuricle.userData = { subPartId: 'left_atrium' };
+  heartGroup.add(lAuricle);
 
-  // 3. Left Atrium (Upper-Right Cavity)
-  const laChamberGeo = new THREE.SphereGeometry(0.048, 24, 20);
-  laChamberGeo.scale(0.78, 1.12, 0.38);
-  applyOrganicVertexShading(laChamberGeo, 0x7c2230, 0x440d17);
-  addHeartSubMesh(
-    laChamberGeo,
-    'left_atrium',
-    [0.092, 0.065, 0.038],
-    [0, 0, -0.15],
-    chamberMat
-  );
-
-  // 4. Left Ventricle (Lower-Right Thick-Walled Cavity)
-  const lvChamberGeo = new THREE.SphereGeometry(0.066, 28, 24);
-  lvChamberGeo.scale(0.75, 1.38, 0.38);
-  applyOrganicVertexShading(lvChamberGeo, 0x7a202e, 0x420c16);
-  addHeartSubMesh(
-    lvChamberGeo,
-    'left_ventricle',
-    [0.068, -0.088, 0.044],
-    [0, 0, 0.18],
-    chamberMat
-  );
-
-  // C. Bright Venous-Blue Great Vessels (Superior Vena Cava, Inferior Vena Cava, Pulmonary Artery)
-  // 5. Superior Vena Cava (Vertical blue trunk on upper-left + 2 top branches + right branch)
-  const svcCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.105, 0.08, 0.02),
-    new THREE.Vector3(-0.115, 0.17, 0.015),
-    new THREE.Vector3(-0.128, 0.27, 0.01),
-  ]);
-  const svcGeo = createVariableTubeGeometry(
-    svcCurve,
-    20,
-    16,
-    (u) => 0.032 - u * 0.004,
-    0x0ea5e9,
-    0x0369a1
-  );
-  addHeartSubMesh(svcGeo, 'superior_vena_cava');
-
-  const svcRightBranchCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.11, 0.18, 0.015),
-    new THREE.Vector3(-0.075, 0.255, 0.01),
-  ]);
-  addHeartSubMesh(
-    createVariableTubeGeometry(
-      svcRightBranchCurve,
-      12,
-      12,
-      () => 0.02,
-      0x0ea5e9,
-      0x0369a1
-    ),
-    'superior_vena_cava'
-  );
-
-  const svcSideBranchCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.115, 0.16, 0.0),
-    new THREE.Vector3(-0.19, 0.175, -0.01),
-  ]);
-  addHeartSubMesh(
-    createVariableTubeGeometry(
-      svcSideBranchCurve,
-      10,
-      10,
-      () => 0.02,
-      0x0284c7,
-      0x075985
-    ),
-    'superior_vena_cava'
-  );
-
-  // 6. Inferior Vena Cava (Vertical blue trunk at bottom-left ascending into right atrium)
-  const ivcHeartCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.128, -0.22, -0.01),
-    new THREE.Vector3(-0.122, -0.13, -0.005),
-    new THREE.Vector3(-0.112, -0.04, 0.005),
-  ]);
-  addHeartSubMesh(
-    createVariableTubeGeometry(
-      ivcHeartCurve,
-      16,
-      14,
-      () => 0.026,
-      0x0ea5e9,
-      0x0369a1
-    ),
-    'inferior_vena_cava'
-  );
-
-  // 7. Pulmonary Artery (Blue trunk rising diagonally from Right Ventricle & bifurcating Left/Right)
-  const pulmMainCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.022, 0.02, 0.062),
-    new THREE.Vector3(0.01, 0.095, 0.058),
-    new THREE.Vector3(0.048, 0.155, 0.048),
-    new THREE.Vector3(0.165, 0.19, 0.032),
-  ]);
-  addHeartSubMesh(
-    createVariableTubeGeometry(
-      pulmMainCurve,
-      24,
-      16,
-      (u) => (u < 0.6 ? 0.031 : 0.025),
-      0x0ea5e9,
-      0x0369a1
-    ),
-    'pulmonary_artery'
-  );
-
-  const pulmLeftBranch = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.035, 0.145, 0.05),
-    new THREE.Vector3(0.005, 0.195, 0.04),
-  ]);
-  addHeartSubMesh(
-    createVariableTubeGeometry(
-      pulmLeftBranch,
-      10,
-      12,
-      () => 0.022,
-      0x0ea5e9,
-      0x0369a1
-    ),
-    'pulmonary_artery'
-  );
-
-  // D. Bright Arterial-Red Great Vessels (Aorta with 3 Superior Branches + Left/Right Pulmonary Veins)
-  // 8. Aorta (Large red Aortic Arch + 3 Superior Arterial Branches)
+  // Sculpted Ascending Aorta & Aortic Arch + 3 Superior Arterial Branches
   const aorticArchCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.032, 0.02, 0.045),
-    new THREE.Vector3(0.015, 0.12, 0.025),
-    new THREE.Vector3(-0.005, 0.205, 0.015),
-    new THREE.Vector3(0.035, 0.195, -0.01),
-    new THREE.Vector3(0.055, 0.11, -0.03),
+    new THREE.Vector3(0.01, 0.08, 0.02),
+    new THREE.Vector3(0.0, 0.19, 0.03),
+    new THREE.Vector3(-0.02, 0.24, 0.0),
+    new THREE.Vector3(-0.04, 0.18, -0.06),
+    new THREE.Vector3(-0.03, 0.04, -0.08),
   ]);
-  addHeartSubMesh(
-    createVariableTubeGeometry(
-      aorticArchCurve,
-      28,
-      18,
-      (u) => 0.044 - u * 0.008,
-      0xef4444,
-      0x991b1b
-    ),
-    'aorta'
+  const aortaArchGeo = createVariableTubeGeometry(
+    aorticArchCurve,
+    24,
+    14,
+    (u) => 0.034 - u * 0.005,
+    0xd9383a,
+    0x8c191c
   );
+  const aortaMesh = new THREE.Mesh(aortaArchGeo, heartMat.clone());
+  aortaMesh.userData = { subPartId: 'aorta', keepWithGlb: true };
+  heartGroup.add(aortaMesh);
 
-  // 3 Superior Aortic Arch Branches (Brachiocephalic, Left Common Carotid, Left Subclavian)
-  [
-    { start: [-0.032, 0.21, 0.015], end: [-0.055, 0.305, 0.01] },
-    { start: [0.0, 0.22, 0.01], end: [0.0, 0.315, 0.005] },
-    { start: [0.032, 0.21, 0.005], end: [0.048, 0.305, 0.0] },
-  ].forEach((b) => {
-    const bCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(b.start[0], b.start[1], b.start[2]),
-      new THREE.Vector3(b.end[0], b.end[1], b.end[2]),
+  // 3 Aortic Arch branches (Brachiocephalic, Left Common Carotid, Left Subclavian)
+  [-0.02, 0.0, 0.02].forEach((bx, idx) => {
+    const branchCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(bx, 0.23, 0.01 - idx * 0.015),
+      new THREE.Vector3(bx + (idx - 1) * 0.015, 0.32, 0.0 - idx * 0.015),
     ]);
-    addHeartSubMesh(
-      createVariableTubeGeometry(bCurve, 10, 10, () => 0.014, 0xef4444, 0x991b1b),
-      'aorta'
+    const bGeo = createVariableTubeGeometry(
+      branchCurve,
+      8,
+      8,
+      () => 0.012,
+      0xd9383a,
+      0x8c191c
     );
+    const branchMesh = new THREE.Mesh(bGeo, heartMat.clone());
+    branchMesh.userData = { subPartId: 'aorta', keepWithGlb: true };
+    heartGroup.add(branchMesh);
   });
 
-  // 9. Pulmonary Veins (Pairs of bright-red horizontal vessels on Left & Right entering Left Atrium)
-  [
-    { y: 0.102, side: -1 },
-    { y: 0.062, side: -1 },
-    { y: 0.102, side: 1 },
-    { y: 0.062, side: 1 },
-  ].forEach((pv) => {
-    const pvCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(pv.side * 0.11, pv.y, 0.0),
-      new THREE.Vector3(pv.side * 0.185, pv.y + 0.008, -0.01),
-    ]);
-    addHeartSubMesh(
-      createVariableTubeGeometry(pvCurve, 10, 10, () => 0.015, 0xef4444, 0x991b1b),
-      'pulmonary_vein'
-    );
-  });
+  // Superior Vena Cava & Pulmonary Artery Trunk (Venous Blue-Purple)
+  const svcCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.09, 0.08, 0.0),
+    new THREE.Vector3(-0.095, 0.26, -0.01),
+  ]);
+  const svcGeo = createVariableTubeGeometry(svcCurve, 12, 12, () => 0.025, 0x2563eb, 0x1e3a8a);
+  const svcMesh = new THREE.Mesh(svcGeo, heartMat.clone());
+  svcMesh.userData = { subPartId: 'superior_vena_cava', keepWithGlb: true };
+  heartGroup.add(svcMesh);
 
-  // E. 4 Ivory-White Cardiac Valves (Tricuspid, Pulmonary, Mitral, Aortic)
-  const valveMat = new THREE.MeshStandardMaterial({
-    color: 0xfff1f2,
-    roughness: 0.25,
-    metalness: 0.05,
-  });
+  // Inferior Vena Cava
+  const heartIvcCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.085, -0.14, -0.015),
+    new THREE.Vector3(-0.085, 0.02, -0.005),
+  ]);
+  const heartIvcGeo = createVariableTubeGeometry(heartIvcCurve, 10, 10, () => 0.024, 0x2563eb, 0x1e3a8a);
+  const heartIvcMesh = new THREE.Mesh(heartIvcGeo, heartMat.clone());
+  heartIvcMesh.userData = { subPartId: 'inferior_vena_cava', keepWithGlb: true };
+  heartGroup.add(heartIvcMesh);
 
-  const buildValveCusps = (
-    subPartId: string,
-    center: [number, number, number],
-    rotZ: number
-  ) => {
-    [-0.012, 0.012].forEach((dx, idx) => {
-      const cuspGeo = new THREE.SphereGeometry(0.016, 14, 12);
-      cuspGeo.scale(1.15, 0.42, 0.65);
-      addHeartSubMesh(
-        cuspGeo,
-        subPartId,
-        [center[0] + dx, center[1], center[2]],
-        [0, 0, rotZ + (idx === 0 ? -0.35 : 0.35)],
-        valveMat
-      );
+  const pulmCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.03, 0.07, 0.05),
+    new THREE.Vector3(0.01, 0.16, 0.04),
+    new THREE.Vector3(-0.08, 0.17, 0.01),
+  ]);
+  const pulmGeo = createVariableTubeGeometry(pulmCurve, 14, 12, () => 0.026, 0x4f46e5, 0x312e81);
+  const pulmMesh = new THREE.Mesh(pulmGeo, heartMat.clone());
+  pulmMesh.userData = { subPartId: 'pulmonary_artery', keepWithGlb: true };
+  heartGroup.add(pulmMesh);
+
+  // Pulmonary Veins (Left & Right pairs entering Left Atrium)
+  [-1, 1].forEach((side) => {
+    [-0.016, 0.016].forEach((dy) => {
+      const pvCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.145, 0.09 + dy, -0.02),
+        new THREE.Vector3(side * 0.085, 0.085 + dy * 0.5, 0.0),
+      ]);
+      const pvGeo = createVariableTubeGeometry(pvCurve, 8, 8, () => 0.012, 0xd9383a, 0x8c191c);
+      const pvMesh = new THREE.Mesh(pvGeo, heartMat.clone());
+      pvMesh.userData = { subPartId: 'pulmonary_vein', keepWithGlb: true };
+      heartGroup.add(pvMesh);
     });
-  };
-
-  buildValveCusps('pulmonary_valve', [-0.022, 0.018, 0.072], 0.25);
-  buildValveCusps('tricuspid_valve', [-0.076, -0.024, 0.065], -0.2);
-  buildValveCusps('mitral_valve', [0.082, 0.005, 0.065], 0.2);
-  buildValveCusps('aortic_valve', [0.032, 0.014, 0.068], -0.15);
-
-  // F. 3D White Blood-Flow Directional Arrows inside Chambers & Great Vessels (matching Diagram)
-  const arrowMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xe2e8f0,
-    emissiveIntensity: 0.35,
-    roughness: 0.2,
   });
 
-  const addFlowArrow3D = (points: [number, number, number][], subPartId: string) => {
-    const vecs = points.map((p) => new THREE.Vector3(p[0], p[1], p[2]));
-    const curve = new THREE.CatmullRomCurve3(vecs);
-    const shaftGeo = new THREE.TubeGeometry(curve, 14, 0.0042, 8, false);
-    addHeartSubMesh(shaftGeo, subPartId, undefined, undefined, arrowMat);
+  // 4 Internal Cardiac Valves (Tricuspid, Pulmonary, Mitral, Aortic) + Right Ventricle
+  const rVentGeo = new THREE.SphereGeometry(0.11, 24, 20);
+  rVentGeo.scale(0.78, 1.15, 0.85);
+  applyOrganicVertexShading(rVentGeo, 0xb91c1c, 0x5c0a0a);
+  const rVentMesh = new THREE.Mesh(rVentGeo, heartMat.clone());
+  rVentMesh.position.set(-0.045, -0.035, 0.025);
+  rVentMesh.userData = { subPartId: 'right_ventricle' };
+  heartGroup.add(rVentMesh);
 
-    // Arrowhead cone at tip
-    const tip = vecs[vecs.length - 1];
-    const prev = vecs[vecs.length - 2];
-    const dir = new THREE.Vector3().subVectors(tip, prev).normalize();
-    const coneGeo = new THREE.ConeGeometry(0.01, 0.022, 10);
-    const coneMesh = new THREE.Mesh(coneGeo, arrowMat);
-    coneMesh.position.copy(tip);
-    coneMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-    coneMesh.userData = { subPartId };
-    heartGroup.add(coneMesh);
-  };
+  const valveConfigs: { id: string; pos: [number, number, number] }[] = [
+    { id: 'tricuspid_valve', pos: [-0.065, 0.02, 0.04] },
+    { id: 'pulmonary_valve', pos: [-0.015, 0.055, 0.055] },
+    { id: 'mitral_valve', pos: [0.065, 0.025, 0.04] },
+    { id: 'aortic_valve', pos: [0.018, 0.055, 0.035] },
+  ];
+  valveConfigs.forEach((vc) => {
+    const vGeo = new THREE.TorusGeometry(0.018, 0.006, 10, 18);
+    applyOrganicVertexShading(vGeo, 0xfef2f2, 0xfecdd3);
+    const vMesh = new THREE.Mesh(vGeo, heartMat.clone());
+    vMesh.position.set(vc.pos[0], vc.pos[1], vc.pos[2]);
+    vMesh.userData = { subPartId: vc.id };
+    heartGroup.add(vMesh);
+  });
 
-  // Blood flow arrows matching the reference diagram:
-  // 1. Superior Vena Cava -> Right Atrium (downward)
-  addFlowArrow3D(
-    [
-      [-0.118, 0.21, 0.048],
-      [-0.112, 0.12, 0.052],
-    ],
-    'superior_vena_cava'
+  // Branching 3D Coronary Arteries wrapping the myocardium surface
+  const ladCoronaryCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.02, 0.08, 0.09),
+    new THREE.Vector3(0.03, 0.0, 0.115),
+    new THREE.Vector3(0.05, -0.08, 0.105),
+    new THREE.Vector3(0.07, -0.15, 0.075),
+  ]);
+  const ladGeo = createVariableTubeGeometry(
+    ladCoronaryCurve,
+    16,
+    8,
+    (u) => 0.007 * (1 - u * 0.45),
+    0xef4444,
+    0x991b1b
   );
-  // 2. Inferior Vena Cava -> Right Atrium (upward)
-  addFlowArrow3D(
-    [
-      [-0.125, -0.19, 0.022],
-      [-0.12, -0.11, 0.025],
-    ],
-    'inferior_vena_cava'
-  );
-  // 3. Right Atrium -> Right Ventricle (downward through tricuspid valve)
-  addFlowArrow3D(
-    [
-      [-0.102, 0.06, 0.062],
-      [-0.088, -0.01, 0.065],
-    ],
-    'right_atrium'
-  );
-  // 4. Right Ventricle U-turn upward toward Pulmonary Valve
-  addFlowArrow3D(
-    [
-      [-0.062, -0.09, 0.065],
-      [-0.032, -0.12, 0.066],
-      [-0.025, -0.04, 0.068],
-    ],
-    'right_ventricle'
-  );
-  // 5. Pulmonary Artery upward flow
-  addFlowArrow3D(
-    [
-      [0.0, 0.065, 0.085],
-      [0.042, 0.145, 0.078],
-    ],
-    'pulmonary_artery'
-  );
-  // 6. Left Atrium -> Left Ventricle (downward)
-  addFlowArrow3D(
-    [
-      [0.092, 0.085, 0.06],
-      [0.092, 0.03, 0.064],
-    ],
-    'left_atrium'
-  );
-  // 7. Left Ventricle U-turn upward toward Aortic Valve
-  addFlowArrow3D(
-    [
-      [0.088, -0.05, 0.065],
-      [0.068, -0.095, 0.066],
-      [0.042, -0.035, 0.068],
-    ],
-    'left_ventricle'
-  );
-  // 8. Aortic Arch upward flow
-  addFlowArrow3D(
-    [
-      [-0.012, 0.11, 0.055],
-      [0.005, 0.19, 0.052],
-    ],
-    'aorta'
-  );
+  const ladMesh = new THREE.Mesh(ladGeo, heartMat.clone());
+  ladMesh.userData = { subPartId: 'left_ventricle', keepWithGlb: true };
+  heartGroup.add(ladMesh);
 
   registerOrganGroup(
     'heart',
     'Mesh_Heart',
     'circulatory',
     heartGroup,
-    new THREE.Vector3(0.055, 0.88, 0.09),
-    0.66,
+    new THREE.Vector3(0.04, 0.91, 0.08),
+    0.62,
     organRecords
   );
   circulatoryGroup.add(heartGroup);
@@ -1103,9 +887,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
 
     const lungMesh = new THREE.Mesh(lGeo, lungMat.clone());
     lungMesh.position.set(side * 0.185, 0, 0);
-    lungMesh.userData = {
-      subPartId: isLeft ? 'left_superior_lobe' : 'right_superior_lobe',
-    };
     lungsGroup.add(lungMesh);
   });
 
@@ -1123,9 +904,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xdbeafe,
     0x93c5fd
   );
-  const tracheaMesh = new THREE.Mesh(tracheaGeo, lungMat.clone());
-  tracheaMesh.userData = { subPartId: 'trachea' };
-  lungsGroup.add(tracheaMesh);
+  lungsGroup.add(new THREE.Mesh(tracheaGeo, lungMat.clone()));
 
   registerOrganGroup(
     'lungs',
@@ -1161,7 +940,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const rHepatic = new THREE.Mesh(rHepaticGeo, liverMat.clone());
   rHepatic.position.set(-0.13, 0.52, 0.09);
   rHepatic.rotation.z = 0.24;
-  rHepatic.userData = { subPartId: 'right_hepatic_lobe' };
   liverGroup.add(rHepatic);
 
   const lHepaticGeo = new THREE.SphereGeometry(0.135, 28, 24);
@@ -1170,7 +948,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const lHepatic = new THREE.Mesh(lHepaticGeo, liverMat.clone());
   lHepatic.position.set(0.05, 0.56, 0.11);
   lHepatic.rotation.z = -0.18;
-  lHepatic.userData = { subPartId: 'left_hepatic_lobe' };
   liverGroup.add(lHepatic);
 
   // White Falciform Ligament dividing Right & Left Lobes (like Image 1 & Image 3)
@@ -1187,9 +964,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xf8fafc,
     0xcbd5e1
   );
-  const falciformMesh = new THREE.Mesh(falciformGeo, liverMat.clone());
-  falciformMesh.userData = { subPartId: 'falciform_ligament' };
-  liverGroup.add(falciformMesh);
+  liverGroup.add(new THREE.Mesh(falciformGeo, liverMat.clone()));
 
   // Green Pear-Shaped Gallbladder tucked under Right Lobe
   const gbGeo = new THREE.SphereGeometry(0.042, 18, 16);
@@ -1198,7 +973,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const gbMesh = new THREE.Mesh(gbGeo, liverMat.clone());
   gbMesh.position.set(-0.14, 0.41, 0.14);
   gbMesh.rotation.z = 0.35;
-  gbMesh.userData = { subPartId: 'gallbladder' };
   liverGroup.add(gbMesh);
 
   registerOrganGroup(
@@ -1426,9 +1200,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const kMesh = new THREE.Mesh(kGeo, kidneyMat.clone());
     kMesh.position.set(side * 0.17, yOffset, -0.06);
     kMesh.rotation.z = side * -0.14;
-    kMesh.userData = {
-      subPartId: side === -1 ? 'right_kidney' : 'left_kidney',
-    };
     kidneysGroup.add(kMesh);
 
     // Suprarenal (Adrenal) Gland cap atop each kidney
@@ -1438,7 +1209,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const adrenal = new THREE.Mesh(adrenalGeo, kidneyMat.clone());
     adrenal.position.set(side * 0.155, yOffset + 0.13, -0.06);
     adrenal.rotation.z = side * 0.25;
-    adrenal.userData = { subPartId: 'adrenal_gland' };
     kidneysGroup.add(adrenal);
 
     // Ureter descending from renal pelvis to urinary bladder
@@ -1455,9 +1225,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       0xfef08a,
       0xca8a04
     );
-    const ureterMesh = new THREE.Mesh(ureterGeo, kidneyMat.clone());
-    ureterMesh.userData = { subPartId: 'ureter' };
-    kidneysGroup.add(ureterMesh);
+    kidneysGroup.add(new THREE.Mesh(ureterGeo, kidneyMat.clone()));
   });
 
   // Urinary Bladder at base of pelvis
@@ -1466,7 +1234,6 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   applyOrganicVertexShading(bladderGeo, 0xd97757, 0x8c3b24);
   const bladderMesh = new THREE.Mesh(bladderGeo, kidneyMat.clone());
   bladderMesh.position.set(0, -0.45, 0.07);
-  bladderMesh.userData = { subPartId: 'urinary_bladder' };
   kidneysGroup.add(bladderMesh);
 
   registerOrganGroup(

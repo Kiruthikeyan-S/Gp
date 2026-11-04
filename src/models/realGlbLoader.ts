@@ -541,8 +541,154 @@ async function fetchGlbBuffer(url: string): Promise<ArrayBuffer> {
   return buffer;
 }
 
+function mapNodeNameToSubPart(
+  organId: string,
+  nodeName: string,
+  defaultPrimaryHex: number,
+  defaultSecondaryHex: number
+): { subPartId: string | null; primaryHex: number; secondaryHex: number } {
+  const n = (nodeName || '').toLowerCase();
+
+  if (organId === 'heart') {
+    if (n.includes('mitral_valve')) {
+      return { subPartId: 'mitral_valve', primaryHex: 0xfef2f2, secondaryHex: 0xfecdd3 };
+    }
+    if (n.includes('tricuspid_valve')) {
+      return { subPartId: 'tricuspid_valve', primaryHex: 0xfef2f2, secondaryHex: 0xfecdd3 };
+    }
+    if (n.includes('aortic_valve')) {
+      return { subPartId: 'aortic_valve', primaryHex: 0xfef2f2, secondaryHex: 0xfecdd3 };
+    }
+    if (n.includes('pulmonary_valve')) {
+      return { subPartId: 'pulmonary_valve', primaryHex: 0xfef2f2, secondaryHex: 0xfecdd3 };
+    }
+    if (n.includes('left_cardiac_atrium')) {
+      return { subPartId: 'left_atrium', primaryHex: 0xb91c1c, secondaryHex: 0x6b0f16 };
+    }
+    if (n.includes('right_cardiac_atrium')) {
+      return { subPartId: 'right_atrium', primaryHex: 0x991b1b, secondaryHex: 0x580c12 };
+    }
+    if (n.includes('right_ventricle')) {
+      return { subPartId: 'right_ventricle', primaryHex: 0xc8232c, secondaryHex: 0x6b0f16 };
+    }
+    return { subPartId: 'left_ventricle', primaryHex: 0xd92630, secondaryHex: 0x731018 };
+  }
+
+  if (organId === 'liver') {
+    if (n.includes('caudate')) {
+      return { subPartId: 'caudate_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('porta') || n.includes('ligament') || n.includes('quadrate')) {
+      return { subPartId: 'gallbladder', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('left')) {
+      return { subPartId: 'left_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    return { subPartId: 'right_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
+  if (organId === 'lungs') {
+    if (n.includes('trachea') || n.includes('carina')) {
+      return { subPartId: 'trachea', primaryHex: 0xe2d9f3, secondaryHex: 0x94a3b8 };
+    }
+    if (n.includes('bronch') && !n.includes('segment')) {
+      return { subPartId: 'bronchi', primaryHex: 0xd8b4fe, secondaryHex: 0x7e22ce };
+    }
+    if (n.includes('left')) {
+      if (n.includes('superior') || n.includes('apical') || n.includes('anterior')) {
+        return { subPartId: 'left_upper_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+      }
+      return { subPartId: 'left_lower_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('middle') || n.includes('lateral') || n.includes('medial')) {
+      return { subPartId: 'right_middle_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('superior') || n.includes('apical')) {
+      return { subPartId: 'right_upper_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    return { subPartId: 'right_lower_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
+  if (organId === 'kidneys') {
+    if (n.includes('bladder') || n.includes('trigone') || n.includes('orifice')) {
+      return { subPartId: 'urinary_bladder', primaryHex: 0xd97757, secondaryHex: 0x8c3b24 };
+    }
+    if (n.includes('ureter_l') || n.includes('pelvis_l') || n.includes('calyx_l')) {
+      return { subPartId: 'left_ureter', primaryHex: 0xfde68a, secondaryHex: 0xb45309 };
+    }
+    if (n.includes('ureter_r') || n.includes('pelvis_r') || n.includes('calyx_r')) {
+      return { subPartId: 'right_ureter', primaryHex: 0xfde68a, secondaryHex: 0xb45309 };
+    }
+    if (n.endsWith('_l') || n.includes('_l_')) {
+      return { subPartId: 'left_kidney', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    return { subPartId: 'right_kidney', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
+  if (organId === 'small_intestine') {
+    if (n.includes('duoden') || n.includes('ampulla') || n.includes('papilla')) {
+      return { subPartId: 'duodenum', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('jejunum')) {
+      return { subPartId: 'jejunum', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('terminal')) {
+      return { subPartId: 'ileocecal_junction', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    return { subPartId: 'ileum', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
+  if (organId === 'large_intestine') {
+    if (n.includes('caecum') || n.includes('appendix') || n.includes('ileocecal')) {
+      return { subPartId: 'cecum_appendix', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('ascending') || n.includes('hepatic')) {
+      return { subPartId: 'ascending_colon', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('transverse') || n.includes('splenic')) {
+      return { subPartId: 'transverse_colon', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('descending')) {
+      return { subPartId: 'descending_colon', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('sigmoid')) {
+      return { subPartId: 'sigmoid_colon', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    return { subPartId: 'rectum', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
+  if (organId === 'pancreas') {
+    if (n.includes('head') || n.includes('uncinate')) {
+      return { subPartId: 'pancreatic_head', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('neck')) {
+      return { subPartId: 'pancreatic_neck', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('body')) {
+      return { subPartId: 'pancreatic_body', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    return { subPartId: 'pancreatic_tail', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
+  if (organId === 'spleen') {
+    if (n.includes('diaphragmatic')) {
+      return { subPartId: 'diaphragmatic_surface', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('hilum')) {
+      return { subPartId: 'splenic_hilum', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    if (n.includes('gastric')) {
+      return { subPartId: 'anterior_extremity', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    }
+    return { subPartId: 'posterior_extremity', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
+  return { subPartId: null, primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+}
+
 /**
- * Loads a single real .glb organ specification and replaces its procedural mesh inside the live AnatomySceneGraph.
+ * Loads a single real .glb organ specification and replaces its procedural mesh inside the live AnatomySceneGraph,
+ * preserving sub-part selectability and great vessels.
  */
 export async function loadSingleRealGlbOrgan(
   spec: RealGlbOrganSpec,
@@ -563,97 +709,183 @@ export async function loadSingleRealGlbOrgan(
 
   if (allPrimitives.length === 0 || isCancelled()) return false;
 
-  const mergedGeo = buildMergedOrganGeometry(
+  // Compute unified bounding box across all primitives first so sub-part meshes share the exact coordinate frame
+  const combinedGeo = buildMergedOrganGeometry(
     allPrimitives,
     spec.primaryColorHex,
     spec.secondaryColorHex,
     spec.urls.length > 1
   );
 
-  // Transform geometry into unified human body scene coordinates
-  if (spec.preRotationEuler) {
-    const rotMat = new THREE.Matrix4().makeRotationFromEuler(
-      new THREE.Euler(
-        spec.preRotationEuler[0],
-        spec.preRotationEuler[1],
-        spec.preRotationEuler[2]
+  const rotMat = spec.preRotationEuler
+    ? new THREE.Matrix4().makeRotationFromEuler(
+        new THREE.Euler(
+          spec.preRotationEuler[0],
+          spec.preRotationEuler[1],
+          spec.preRotationEuler[2]
+        )
       )
-    );
-    mergedGeo.applyMatrix4(rotMat);
+    : null;
+
+  if (rotMat) {
+    combinedGeo.applyMatrix4(rotMat);
   }
 
-  mergedGeo.computeBoundingBox();
-  const bbox = mergedGeo.boundingBox!;
+  combinedGeo.computeBoundingBox();
+  const bbox = combinedGeo.boundingBox!;
   const rawCenter = new THREE.Vector3();
   const rawSize = new THREE.Vector3();
   bbox.getCenter(rawCenter);
   bbox.getSize(rawSize);
 
-  let finalCenter = new THREE.Vector3();
+  const finalCenter = new THREE.Vector3();
+  let fitScaleFactor = 1;
 
   if (spec.coordMode === 'vhm') {
-    // Map directly from Visible Human Male metric space -> Scene space
-    mergedGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
-    mergedGeo.translate(0, VHM_Y_OFFSET, 0);
-    mergedGeo.computeBoundingBox();
-    mergedGeo.boundingBox!.getCenter(finalCenter);
-    mergedGeo.boundingBox!.getSize(rawSize);
-    // Center geometry around (0,0,0) so group.position holds the exact anatomical center
-    mergedGeo.translate(-finalCenter.x, -finalCenter.y, -finalCenter.z);
+    combinedGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
+    combinedGeo.translate(0, VHM_Y_OFFSET, 0);
+    combinedGeo.computeBoundingBox();
+    combinedGeo.boundingBox!.getCenter(finalCenter);
+    combinedGeo.boundingBox!.getSize(rawSize);
   } else {
-    // Fit standalone Sketchfab / MRI GLB scan into target anatomical bounding box
     const maxDim = Math.max(rawSize.x, rawSize.y, rawSize.z, 0.0001);
-    const scaleFactor = (spec.targetMaxDim || 0.38) / maxDim;
-    mergedGeo.translate(-rawCenter.x, -rawCenter.y, -rawCenter.z);
-    mergedGeo.scale(scaleFactor, scaleFactor, scaleFactor);
-    mergedGeo.computeBoundingBox();
-    mergedGeo.boundingBox!.getSize(rawSize);
+    fitScaleFactor = (spec.targetMaxDim || 0.38) / maxDim;
+    combinedGeo.translate(-rawCenter.x, -rawCenter.y, -rawCenter.z);
+    combinedGeo.scale(fitScaleFactor, fitScaleFactor, fitScaleFactor);
+    combinedGeo.computeBoundingBox();
+    combinedGeo.boundingBox!.getSize(rawSize);
     finalCenter.set(
       spec.targetBoxCenter?.[0] ?? 0,
       spec.targetBoxCenter?.[1] ?? 0.5,
       spec.targetBoxCenter?.[2] ?? 0
     );
   }
+  combinedGeo.dispose();
 
-  const mat = new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    roughness: spec.roughness,
-    metalness: spec.metalness,
+  // Group primitives by anatomical subPartId so each part is an individually highlightable 3D mesh
+  const groupedPrims = new Map<
+    string,
+    {
+      subPartId: string | null;
+      primaryHex: number;
+      secondaryHex: number;
+      prims: ParsedPrimitive[];
+    }
+  >();
+
+  for (const p of allPrimitives) {
+    const mapped = mapNodeNameToSubPart(
+      spec.organId,
+      p.nodeName,
+      spec.primaryColorHex,
+      spec.secondaryColorHex
+    );
+    const key = mapped.subPartId || '__main__';
+    const existing = groupedPrims.get(key);
+    if (existing) {
+      existing.prims.push(p);
+    } else {
+      groupedPrims.set(key, {
+        subPartId: mapped.subPartId,
+        primaryHex: mapped.primaryHex,
+        secondaryHex: mapped.secondaryHex,
+        prims: [p],
+      });
+    }
+  }
+
+  // Keep any complementary vessel meshes marked keepWithGlb (e.g., Aortic Arch, Vena Cava, Pulmonary Artery on Heart)
+  const oldGroupPos = record.group.position.clone();
+  const keptVesselMeshes: THREE.Mesh[] = [];
+  const toRemove: THREE.Object3D[] = [];
+
+  record.group.children.forEach((child) => {
+    if ((child as THREE.Mesh).isMesh && child.userData?.keepWithGlb) {
+      keptVesselMeshes.push(child as THREE.Mesh);
+    } else {
+      toRemove.push(child);
+    }
   });
 
-  const realMesh = new THREE.Mesh(mergedGeo, mat);
-  realMesh.name = record.meshName;
-  realMesh.userData = {
-    organId: record.organId,
-    meshName: record.meshName,
-    systemId: record.systemId,
-    isRealGlbScan: true,
-  };
-
-  // Dispose old procedural meshes in this organ group and swap in the real GLB mesh
-  while (record.group.children.length > 0) {
-    const child = record.group.children[0];
+  for (const child of toRemove) {
     record.group.remove(child);
     if ((child as THREE.Mesh).isMesh) {
-      const m = child as THREE.Mesh;
-      m.geometry?.dispose();
+      (child as THREE.Mesh).geometry?.dispose();
+    }
+  }
+
+  // Shift kept vessel meshes so they remain at their exact anatomical position relative to the new group center
+  const posDelta = oldGroupPos.sub(finalCenter);
+  record.meshes.length = 0;
+  record.originalMaterials.clear();
+
+  for (const vesselMesh of keptVesselMeshes) {
+    vesselMesh.position.add(posDelta);
+    record.meshes.push(vesselMesh);
+    if (vesselMesh.material instanceof THREE.MeshStandardMaterial) {
+      record.originalMaterials.set(vesselMesh, vesselMesh.material.clone());
     }
   }
 
   record.group.position.copy(finalCenter);
   record.group.rotation.set(0, 0, 0);
   record.group.scale.setScalar(1);
-  record.group.add(realMesh);
 
-  record.meshes.length = 0;
-  record.meshes.push(realMesh);
+  for (const [, bucket] of groupedPrims) {
+    const subGeo = buildMergedOrganGeometry(
+      bucket.prims,
+      bucket.primaryHex,
+      bucket.secondaryHex,
+      spec.urls.length > 1
+    );
 
-  record.originalMaterials.clear();
-  record.originalMaterials.set(realMesh, mat.clone());
+    if (rotMat) {
+      subGeo.applyMatrix4(rotMat);
+    }
 
-  record.focusCenter.copy(finalCenter);
-  const maxOrganSpan = Math.max(rawSize.x, rawSize.y, rawSize.z);
-  record.focusRadius = Math.max(0.52, Math.min(1.25, maxOrganSpan * 1.45));
+    if (spec.coordMode === 'vhm') {
+      subGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
+      subGeo.translate(0, VHM_Y_OFFSET, 0);
+      subGeo.translate(-finalCenter.x, -finalCenter.y, -finalCenter.z);
+    } else {
+      subGeo.translate(-rawCenter.x, -rawCenter.y, -rawCenter.z);
+      subGeo.scale(fitScaleFactor, fitScaleFactor, fitScaleFactor);
+    }
+
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: spec.roughness,
+      metalness: spec.metalness,
+    });
+
+    const subMesh = new THREE.Mesh(subGeo, mat);
+    subMesh.name = bucket.subPartId
+      ? `${record.meshName}_${bucket.subPartId}`
+      : record.meshName;
+    subMesh.userData = {
+      organId: record.organId,
+      meshName: record.meshName,
+      systemId: record.systemId,
+      subPartId: bucket.subPartId,
+      isRealGlbScan: true,
+    };
+
+    record.group.add(subMesh);
+    record.meshes.push(subMesh);
+    record.originalMaterials.set(subMesh, mat.clone());
+  }
+
+  // Compute accurate focusCenter & focusRadius across the complete organ group (including vessels)
+  record.group.updateMatrixWorld(true);
+  const fullBox = new THREE.Box3().setFromObject(record.group);
+  const fullSize = new THREE.Vector3();
+  const fullCenter = new THREE.Vector3();
+  fullBox.getSize(fullSize);
+  fullBox.getCenter(fullCenter);
+
+  record.focusCenter.copy(fullCenter);
+  const maxOrganSpan = Math.max(fullSize.x, fullSize.y, fullSize.z);
+  record.focusRadius = Math.max(0.62, Math.min(1.18, maxOrganSpan * 1.48));
 
   return true;
 }
