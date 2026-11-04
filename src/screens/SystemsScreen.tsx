@@ -14,10 +14,8 @@ import {
 } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { theme } from '../theme';
 import { BODY_SYSTEMS, ORGANS } from '../data/anatomyData';
 import { useAnatomyStore } from '../state/useAnatomyStore';
-import { OrganCard } from '../components/OrganCard';
 import { RootStackParamList, TabParamList, BodySystemId } from '../types';
 
 type SystemsNavProp = CompositeNavigationProp<
@@ -29,11 +27,8 @@ export const SystemsScreen: React.FC = () => {
   const navigation = useNavigation<SystemsNavProp>();
   const {
     selectedSystemId,
-    selectedOrganId,
     selectSystem,
     selectOrgan,
-    toggleBookmark,
-    isBookmarked,
   } = useAnatomyStore();
 
   const [catalogMode, setCatalogMode] = useState<'systems' | 'organs'>(
@@ -49,15 +44,26 @@ export const SystemsScreen: React.FC = () => {
     navigation.navigate('ExplorerTab', { targetSystemId: systemId });
   };
 
+  const handleOrganPress = (organId: string) => {
+    selectOrgan(organId);
+    navigation.navigate('ExplorerTab', { targetOrganId: organId });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Header Bar */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Anatomical Atlas</Text>
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.headerTitle}>Anatomical Catalog</Text>
+          <View style={styles.headerBadge}>
+            <Text style={styles.headerBadgeText}>Atlas</Text>
+          </View>
+        </View>
         <Text style={styles.headerSubtitle}>
-          Explore physiological systems or inspect individual 3D organs.
+          Select a system or individual organ to inspect in 3D
         </Text>
 
-        {/* Segmented Mode Switcher (Systems vs Organs — inspired by Reference Image 2) */}
+        {/* Clean Segmented Switcher */}
         <View style={styles.segmentRow}>
           <TouchableOpacity
             style={[
@@ -65,30 +71,43 @@ export const SystemsScreen: React.FC = () => {
               catalogMode === 'systems' && styles.segmentPillActive,
             ]}
             onPress={() => setCatalogMode('systems')}
+            activeOpacity={0.8}
           >
+            <MaterialCommunityIcons
+              name="human-male-height"
+              size={16}
+              color={catalogMode === 'systems' ? '#0B0F19' : '#94A3B8'}
+            />
             <Text
               style={[
                 styles.segmentText,
                 catalogMode === 'systems' && styles.segmentTextActive,
               ]}
             >
-              Body Systems ({BODY_SYSTEMS.length})
+              Systems ({BODY_SYSTEMS.length})
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[
               styles.segmentPill,
               catalogMode === 'organs' && styles.segmentPillActive,
             ]}
             onPress={() => setCatalogMode('organs')}
+            activeOpacity={0.8}
           >
+            <MaterialCommunityIcons
+              name="cube-scan"
+              size={15}
+              color={catalogMode === 'organs' ? '#0B0F19' : '#94A3B8'}
+            />
             <Text
               style={[
                 styles.segmentText,
                 catalogMode === 'organs' && styles.segmentTextActive,
               ]}
             >
-              Explore Organs ({ORGANS.length})
+              Organs ({ORGANS.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -119,12 +138,12 @@ export const SystemsScreen: React.FC = () => {
                   <View
                     style={[
                       styles.iconWrap,
-                      { backgroundColor: `${system.color}15` },
+                      { backgroundColor: `${system.color}20` },
                     ]}
                   >
                     <MaterialCommunityIcons
                       name={system.icon as any}
-                      size={26}
+                      size={24}
                       color={system.color}
                     />
                   </View>
@@ -132,85 +151,90 @@ export const SystemsScreen: React.FC = () => {
                     <Text style={styles.systemName}>{system.name}</Text>
                     <Text style={styles.organCount}>
                       {systemOrgans.length > 0
-                        ? `${systemOrgans.length} Key Visceral Organs`
-                        : '3D Structural & Motor Layer'}
+                        ? `${systemOrgans.length} Organs`
+                        : 'Structural Framework'}
                     </Text>
                   </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.view3DBtn,
+                      { backgroundColor: `${system.color}20`, borderColor: `${system.color}40` },
+                    ]}
+                    onPress={() => handleSystemPress(system.id)}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialCommunityIcons name="cube-scan" size={14} color={system.color} />
+                    <Text style={[styles.view3DBtnText, { color: system.color }]}>3D View</Text>
+                  </TouchableOpacity>
                 </View>
 
                 <Text style={styles.description}>{system.description}</Text>
 
                 {systemOrgans.length > 0 && (
-                  <View style={styles.organsContainer}>
-                    <Text style={styles.organsLabel}>
-                      Core Anatomical Structures:
-                    </Text>
-                    <View style={styles.organsChipsWrap}>
-                      {systemOrgans.map((organ) => (
-                        <TouchableOpacity
-                          key={organ.id}
-                          style={[
-                            styles.organChip,
-                            {
-                              borderColor: `${system.color}40`,
-                              backgroundColor: `${system.color}10`,
-                            },
-                          ]}
-                          onPress={() => {
-                            selectOrgan(organ.id);
-                            navigation.navigate('OrganDetails', {
-                              organId: organ.id,
-                            });
-                          }}
-                        >
-                          <MaterialCommunityIcons
-                            name={organ.icon as any}
-                            size={14}
-                            color={system.color}
-                            style={{ marginRight: 4 }}
-                          />
-                          <Text
-                            style={[
-                              styles.organChipText,
-                              { color: system.color },
-                            ]}
-                          >
-                            {organ.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                  <View style={styles.organsChipsWrap}>
+                    {systemOrgans.map((organ) => (
+                      <TouchableOpacity
+                        key={organ.id}
+                        style={[
+                          styles.organChip,
+                          {
+                            borderColor: `${system.color}35`,
+                            backgroundColor: `${system.color}15`,
+                          },
+                        ]}
+                        onPress={() => handleOrganPress(organ.id)}
+                        activeOpacity={0.8}
+                      >
+                        <MaterialCommunityIcons
+                          name={organ.icon as any}
+                          size={14}
+                          color={system.color}
+                        />
+                        <Text style={[styles.organChipText, { color: system.color }]}>
+                          {organ.name}
+                        </Text>
+                        <Ionicons name="chevron-forward" size={12} color={system.color} />
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 )}
-
-                <TouchableOpacity
-                  style={[styles.exploreBtn, { backgroundColor: system.color }]}
-                  activeOpacity={0.85}
-                  onPress={() => handleSystemPress(system.id)}
-                >
-                  <Text style={styles.exploreBtnText}>
-                    Explore in 3D Viewport
-                  </Text>
-                  <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-                </TouchableOpacity>
               </View>
             );
           })
         ) : (
-          /* Explore Individual Organs Catalog */
-          <View>
+          /* All Organs Grid List */
+          <View style={styles.organsGrid}>
             {ORGANS.map((organ) => (
-              <OrganCard
+              <TouchableOpacity
                 key={organ.id}
-                organ={organ}
-                isSelected={selectedOrganId === organ.id}
-                isBookmarked={isBookmarked(organ.id)}
-                onBookmarkToggle={() => toggleBookmark(organ.id)}
-                onPress={() => {
-                  selectOrgan(organ.id);
-                  navigation.navigate('OrganDetails', { organId: organ.id });
-                }}
-              />
+                style={styles.organListCard}
+                onPress={() => handleOrganPress(organ.id)}
+                activeOpacity={0.85}
+              >
+                <View
+                  style={[
+                    styles.organListIconWrap,
+                    { backgroundColor: `${organ.accentColor}20` },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={organ.icon as any}
+                    size={28}
+                    color={organ.accentColor}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.organListName}>{organ.name}</Text>
+                  <Text style={styles.organListSystem}>{organ.systemName}</Text>
+                  <Text style={styles.organListLocation} numberOfLines={1}>
+                    📍 {organ.location}
+                  </Text>
+                </View>
+                <View style={styles.organListAction}>
+                  <MaterialCommunityIcons name="cube-scan" size={16} color="#38BDF8" />
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -222,136 +246,198 @@ export const SystemsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#0B0F19',
   },
   header: {
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.cardBorder,
+    borderBottomColor: '#1E293B',
+    backgroundColor: '#0F172A',
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    letterSpacing: -0.3,
+  },
+  headerBadge: {
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  headerBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#38BDF8',
+    textTransform: 'uppercase',
   },
   headerSubtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
+    fontSize: 12,
+    color: '#94A3B8',
     marginTop: 2,
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
   segmentRow: {
     flexDirection: 'row',
-    gap: 8,
+    backgroundColor: '#0B0F19',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    gap: 4,
   },
   segmentPill: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+    gap: 6,
   },
   segmentPillActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: '#38BDF8',
   },
   segmentText: {
-    ...theme.typography.caption,
+    fontSize: 12,
     fontWeight: '600',
-    color: theme.colors.textSecondary,
+    color: '#94A3B8',
   },
   segmentTextActive: {
-    color: '#FFFFFF',
+    color: '#0B0F19',
     fontWeight: '700',
   },
   container: {
     flex: 1,
+    backgroundColor: '#0B0F19',
   },
   contentContainer: {
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    padding: 16,
+    gap: 12,
+    paddingBottom: 24,
   },
   systemCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    ...theme.shadows.card,
+    borderColor: '#1E293B',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    gap: 12,
+    marginBottom: 10,
   },
   iconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: theme.borderRadius.sm,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing.md,
   },
   headerTextWrap: {
     flex: 1,
   },
   systemName: {
-    ...theme.typography.h3,
-    color: theme.colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F8FAFC',
   },
   organCount: {
-    ...theme.typography.small,
-    color: theme.colors.textMuted,
-    marginTop: 2,
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 1,
+  },
+  view3DBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  view3DBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   description: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: theme.spacing.md,
-  },
-  organsContainer: {
-    marginBottom: theme.spacing.md,
-  },
-  organsLabel: {
-    ...theme.typography.small,
-    color: theme.colors.textMuted,
-    marginBottom: 6,
-    textTransform: 'uppercase',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#94A3B8',
+    marginBottom: 12,
   },
   organsChipsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
   },
   organChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.full,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
   },
   organChipText: {
-    ...theme.typography.small,
+    fontSize: 11,
     fontWeight: '600',
   },
-  exploreBtn: {
+  organsGrid: {
+    gap: 10,
+  },
+  organListCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: theme.borderRadius.sm,
+    backgroundColor: '#0F172A',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    gap: 12,
   },
-  exploreBtnText: {
-    ...theme.typography.bodyMedium,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    marginRight: 6,
+  organListIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  organListName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  organListSystem: {
+    fontSize: 11,
+    color: '#38BDF8',
+    marginTop: 1,
+  },
+  organListLocation: {
+    fontSize: 10,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  organListAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingLeft: 6,
   },
 });

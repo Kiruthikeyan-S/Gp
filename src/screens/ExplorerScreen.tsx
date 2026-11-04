@@ -215,7 +215,7 @@ export const ExplorerScreen: React.FC = () => {
                       viewMode === 'isolate' && styles.modeSegmentTextActive,
                     ]}
                   >
-                    Isolate 3D
+                    Solo 3D
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -612,13 +612,13 @@ export const ExplorerScreen: React.FC = () => {
                   >
                     <MaterialCommunityIcons
                       name={
-                        viewMode === 'body' ? 'cube-scan' : 'human-handsdown'
+                        viewMode === 'body' ? 'cube-scan' : 'human-male-height'
                       }
                       size={16}
                       color="#38BDF8"
                     />
                     <Text style={styles.secondaryActionText}>
-                      {viewMode === 'body' ? 'Isolate 3D' : 'Full Body'}
+                      {viewMode === 'body' ? 'Solo 3D' : 'Full Body'}
                     </Text>
                   </TouchableOpacity>
 
@@ -634,7 +634,7 @@ export const ExplorerScreen: React.FC = () => {
                     }
                   >
                     <Text style={styles.primaryActionText}>
-                      Anatomical Guide
+                      Organ Details
                     </Text>
                     <Ionicons
                       name="arrow-forward"

@@ -404,39 +404,161 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   skeletalGroup.add(sacrumMesh);
 
   // =========================================================================
-  // 3. MUSCULAR SYSTEM (Sculpted Pectorals, Deltoids, Rectus Abdominis)
+  // 3. ANATOMICALLY SCULPTED MUSCULAR SYSTEM
   // =========================================================================
   const muscularGroup = systemGroups.get('muscular')!;
   const muscleMat = new THREE.MeshStandardMaterial({
-    color: 0x9f1239,
-    roughness: 0.48,
-    metalness: 0.05,
+    vertexColors: true,
+    roughness: 0.38,
+    metalness: 0.1,
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.72,
+    depthWrite: false,
+    side: THREE.DoubleSide,
   });
 
+  // 1. Pectoralis Major (Contoured fan-shaped chest muscle sheets hugging ribcage)
   [-1, 1].forEach((side) => {
-    const pecGeo = new THREE.SphereGeometry(0.21, 20, 20);
-    pecGeo.scale(1.15, 0.78, 0.35);
-    const pec = new THREE.Mesh(pecGeo, muscleMat);
-    pec.position.set(side * 0.19, 1.02, 0.22);
-    pec.rotation.z = side * -0.15;
-    muscularGroup.add(pec);
+    const pecGeo = new THREE.PlaneGeometry(0.38, 0.32, 18, 16);
+    const pPos = pecGeo.attributes.position;
+    for (let i = 0; i < pPos.count; i++) {
+      const u = pPos.getX(i); // -0.19 to 0.19
+      const v = pPos.getY(i); // -0.16 to 0.16
+      const uNorm = (u + 0.19) / 0.38;
+      const vNorm = (v + 0.16) / 0.32;
 
-    const deltGeo = new THREE.SphereGeometry(0.15, 18, 18);
-    deltGeo.scale(0.82, 1.35, 0.85);
-    const delt = new THREE.Mesh(deltGeo, muscleMat);
-    delt.position.set(side * 0.54, 1.12, 0);
-    muscularGroup.add(delt);
-
-    // Six-pack Rectus Abdominis segments
-    for (let a = 0; a < 4; a++) {
-      const abGeo = new THREE.SphereGeometry(0.075, 14, 14);
-      abGeo.scale(0.95, 0.85, 0.35);
-      const ab = new THREE.Mesh(abGeo, muscleMat);
-      ab.position.set(side * 0.075, 0.38 - a * 0.14, 0.22);
-      muscularGroup.add(ab);
+      const x = side * (0.05 + uNorm * 0.44);
+      const y = 1.0 + vNorm * 0.28 - uNorm * 0.08;
+      const zBarrel = Math.sqrt(Math.max(0, 0.42 * 0.42 - (x * 0.85) * (x * 0.85))) * 0.58;
+      const bellyThickness = Math.sin(uNorm * Math.PI) * Math.sin(vNorm * Math.PI) * 0.038;
+      const z = zBarrel + 0.03 + bellyThickness;
+      pPos.setXYZ(i, x, y, z);
     }
+    pecGeo.computeVertexNormals();
+    applyOrganicVertexShading(pecGeo, 0x9f1239, 0x4c0519, (x, y) => {
+      const striation = Math.sin(x * 35 + y * 28) * 0.003;
+      return { offset: striation, colorMix: 0.55 + 0.35 * Math.sin(x * 25 + y * 20) };
+    });
+    const pecMesh = new THREE.Mesh(pecGeo, muscleMat.clone());
+    muscularGroup.add(pecMesh);
+  });
+
+  // 2. Rectus Abdominis (Continuous anatomical contoured abdominal wall with Linea Alba & Tendinous Inscriptions)
+  const absGeo = new THREE.PlaneGeometry(0.32, 0.82, 24, 36);
+  const aPos = absGeo.attributes.position;
+  for (let i = 0; i < aPos.count; i++) {
+    const u = aPos.getX(i); // -0.16 to 0.16
+    const v = aPos.getY(i); // -0.41 to 0.41 (bottom to top)
+    const y = 0.24 + v * 0.95; // from ~ -0.15 to ~ 0.63
+
+    const arch = Math.cos(v * 2.8) * 0.06;
+    const xArch = (1 - (u / 0.16) * (u / 0.16)) * 0.045;
+
+    // Tendinous intersections (horizontal anatomical grooves across rectus abdominis)
+    const t1 = Math.exp(-Math.pow(y - 0.52, 2) * 550);
+    const t2 = Math.exp(-Math.pow(y - 0.34, 2) * 550);
+    const t3 = Math.exp(-Math.pow(y - 0.16, 2) * 550);
+    const t4 = Math.exp(-Math.pow(y - -0.02, 2) * 550);
+    const tendinousGroove = (t1 + t2 + t3 + t4) * 0.016;
+
+    // Linea alba (medial vertical cleft)
+    const lineaAlba = Math.exp(-Math.pow(u * 38, 2)) * 0.022;
+
+    const z = 0.19 + arch + xArch - tendinousGroove - lineaAlba;
+    aPos.setXYZ(i, u * 0.92, y, z);
+  }
+  absGeo.computeVertexNormals();
+  applyOrganicVertexShading(absGeo, 0x9f1239, 0x58081f, (_x, y) => {
+    const fiber = Math.sin(y * 45) * 0.002;
+    return { offset: fiber, colorMix: 0.5 + 0.4 * Math.sin(y * 22) };
+  });
+  const absMesh = new THREE.Mesh(absGeo, muscleMat.clone());
+  muscularGroup.add(absMesh);
+
+  // 3. External Obliques (Flanking lateral abdominal walls)
+  [-1, 1].forEach((side) => {
+    const obGeo = new THREE.PlaneGeometry(0.24, 0.62, 16, 22);
+    const oPos = obGeo.attributes.position;
+    for (let i = 0; i < oPos.count; i++) {
+      const u = oPos.getX(i); // -0.12 to 0.12
+      const v = oPos.getY(i); // -0.31 to 0.31
+      const uNorm = (u + 0.12) / 0.24;
+      const vNorm = (v + 0.31) / 0.62;
+
+      const x = side * (0.14 + uNorm * 0.19);
+      const y = 0.22 + vNorm * 0.55;
+      const z = (1 - uNorm) * 0.2 + uNorm * 0.02;
+      oPos.setXYZ(i, x, y, z);
+    }
+    obGeo.computeVertexNormals();
+    applyOrganicVertexShading(obGeo, 0x881337, 0x4c0519, (x, y) => {
+      const diagonalFiber = Math.sin((x * side + y) * 35) * 0.003;
+      return { offset: diagonalFiber, colorMix: 0.5 + 0.35 * Math.sin((x + y) * 20) };
+    });
+    const obMesh = new THREE.Mesh(obGeo, muscleMat.clone());
+    muscularGroup.add(obMesh);
+  });
+
+  // 4. Deltoids (Shoulder caps wrapping acromion and upper humerus)
+  [-1, 1].forEach((side) => {
+    const deltGeo = new THREE.SphereGeometry(0.14, 20, 20);
+    deltGeo.scale(0.85, 1.45, 0.95);
+    const dPos = deltGeo.attributes.position;
+    for (let i = 0; i < dPos.count; i++) {
+      let x = dPos.getX(i);
+      const y = dPos.getY(i);
+      const z = dPos.getZ(i);
+      if (side * x < 0) x *= 0.55;
+      dPos.setXYZ(i, x, y, z);
+    }
+    deltGeo.computeVertexNormals();
+    applyOrganicVertexShading(deltGeo, 0x9f1239, 0x4c0519);
+    const deltMesh = new THREE.Mesh(deltGeo, muscleMat.clone());
+    deltMesh.position.set(side * 0.52, 1.15, 0.02);
+    deltMesh.rotation.z = side * -0.18;
+    muscularGroup.add(deltMesh);
+  });
+
+  // 5. Trapezius & Sternocleidomastoid (Neck stabilizers connecting cervical spine to clavicle)
+  [-1, 1].forEach((side) => {
+    const scmCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.12, 1.58, -0.04),
+      new THREE.Vector3(side * 0.09, 1.42, 0.08),
+      new THREE.Vector3(side * 0.05, 1.28, 0.18),
+    ]);
+    const scmGeo = createVariableTubeGeometry(scmCurve, 12, 8, () => 0.016, 0x9f1239, 0x4c0519);
+    const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
+    muscularGroup.add(scmMesh);
+
+    const trapCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.04, 1.55, -0.1),
+      new THREE.Vector3(side * 0.22, 1.38, -0.06),
+      new THREE.Vector3(side * 0.42, 1.25, -0.02),
+    ]);
+    const trapGeo = createVariableTubeGeometry(
+      trapCurve,
+      14,
+      8,
+      (u) => 0.024 * (1 - u * 0.3),
+      0x881337,
+      0x4c0519
+    );
+    const trapMesh = new THREE.Mesh(trapGeo, muscleMat.clone());
+    muscularGroup.add(trapMesh);
+  });
+
+  // 6. Serratus Anterior (Ribcage lateral muscular slips)
+  [-1, 1].forEach((side) => {
+    [0.82, 0.72, 0.62, 0.52].forEach((sy, sIdx) => {
+      const sCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.28, sy, 0.12 - sIdx * 0.02),
+        new THREE.Vector3(side * 0.36, sy - 0.04, 0.04 - sIdx * 0.02),
+        new THREE.Vector3(side * 0.39, sy - 0.08, -0.06),
+      ]);
+      const sGeo = createVariableTubeGeometry(sCurve, 8, 6, () => 0.012, 0x9f1239, 0x4c0519);
+      const sMesh = new THREE.Mesh(sGeo, muscleMat.clone());
+      muscularGroup.add(sMesh);
+    });
   });
 
   // =========================================================================

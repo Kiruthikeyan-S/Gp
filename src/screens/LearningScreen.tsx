@@ -9,122 +9,84 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { theme } from '../theme';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { LESSONS, ORGANS } from '../data/anatomyData';
 import { useAnatomyStore } from '../state/useAnatomyStore';
-import { SystemBadge } from '../components/SystemBadge';
-import { Lesson, RootStackParamList } from '../types';
-
-type LearningNavProp = NativeStackNavigationProp<RootStackParamList>;
+import { Lesson, TabParamList } from '../types';
 
 export const LearningScreen: React.FC = () => {
-  const navigation = useNavigation<LearningNavProp>();
+  const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
   const {
     completedLessonIds,
-    bookmarkedOrganIds,
     toggleLessonCompleted,
     isLessonCompleted,
-    toggleBookmark,
-    isBookmarked,
     selectOrgan,
   } = useAnatomyStore();
 
-  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(
-    LESSONS[0]
+  const [expandedLessonId, setExpandedLessonId] = useState<string | null>(
+    LESSONS[0].id
   );
-  const [filterTab, setFilterTab] = useState<
-    'all' | 'completed' | 'in_progress' | 'bookmarked'
-  >('all');
+  const [activeSystemFilter, setActiveSystemFilter] = useState<string>('all');
 
   const filteredLessons = LESSONS.filter((lesson) => {
-    const isCompleted = isLessonCompleted(lesson.id);
-    if (filterTab === 'completed') return isCompleted;
-    if (filterTab === 'in_progress') return !isCompleted;
-    if (filterTab === 'bookmarked')
-      return bookmarkedOrganIds.includes(lesson.organId);
-    return true;
+    if (activeSystemFilter === 'all') return true;
+    return lesson.systemId === activeSystemFilter;
   });
+
+  const handleInspectIn3D = (organId: string) => {
+    selectOrgan(organId);
+    navigation.navigate('ExplorerTab', { targetOrganId: organId });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Header Bar */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Anatomy Lessons</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>Anatomy Lessons</Text>
+          <View style={styles.completedBadge}>
+            <Text style={styles.completedBadgeText}>
+              {completedLessonIds.length}/{LESSONS.length} Complete
+            </Text>
+          </View>
+        </View>
         <Text style={styles.headerSubtitle}>
-          Concise, high-yield physiological explanations verified against
-          medical references.
+          Concise medical explanations and clinical physiology
         </Text>
 
-        {/* Tab Filters */}
+        {/* Clean System Filter Tabs */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabBar}
+          contentContainerStyle={styles.filterScroll}
         >
-          <TouchableOpacity
-            style={[
-              styles.tabItem,
-              filterTab === 'all' && styles.tabItemActive,
-            ]}
-            onPress={() => setFilterTab('all')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                filterTab === 'all' && styles.tabTextActive,
-              ]}
-            >
-              All ({LESSONS.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabItem,
-              filterTab === 'in_progress' && styles.tabItemActive,
-            ]}
-            onPress={() => setFilterTab('in_progress')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                filterTab === 'in_progress' && styles.tabTextActive,
-              ]}
-            >
-              In Progress ({LESSONS.length - completedLessonIds.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabItem,
-              filterTab === 'completed' && styles.tabItemActive,
-            ]}
-            onPress={() => setFilterTab('completed')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                filterTab === 'completed' && styles.tabTextActive,
-              ]}
-            >
-              Completed ({completedLessonIds.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabItem,
-              filterTab === 'bookmarked' && styles.tabItemActive,
-            ]}
-            onPress={() => setFilterTab('bookmarked')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                filterTab === 'bookmarked' && styles.tabTextActive,
-              ]}
-            >
-              Bookmarked
-            </Text>
-          </TouchableOpacity>
+          {['all', 'circulatory', 'respiratory', 'nervous', 'digestive'].map(
+            (sys) => {
+              const isActive = activeSystemFilter === sys;
+              return (
+                <TouchableOpacity
+                  key={sys}
+                  style={[
+                    styles.filterChip,
+                    isActive && styles.filterChipActive,
+                  ]}
+                  onPress={() => setActiveSystemFilter(sys)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      isActive && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {sys === 'all'
+                      ? 'All'
+                      : sys.charAt(0).toUpperCase() + sys.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }
+          )}
         </ScrollView>
       </View>
 
@@ -133,168 +95,157 @@ export const LearningScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {filteredLessons.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Ionicons
-              name="book-outline"
-              size={36}
-              color={theme.colors.textMuted}
-            />
-            <Text style={styles.emptyText}>
-              No lessons match the selected filter yet.
-            </Text>
-          </View>
-        ) : (
-          filteredLessons.map((lesson) => {
-            const completed = isLessonCompleted(lesson.id);
-            const organ = ORGANS.find((o) => o.id === lesson.organId);
-            const organBookmarked = isBookmarked(lesson.organId);
-            const isExpanded = selectedLesson?.id === lesson.id;
+        {filteredLessons.map((lesson) => {
+          const isCompleted = isLessonCompleted(lesson.id);
+          const isExpanded = expandedLessonId === lesson.id;
+          const organ = ORGANS.find((o) => o.id === lesson.organId);
 
-            return (
-              <View
-                key={lesson.id}
-                style={[
-                  styles.lessonCard,
-                  completed && styles.lessonCardCompleted,
-                ]}
+          return (
+            <View
+              key={lesson.id}
+              style={[
+                styles.lessonCard,
+                isCompleted && styles.lessonCardCompleted,
+              ]}
+            >
+              <TouchableOpacity
+                style={styles.lessonCardHeader}
+                activeOpacity={0.85}
+                onPress={() =>
+                  setExpandedLessonId(isExpanded ? null : lesson.id)
+                }
               >
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    setSelectedLesson(isExpanded ? null : lesson)
-                  }
-                >
-                  <View style={styles.cardTop}>
-                    <View style={styles.badgeRow}>
-                      <SystemBadge systemId={lesson.systemId} size="sm" />
-                      <View style={styles.readTimeBadge}>
-                        <Ionicons
-                          name="time-outline"
-                          size={13}
-                          color={theme.colors.textMuted}
-                        />
-                        <Text style={styles.readTimeText}>
-                          {lesson.readTimeMinutes} min read
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.topRightIcons}>
-                      <TouchableOpacity
-                        style={styles.iconBtn}
-                        onPress={() => toggleBookmark(lesson.organId)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <MaterialCommunityIcons
-                          name={
-                            organBookmarked ? 'bookmark' : 'bookmark-outline'
-                          }
-                          size={22}
-                          color={
-                            organBookmarked
-                              ? theme.colors.warning
-                              : theme.colors.textMuted
-                          }
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.iconBtn}
-                        onPress={() => toggleLessonCompleted(lesson.id)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons
-                          name={
-                            completed ? 'checkmark-circle' : 'ellipse-outline'
-                          }
-                          size={24}
-                          color={
-                            completed
-                              ? theme.colors.success
-                              : theme.colors.textMuted
-                          }
-                        />
-                      </TouchableOpacity>
-                    </View>
+                <View style={styles.lessonMetaRow}>
+                  <View
+                    style={[
+                      styles.systemTag,
+                      {
+                        backgroundColor: organ
+                          ? `${organ.accentColor}20`
+                          : '#1E293B',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.systemTagDot,
+                        {
+                          backgroundColor: organ
+                            ? organ.accentColor
+                            : '#38BDF8',
+                        },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.systemTagText,
+                        {
+                          color: organ ? organ.accentColor : '#38BDF8',
+                        },
+                      ]}
+                    >
+                      {lesson.systemId.toUpperCase()}
+                    </Text>
                   </View>
 
-                  <Text style={styles.lessonTitle}>{lesson.title}</Text>
-                  <Text style={styles.lessonSummary}>{lesson.summary}</Text>
-                </TouchableOpacity>
+                  <View style={styles.readTimeRow}>
+                    <Ionicons name="time-outline" size={13} color="#94A3B8" />
+                    <Text style={styles.readTimeText}>
+                      {lesson.readTimeMinutes} min read
+                    </Text>
+                  </View>
 
-                {/* Expanded Lesson Reader */}
-                {isExpanded && (
-                  <View style={styles.expandedContent}>
-                    <View style={styles.divider} />
-                    {lesson.sections.map((sec, idx) => (
-                      <View key={idx} style={styles.sectionBlock}>
-                        <Text style={styles.sectionHeading}>{sec.heading}</Text>
-                        <Text style={styles.sectionBody}>{sec.body}</Text>
-                      </View>
-                    ))}
+                  <TouchableOpacity
+                    style={styles.checkAction}
+                    onPress={() => toggleLessonCompleted(lesson.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name={
+                        isCompleted
+                          ? 'checkmark-circle'
+                          : 'ellipse-outline'
+                      }
+                      size={20}
+                      color={isCompleted ? '#10B981' : '#64748B'}
+                    />
+                  </TouchableOpacity>
+                </View>
 
-                    <View style={styles.lessonFooterActions}>
-                      {organ && (
-                        <TouchableOpacity
-                          style={styles.inspectOrganBtn}
-                          onPress={() => {
-                            selectOrgan(organ.id);
-                            navigation.navigate('OrganDetails', {
-                              organId: organ.id,
-                            });
-                          }}
-                        >
-                          <MaterialCommunityIcons
-                            name={organ.icon as any}
-                            size={18}
-                            color={theme.colors.primary}
-                          />
-                          <Text style={styles.inspectOrganText}>
-                            {organ.name} Details
+                <Text style={styles.lessonTitle}>{lesson.title}</Text>
+                <Text style={styles.lessonSummary} numberOfLines={isExpanded ? undefined : 2}>
+                  {lesson.summary}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Expanded Lesson Content */}
+              {isExpanded && (
+                <View style={styles.expandedContent}>
+                  {lesson.sections.map((sec, sIdx) => (
+                    <View key={sIdx} style={styles.sectionBlock}>
+                      <View style={styles.sectionHeadingRow}>
+                        <View style={styles.sectionNumberBadge}>
+                          <Text style={styles.sectionNumberText}>
+                            {sIdx + 1}
                           </Text>
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity
-                        style={[
-                          styles.toggleDoneBtn,
-                          completed && styles.toggleDoneBtnActive,
-                        ]}
-                        onPress={() => toggleLessonCompleted(lesson.id)}
-                      >
-                        <Text
-                          style={[
-                            styles.toggleDoneText,
-                            completed && styles.toggleDoneTextActive,
-                          ]}
-                        >
-                          {completed
-                            ? 'Completed ✓'
-                            : 'Mark Lesson Complete'}
+                        </View>
+                        <Text style={styles.sectionHeading}>
+                          {sec.heading}
                         </Text>
-                      </TouchableOpacity>
+                      </View>
+                      <Text style={styles.sectionBody}>{sec.body}</Text>
                     </View>
-                  </View>
-                )}
+                  ))}
 
-                {/* Expand/Collapse Bar Indicator */}
-                <TouchableOpacity
-                  style={styles.expandBar}
-                  onPress={() =>
-                    setSelectedLesson(isExpanded ? null : lesson)
-                  }
-                >
-                  <Text style={styles.expandBarText}>
-                    {isExpanded ? 'Collapse Lesson' : 'Read Full Lesson'}
-                  </Text>
-                  <Ionicons
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                    color={theme.colors.primary}
-                  />
-                </TouchableOpacity>
-              </View>
-            );
-          })
-        )}
+                  {/* Actions Row */}
+                  <View style={styles.lessonActionsRow}>
+                    <TouchableOpacity
+                      style={styles.inspect3DBtn}
+                      onPress={() => handleInspectIn3D(lesson.organId)}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name="cube-scan"
+                        size={15}
+                        color="#0B0F19"
+                      />
+                      <Text style={styles.inspect3DBtnText}>
+                        Inspect in 3D Atlas
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.markCompleteBtn,
+                        isCompleted && styles.markCompleteBtnDone,
+                      ]}
+                      onPress={() => toggleLessonCompleted(lesson.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={
+                          isCompleted
+                            ? 'checkmark-circle'
+                            : 'checkmark-outline'
+                        }
+                        size={15}
+                        color={isCompleted ? '#10B981' : '#E2E8F0'}
+                      />
+                      <Text
+                        style={[
+                          styles.markCompleteBtnText,
+                          isCompleted && { color: '#10B981' },
+                        ]}
+                      >
+                        {isCompleted ? 'Completed' : 'Mark Done'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -303,199 +254,221 @@ export const LearningScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#0B0F19',
   },
   header: {
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.cardBorder,
+    borderBottomColor: '#1E293B',
+    backgroundColor: '#0F172A',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    letterSpacing: -0.3,
+  },
+  completedBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  completedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#10B981',
   },
   headerSubtitle: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
+    fontSize: 12,
+    color: '#94A3B8',
     marginTop: 2,
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
-  tabBar: {
-    flexDirection: 'row',
+  filterScroll: {
     gap: 8,
-    paddingBottom: theme.spacing.sm,
   },
-  tabItem: {
+  filterChip: {
+    backgroundColor: '#0B0F19',
+    borderRadius: 999,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
+    borderColor: '#1E293B',
   },
-  tabItemActive: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
+  filterChipActive: {
+    backgroundColor: '#38BDF8',
+    borderColor: '#38BDF8',
   },
-  tabText: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
   },
-  tabTextActive: {
-    color: theme.colors.primaryDark,
+  filterChipTextActive: {
+    color: '#0B0F19',
     fontWeight: '700',
   },
   container: {
     flex: 1,
+    backgroundColor: '#0B0F19',
   },
   contentContainer: {
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-  },
-  emptyBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.textMuted,
-    marginTop: 8,
+    padding: 16,
+    gap: 12,
+    paddingBottom: 24,
   },
   lessonCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    ...theme.shadows.card,
+    borderColor: '#1E293B',
+    overflow: 'hidden',
   },
   lessonCardCompleted: {
-    borderColor: theme.colors.success,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+  lessonCardHeader: {
+    padding: 16,
   },
-  badgeRow: {
+  lessonMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 8,
   },
-  readTimeBadge: {
+  systemTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surfaceSubtle,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.sm,
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  systemTagDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  systemTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  readTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
   },
   readTimeText: {
-    ...theme.typography.small,
-    color: theme.colors.textMuted,
-    marginLeft: 4,
+    fontSize: 11,
+    color: '#94A3B8',
   },
-  topRightIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconBtn: {
+  checkAction: {
     padding: 2,
   },
   lessonTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F8FAFC',
     marginBottom: 4,
   },
   lessonSummary: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
+    fontSize: 12,
     lineHeight: 18,
-  },
-  expandBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: theme.spacing.md,
-    paddingTop: theme.spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.surfaceSubtle,
-  },
-  expandBarText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    fontWeight: '600',
-    marginRight: 4,
+    color: '#94A3B8',
   },
   expandedContent: {
-    marginTop: theme.spacing.sm,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.cardBorder,
-    marginVertical: theme.spacing.sm,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
+    paddingTop: 14,
+    gap: 12,
   },
   sectionBlock: {
-    marginBottom: theme.spacing.md,
+    gap: 4,
+  },
+  sectionHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionNumberBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionNumberText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#38BDF8',
   },
   sectionHeading: {
-    ...theme.typography.bodyMedium,
+    fontSize: 13,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
+    color: '#F1F5F9',
   },
   sectionBody: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-    lineHeight: 22,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#94A3B8',
+    paddingLeft: 28,
   },
-  lessonFooterActions: {
+  lessonActionsRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: theme.spacing.sm,
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
   },
-  inspectOrganBtn: {
+  inspect3DBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.primaryLight,
-    paddingVertical: 9,
-    borderRadius: theme.borderRadius.sm,
     gap: 6,
+    backgroundColor: '#38BDF8',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
-  inspectOrganText: {
-    ...theme.typography.caption,
-    color: theme.colors.primaryDark,
-    fontWeight: '600',
+  inspect3DBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0B0F19',
   },
-  toggleDoneBtn: {
-    flex: 1,
+  markCompleteBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surfaceSubtle,
+    gap: 5,
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    paddingVertical: 9,
-    borderRadius: theme.borderRadius.sm,
+    borderColor: '#334155',
   },
-  toggleDoneBtnActive: {
-    backgroundColor: theme.colors.successLight,
-    borderColor: theme.colors.success,
+  markCompleteBtnDone: {
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
-  toggleDoneText: {
-    ...theme.typography.caption,
-    color: theme.colors.textPrimary,
+  markCompleteBtnText: {
+    fontSize: 12,
     fontWeight: '600',
-  },
-  toggleDoneTextActive: {
-    color: '#065F46',
+    color: '#E2E8F0',
   },
 });

@@ -10,7 +10,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ExplorerScreen } from '../screens/ExplorerScreen';
 import { SystemsScreen } from '../screens/SystemsScreen';
 import { LearningScreen } from '../screens/LearningScreen';
-import { QuizScreen } from '../screens/QuizScreen';
+import { ChatbotScreen } from '../screens/ChatbotScreen';
 import { OrganDetailsScreen } from '../screens/OrganDetailsScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -24,16 +24,16 @@ function BottomTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
+        tabBarActiveTintColor: '#38BDF8',
         tabBarInactiveTintColor: '#64748B',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
+          backgroundColor: '#0F172A',
+          borderTopColor: '#1E293B',
           borderTopWidth: 1,
-          height: 58 + bottomPad,
+          height: 56 + bottomPad,
           paddingBottom: bottomPad,
-          paddingTop: 8,
-          elevation: 8,
+          paddingTop: 6,
+          elevation: 10,
         },
         tabBarItemStyle: {
           paddingVertical: 2,
@@ -50,8 +50,12 @@ function BottomTabs() {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home-outline" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={21}
+              color={color}
+            />
           ),
         }}
       />
@@ -84,19 +88,23 @@ function BottomTabs() {
         component={LearningScreen}
         options={{
           tabBarLabel: 'Learn',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="book-outline" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'book' : 'book-outline'}
+              size={21}
+              color={color}
+            />
           ),
         }}
       />
       <Tab.Screen
-        name="QuizTab"
-        component={QuizScreen}
+        name="ChatTab"
+        component={ChatbotScreen}
         options={{
-          tabBarLabel: 'Quiz',
-          tabBarIcon: ({ color }) => (
+          tabBarLabel: 'AI Tutor',
+          tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons
-              name="trophy-outline"
+              name={focused ? 'robot' : 'robot-outline'}
               size={22}
               color={color}
             />
