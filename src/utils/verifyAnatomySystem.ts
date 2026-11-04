@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ORGANS, BODY_SYSTEMS, LESSONS, QUIZ_QUESTIONS } from '../data/anatomyData';
+import { ORGAN_SUB_PARTS } from '../data/organSubParts';
 import { buildAnatomySceneGraph } from '../models/anatomyModelBuilder';
 import { REAL_GLB_ORGAN_SPECS, parseGlbBinary } from '../models/realGlbLoader';
 
@@ -215,7 +216,48 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
     'Native binary .glb parser decoded GLTF 2.0 positions and indices with zero DOM dependencies'
   );
 
-  // 9. Verify GPU Resource Disposal
+  // 9. Verify 13-Part 3D Cross-Section Heart & Interactive Sub-Part Labels for All 10 Organs
+  for (const organ of ORGANS) {
+    const subParts = ORGAN_SUB_PARTS[organ.id];
+    assert(
+      Array.isArray(subParts) && subParts.length >= 4,
+      `Organ "${organ.name}" has ${subParts?.length || 0} labeled anatomical sub-parts with 3D anchors`
+    );
+  }
+
+  const heartSubParts = ORGAN_SUB_PARTS['heart'];
+  const expectedHeartPartIds = [
+    'superior_vena_cava',
+    'aorta',
+    'pulmonary_artery',
+    'pulmonary_vein',
+    'right_atrium',
+    'left_atrium',
+    'pulmonary_valve',
+    'tricuspid_valve',
+    'mitral_valve',
+    'aortic_valve',
+    'inferior_vena_cava',
+    'right_ventricle',
+    'left_ventricle',
+  ];
+  const hasAll13HeartParts = expectedHeartPartIds.every((id) =>
+    heartSubParts.some((sp) => sp.id === id)
+  );
+  assert(
+    heartSubParts.length === 13 && hasAll13HeartParts,
+    '3D Cross-Section Heart defines all 13 diagram callout parts (Superior/Inferior Vena Cava, Aorta, Pulmonary Artery/Vein, 4 Chambers, 4 Valves)'
+  );
+
+  const taggedHeartMeshes = heartRecord.meshes.filter(
+    (m) => typeof m.userData?.subPartId === 'string'
+  );
+  assert(
+    taggedHeartMeshes.length >= 13,
+    `Mesh_Heart contains ${taggedHeartMeshes.length} individually selectable 3D sub-part meshes with subPartId tags`
+  );
+
+  // 10. Verify GPU Resource Disposal
   graph.dispose();
   assert(true, 'Disposed all 3D geometries and materials cleanly');
 

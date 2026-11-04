@@ -15,7 +15,7 @@ import {
   buildAnatomySceneGraph,
   AnatomySceneGraph,
 } from '../models/anatomyModelBuilder';
-import { loadAllRealMedicalGlbModels } from '../models/realGlbLoader';
+import { ORGAN_SUB_PARTS } from '../data/organSubParts';
 import { BodySystemId } from '../types';
 import { CameraPreset } from '../state/useAnatomyStore';
 import { theme } from '../theme';
@@ -25,6 +25,7 @@ export type ShellMode = 'xray' | 'solid' | 'hidden';
 
 interface Anatomy3DViewportProps {
   selectedOrganId: string | null;
+  selectedSubPartId?: string | null;
   selectedSystemId: BodySystemId | 'all';
   cameraPreset: CameraPreset;
   zoomLevel: number;
@@ -33,8 +34,10 @@ interface Anatomy3DViewportProps {
   showSkeletal: boolean;
   showMuscular: boolean;
   showVascular: boolean;
+  showPinMarkers?: boolean;
   animatePhysiology: boolean;
   onSelectOrgan: (organId: string) => void;
+  onSelectSubPart?: (subPartId: string | null) => void;
 }
 
 /**
@@ -111,6 +114,7 @@ export function patchExpoGlForThree(gl: ExpoWebGLRenderingContext) {
 
 export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   selectedOrganId,
+  selectedSubPartId = null,
   selectedSystemId,
   cameraPreset,
   zoomLevel,
@@ -119,16 +123,14 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   showSkeletal,
   showMuscular,
   showVascular,
+  showPinMarkers = true,
   animatePhysiology,
   onSelectOrgan,
+  onSelectSubPart,
 }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [glKey, setGlKey] = useState<number>(0);
-  const [glbScanStatus, setGlbScanStatus] = useState<{
-    loaded: number;
-    total: number;
-  }>({ loaded: 0, total: 10 });
   const layoutRef = useRef<{ width: number; height: number }>({
     width: 360,
     height: 520,
@@ -137,6 +139,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const isMountedRef = useRef<boolean>(true);
   const rafIdRef = useRef<number | null>(null);
   const sceneGraphRef = useRef<AnatomySceneGraph | null>(null);
+  const pinGroupsRef = useRef<Map<string, THREE.Group>>(new Map());
+  const pinMeshesRef = useRef<THREE.Mesh[]>([]);
   const pedestalGroupRef = useRef<THREE.Group | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -176,15 +180,18 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
   const stateRef = useRef({
     selectedOrganId,
+    selectedSubPartId,
     selectedSystemId,
     viewMode,
     shellMode,
     showSkeletal,
     showMuscular,
     showVascular,
+    showPinMarkers,
     animatePhysiology,
     zoomLevel,
     onSelectOrgan,
+    onSelectSubPart,
   });
 
   const updateCameraFocusForMode = useCallback(() => {
@@ -202,9 +209,9 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         // World offset includes rootGroup.position.y (-0.58), shifted slightly so organ sits above bottom card
         targetOrbitRef.current.lookX = rec.focusCenter.x;
         targetOrbitRef.current.lookY =
-          rec.focusCenter.y - 0.58 - rec.focusRadius * 0.06;
+          rec.focusCenter.y - 0.58 - rec.focusRadius * 0.05;
         targetOrbitRef.current.lookZ = rec.focusCenter.z;
-        targetOrbitRef.current.radius = (rec.focusRadius * 1.12) / scale;
+        targetOrbitRef.current.radius = (rec.focusRadius * 1.18) / scale;
         return;
       }
     }
@@ -222,12 +229,14 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
     const {
       selectedOrganId: activeOrganId,
+      selectedSubPartId: activeSubPartId,
       selectedSystemId: activeSystemId,
       viewMode: mode,
       shellMode: activeShellMode,
       showSkeletal: skeletalVisible,
       showMuscular: muscularVisible,
       showVascular: vascularVisible,
+      showPinMarkers: pinsVisible,
     } = stateRef.current;
 
     if (mode === 'isolate' && activeOrganId) {
@@ -255,15 +264,52 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           currentMat.color.copy(origMat.color);
           currentMat.opacity = origMat.opacity;
           currentMat.transparent = origMat.transparent;
-          currentMat.emissive.setHex(0x000000);
-          currentMat.emissiveIntensity = 0;
+
+          const meshSubPartId = mesh.userData?.subPartId;
+          if (
+            isTarget &&
+            activeSubPartId &&
+            meshSubPartId === activeSubPartId
+          ) {
+            currentMat.emissive.setHex(0x38bdf8);
+            currentMat.emissiveIntensity = 0.52;
+          } else {
+            currentMat.emissive.setHex(0x000000);
+            currentMat.emissiveIntensity = 0;
+          }
         });
       });
+
+      // Toggle 3D anatomical pointer pins & leader lines for the isolated organ
+      pinGroupsRef.current.forEach((pinGroup, orgId) => {
+        const showThisPinGroup = orgId === activeOrganId && !!pinsVisible;
+        pinGroup.visible = showThisPinGroup;
+        if (showThisPinGroup) {
+          pinGroup.children.forEach((child) => {
+            const subId = child.userData?.subPartId;
+            const isSelectedPin = activeSubPartId && subId === activeSubPartId;
+            if (child instanceof THREE.Mesh) {
+              const mat = child.material as THREE.MeshBasicMaterial;
+              if (child.userData?.isPinHead) {
+                child.scale.setScalar(isSelectedPin ? 1.65 : 1.0);
+                mat.color.setHex(isSelectedPin ? 0xfbbf24 : 0xffffff);
+              } else {
+                mat.color.setHex(isSelectedPin ? 0xfbbf24 : 0x94a3b8);
+                mat.opacity = isSelectedPin ? 1.0 : 0.72;
+              }
+            }
+          });
+        }
+      });
     } else {
-      // Full Body 3D View (like Image 1 & Image 3)
+      // Full Body 3D View
       if (pedestalGroupRef.current) {
         pedestalGroupRef.current.visible = true;
       }
+      pinGroupsRef.current.forEach((pinGroup) => {
+        pinGroup.visible = false;
+      });
+
       graph.setShellMode(activeShellMode);
       graph.vascularGroup.visible =
         vascularVisible &&
@@ -313,28 +359,34 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   useEffect(() => {
     stateRef.current = {
       selectedOrganId,
+      selectedSubPartId,
       selectedSystemId,
       viewMode,
       shellMode,
       showSkeletal,
       showMuscular,
       showVascular,
+      showPinMarkers,
       animatePhysiology,
       zoomLevel,
       onSelectOrgan,
+      onSelectSubPart,
     };
     applySceneState();
   }, [
     selectedOrganId,
+    selectedSubPartId,
     selectedSystemId,
     viewMode,
     shellMode,
     showSkeletal,
     showMuscular,
     showVascular,
+    showPinMarkers,
     animatePhysiology,
     zoomLevel,
     onSelectOrgan,
+    onSelectSubPart,
     applySceneState,
   ]);
 
@@ -376,6 +428,13 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     raycaster.setFromCamera(ndc, camera);
 
     const pickableMeshes: THREE.Mesh[] = [];
+    // Include visible 3D pin spheres first so tapping a pin selects its sub-part immediately
+    pinMeshesRef.current.forEach((pinMesh) => {
+      if (pinMesh.parent && pinMesh.parent.visible) {
+        pickableMeshes.push(pinMesh);
+      }
+    });
+
     graph.organRecords.forEach((record) => {
       const sysGroup = graph.systemGroups.get(record.systemId);
       if (sysGroup && sysGroup.visible && record.group.visible) {
@@ -385,10 +444,34 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
     const intersects = raycaster.intersectObjects(pickableMeshes, false);
     if (intersects.length > 0) {
-      const hitMesh = intersects[0].object;
+      const hit = intersects[0];
+      const hitMesh = hit.object;
       const hitOrganId = hitMesh.userData?.organId;
       if (hitOrganId) {
+        let hitSubPartId: string | null = hitMesh.userData?.subPartId || null;
+
+        // If the tapped mesh doesn't have an explicit subPartId tag, find the closest anatomical sub-part anchor
+        const subParts = ORGAN_SUB_PARTS[hitOrganId];
+        const record = graph.organRecords.get(hitOrganId);
+        if (!hitSubPartId && subParts && subParts.length > 0 && record) {
+          const localPt = record.group.worldToLocal(hit.point.clone());
+          let bestDist = Infinity;
+          for (const sp of subParts) {
+            const dx = localPt.x - sp.localAnchor[0];
+            const dy = localPt.y - sp.localAnchor[1];
+            const dz = localPt.z - sp.localAnchor[2];
+            const dist = dx * dx + dy * dy + dz * dz;
+            if (dist < bestDist) {
+              bestDist = dist;
+              hitSubPartId = sp.id;
+            }
+          }
+        }
+
         stateRef.current.onSelectOrgan(hitOrganId);
+        if (stateRef.current.onSelectSubPart) {
+          stateRef.current.onSelectSubPart(hitSubPartId);
+        }
       }
     }
   }, []);
@@ -541,27 +624,99 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
         scene.add(pedestalGroup);
 
-        // Build Sculpted 3D Human Anatomy Scene Graph & Stream Real Medical GLB Scans
+        // Build Sculpted Multi-Part 3D Human Anatomy Scene Graph (including 13-Part Cross-Section Heart)
         const graph = buildAnatomySceneGraph();
         sceneGraphRef.current = graph;
         scene.add(graph.rootGroup);
+
+        // Build 3D Anatomical Callout Pins & Pointer Leader Lines for each Organ's Sub-Parts
+        pinGroupsRef.current.clear();
+        pinMeshesRef.current = [];
+        graph.organRecords.forEach((record, organId) => {
+          const subParts = ORGAN_SUB_PARTS[organId];
+          if (!subParts || subParts.length === 0) return;
+
+          const pinGroup = new THREE.Group();
+          pinGroup.name = `PinGroup_${organId}`;
+          pinGroup.visible = false;
+
+          subParts.forEach((sp) => {
+            const [ax, ay, az] = sp.localAnchor;
+            const anchorVec = new THREE.Vector3(ax, ay, az);
+            const outerX = sp.side === 'left' ? -0.19 : 0.19;
+            const elbowVec = new THREE.Vector3(
+              outerX * 0.72,
+              ay + 0.012,
+              az + 0.02
+            );
+            const tipVec = new THREE.Vector3(outerX, ay + 0.012, az + 0.025);
+
+            // 1. Anchor Pin Dot on the 3D tissue surface
+            const dotGeo = new THREE.SphereGeometry(0.0085, 12, 12);
+            const dotMat = new THREE.MeshBasicMaterial({
+              color: 0xffffff,
+            });
+            const dotMesh = new THREE.Mesh(dotGeo, dotMat);
+            dotMesh.position.copy(anchorVec);
+            dotMesh.userData = {
+              organId,
+              subPartId: sp.id,
+              isPinHead: true,
+            };
+            pinGroup.add(dotMesh);
+            pinMeshesRef.current.push(dotMesh);
+
+            // 2. 3D Pointer Leader Tube from tissue anchor to outer label margin
+            const lineCurve = new THREE.CatmullRomCurve3([
+              anchorVec,
+              elbowVec,
+              tipVec,
+            ]);
+            const lineGeo = new THREE.TubeGeometry(
+              lineCurve,
+              10,
+              0.0018,
+              6,
+              false
+            );
+            const lineMat = new THREE.MeshBasicMaterial({
+              color: 0x94a3b8,
+              transparent: true,
+              opacity: 0.75,
+            });
+            const lineMesh = new THREE.Mesh(lineGeo, lineMat);
+            lineMesh.userData = {
+              organId,
+              subPartId: sp.id,
+              isPinHead: false,
+            };
+            pinGroup.add(lineMesh);
+
+            // 3. Outer Label Connector Node
+            const tipGeo = new THREE.SphereGeometry(0.006, 10, 10);
+            const tipMat = new THREE.MeshBasicMaterial({
+              color: new THREE.Color(sp.color),
+            });
+            const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+            tipMesh.position.copy(tipVec);
+            tipMesh.userData = {
+              organId,
+              subPartId: sp.id,
+              isPinHead: true,
+            };
+            pinGroup.add(tipMesh);
+            pinMeshesRef.current.push(tipMesh);
+          });
+
+          record.group.add(pinGroup);
+          pinGroupsRef.current.set(organId, pinGroup);
+        });
 
         applySceneState();
 
         if (isMountedRef.current) {
           setIsLoading(false);
         }
-
-        // Asynchronously stream & hot-swap real 3D .glb medical scans (Sketchfab / NIH 3D / Visible Human)
-        loadAllRealMedicalGlbModels(
-          graph,
-          (loadedCount, totalCount) => {
-            if (!isMountedRef.current) return;
-            setGlbScanStatus({ loaded: loadedCount, total: totalCount });
-            applySceneState();
-          },
-          () => !isMountedRef.current
-        );
 
         let clock = 0;
 
@@ -712,15 +867,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         style={styles.glView}
         onContextCreate={onContextCreate}
       />
-
-      {!isLoading && glbScanStatus.loaded < glbScanStatus.total && (
-        <View style={styles.glbStreamingPill} pointerEvents="none">
-          <ActivityIndicator size="small" color="#38BDF8" />
-          <Text style={styles.glbStreamingText}>
-            3D GLB Scans: {glbScanStatus.loaded}/{glbScanStatus.total}
-          </Text>
-        </View>
-      )}
 
       {isLoading && (
         <View style={styles.loadingOverlay}>
