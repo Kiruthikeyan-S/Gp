@@ -15,7 +15,11 @@ import {
   buildAnatomySceneGraph,
   AnatomySceneGraph,
 } from '../models/anatomyModelBuilder';
-import { loadAllRealMedicalGlbModels } from '../models/realGlbLoader';
+import {
+  applyCachedGlbOrgansSync,
+  ensurePriorityOrganGlbLoaded,
+  loadAllRealMedicalGlbModels,
+} from '../models/realGlbLoader';
 import { ORGAN_SUB_PARTS } from '../data/organSubParts';
 import { BodySystemId } from '../types';
 import { CameraPreset } from '../state/useAnatomyStore';
@@ -268,10 +272,11 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           if (
             isTarget &&
             activeSubPartId &&
-            meshSubPartId === activeSubPartId
+            (meshSubPartId === activeSubPartId || record.meshes.length === 1)
           ) {
             currentMat.emissive.setHex(0x38bdf8);
-            currentMat.emissiveIntensity = 0.45;
+            currentMat.emissiveIntensity =
+              record.meshes.length === 1 ? 0.28 : 0.45;
           } else {
             currentMat.emissive.setHex(0x000000);
             currentMat.emissiveIntensity = 0;
@@ -346,6 +351,24 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       onSelectSubPart,
     };
     applySceneState();
+
+    if (selectedOrganId && sceneGraphRef.current) {
+      const g = sceneGraphRef.current;
+      const rec = g.organRecords.get(selectedOrganId);
+      const isAlreadyGlb =
+        rec && rec.meshes.length > 0 && rec.meshes[0].userData?.isRealGlbScan;
+      if (!isAlreadyGlb) {
+        ensurePriorityOrganGlbLoaded(
+          selectedOrganId,
+          g,
+          () => !isMountedRef.current
+        ).then((ok) => {
+          if (ok && isMountedRef.current) {
+            applySceneState();
+          }
+        });
+      }
+    }
   }, [
     selectedOrganId,
     selectedSubPartId,
@@ -407,11 +430,87 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       }
     });
 
-    const intersects = raycaster.intersectObjects(pickableMeshes, false);
-    if (intersects.length > 0) {
-      const hit = intersects[0];
-      const hitMesh = hit.object;
-      const hitOrganId = hitMesh.userData?.organId;
+    // Fast bounding-box + strided triangle/vertex raycast (< 2ms on mobile Hermes even for 300k-triangle scans)
+    let bestHitMesh: THREE.Mesh | null = null;
+    let bestWorldDist = Infinity;
+    const bestWorldPoint = new THREE.Vector3();
+
+    const invMat = new THREE.Matrix4();
+    const localRay = new THREE.Ray();
+    const vA = new THREE.Vector3();
+    const vB = new THREE.Vector3();
+    const vC = new THREE.Vector3();
+    const tmpLocalHit = new THREE.Vector3();
+    const tmpWorldHit = new THREE.Vector3();
+
+    for (const mesh of pickableMeshes) {
+      const geo = mesh.geometry;
+      if (!geo) continue;
+      if (!geo.boundingBox) {
+        geo.computeBoundingBox();
+      }
+      const bbox = geo.boundingBox;
+      if (!bbox) continue;
+
+      mesh.updateMatrixWorld();
+      invMat.copy(mesh.matrixWorld).invert();
+      localRay.copy(raycaster.ray).applyMatrix4(invMat);
+
+      if (!localRay.intersectsBox(bbox)) continue;
+
+      const posAttr = geo.getAttribute('position');
+      if (!posAttr) continue;
+      const indexAttr = geo.getIndex();
+      const triCount = indexAttr
+        ? Math.floor(indexAttr.count / 3)
+        : Math.floor(posAttr.count / 3);
+
+      if (triCount <= 12000) {
+        const triStride = triCount > 4500 ? 2 : 1;
+        for (let t = 0; t < triCount; t += triStride) {
+          const i0 = indexAttr ? indexAttr.getX(t * 3) : t * 3;
+          const i1 = indexAttr ? indexAttr.getX(t * 3 + 1) : t * 3 + 1;
+          const i2 = indexAttr ? indexAttr.getX(t * 3 + 2) : t * 3 + 2;
+          vA.fromBufferAttribute(posAttr, i0);
+          vB.fromBufferAttribute(posAttr, i1);
+          vC.fromBufferAttribute(posAttr, i2);
+          if (localRay.intersectTriangle(vA, vB, vC, false, tmpLocalHit)) {
+            tmpWorldHit.copy(tmpLocalHit).applyMatrix4(mesh.matrixWorld);
+            const dist = raycaster.ray.origin.distanceTo(tmpWorldHit);
+            if (dist < bestWorldDist) {
+              bestWorldDist = dist;
+              bestHitMesh = mesh;
+              bestWorldPoint.copy(tmpWorldHit);
+            }
+          }
+        }
+      } else {
+        // Dense MRI/CT mesh (>12k triangles): fast strided surface-vertex proximity check along localRay
+        const vCount = posAttr.count;
+        const vStride = Math.max(1, Math.floor(vCount / 3500));
+        const bSize = new THREE.Vector3();
+        bbox.getSize(bSize);
+        const radiusSq = Math.pow(
+          Math.max(bSize.x, bSize.y, bSize.z) * 0.085,
+          2
+        );
+        for (let i = 0; i < vCount; i += vStride) {
+          vA.fromBufferAttribute(posAttr, i);
+          if (localRay.distanceSqToPoint(vA) <= radiusSq) {
+            tmpWorldHit.copy(vA).applyMatrix4(mesh.matrixWorld);
+            const dist = raycaster.ray.origin.distanceTo(tmpWorldHit);
+            if (dist < bestWorldDist) {
+              bestWorldDist = dist;
+              bestHitMesh = mesh;
+              bestWorldPoint.copy(tmpWorldHit);
+            }
+          }
+        }
+      }
+    }
+
+    if (bestHitMesh) {
+      const hitOrganId = bestHitMesh.userData?.organId;
       if (hitOrganId) {
         const wasAlreadyIsolatedOnThisOrgan =
           stateRef.current.viewMode === 'isolate' &&
@@ -421,17 +520,17 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
         // Only resolve & highlight a specific sub-part when touching the 3D organ in Separate 3D (isolate) mode
         if (wasAlreadyIsolatedOnThisOrgan && stateRef.current.onSelectSubPart) {
-          let hitSubPartId: string | null = hitMesh.userData?.subPartId || null;
+          let hitSubPartId: string | null =
+            bestHitMesh.userData?.subPartId || null;
 
           const subParts = ORGAN_SUB_PARTS[hitOrganId];
-          const record = graph.organRecords.get(hitOrganId);
-          if (!hitSubPartId && subParts && subParts.length > 0 && record) {
-            const localPt = record.group.worldToLocal(hit.point.clone());
+          if (!hitSubPartId && subParts && subParts.length > 0) {
+            const rootPt = graph.rootGroup.worldToLocal(bestWorldPoint.clone());
             let bestDist = Infinity;
             for (const sp of subParts) {
-              const dx = localPt.x - sp.localAnchor[0];
-              const dy = localPt.y - sp.localAnchor[1];
-              const dz = localPt.z - sp.localAnchor[2];
+              const dx = rootPt.x - sp.localAnchor[0];
+              const dy = rootPt.y - sp.localAnchor[1];
+              const dz = rootPt.z - sp.localAnchor[2];
               const dist = dx * dx + dy * dy + dz * dz;
               if (dist < bestDist) {
                 bestDist = dist;
@@ -594,18 +693,31 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
         scene.add(pedestalGroup);
 
-        // Build Sculpted 3D Human Anatomy Scene Graph & Stream Real Medical GLB Scans
+        // Build Sculpted 3D Human Anatomy Scene Graph & Attach Any Pre-Cached GLB Scans Synchronously (0ms)
         const graph = buildAnatomySceneGraph();
         sceneGraphRef.current = graph;
         scene.add(graph.rootGroup);
 
+        applyCachedGlbOrgansSync(graph);
+
+        const priorityOrganId = stateRef.current.selectedOrganId || 'heart';
+        await Promise.race([
+          ensurePriorityOrganGlbLoaded(
+            priorityOrganId,
+            graph,
+            () => !isMountedRef.current
+          ),
+          new Promise((resolve) => setTimeout(resolve, 2200)),
+        ]);
+
         applySceneState();
+        currentOrbitRef.current = { ...targetOrbitRef.current };
 
         if (isMountedRef.current) {
           setIsLoading(false);
         }
 
-        // Asynchronously stream & hot-swap real 3D .glb medical scans (Sketchfab / NIH 3D / Visible Human)
+        // Asynchronously stream & hot-swap remaining real 3D .glb medical scans (Sketchfab / NIH 3D / Visible Human)
         loadAllRealMedicalGlbModels(
           graph,
           (loadedCount, totalCount) => {
@@ -613,7 +725,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
             setGlbScanStatus({ loaded: loadedCount, total: totalCount });
             applySceneState();
           },
-          () => !isMountedRef.current
+          () => !isMountedRef.current,
+          priorityOrganId
         );
 
         let clock = 0;
@@ -626,12 +739,12 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
           const cur = currentOrbitRef.current;
           const tgt = targetOrbitRef.current;
-          cur.theta += (tgt.theta - cur.theta) * 0.14;
-          cur.phi += (tgt.phi - cur.phi) * 0.14;
-          cur.radius += (tgt.radius - cur.radius) * 0.14;
-          cur.lookX += (tgt.lookX - cur.lookX) * 0.14;
-          cur.lookY += (tgt.lookY - cur.lookY) * 0.14;
-          cur.lookZ += (tgt.lookZ - cur.lookZ) * 0.14;
+          cur.theta += (tgt.theta - cur.theta) * 0.26;
+          cur.phi += (tgt.phi - cur.phi) * 0.26;
+          cur.radius += (tgt.radius - cur.radius) * 0.26;
+          cur.lookX += (tgt.lookX - cur.lookX) * 0.26;
+          cur.lookY += (tgt.lookY - cur.lookY) * 0.26;
+          cur.lookZ += (tgt.lookZ - cur.lookZ) * 0.26;
 
           camera.position.x =
             cur.lookX + cur.radius * Math.sin(cur.phi) * Math.sin(cur.theta);

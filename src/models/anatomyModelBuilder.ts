@@ -670,7 +670,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0x8c191c
   );
   const aortaMesh = new THREE.Mesh(aortaArchGeo, heartMat.clone());
-  aortaMesh.userData = { subPartId: 'aorta', keepWithGlb: true };
+  aortaMesh.userData = { subPartId: 'aorta' };
   heartGroup.add(aortaMesh);
 
   // 3 Aortic Arch branches (Brachiocephalic, Left Common Carotid, Left Subclavian)
@@ -688,7 +688,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       0x8c191c
     );
     const branchMesh = new THREE.Mesh(bGeo, heartMat.clone());
-    branchMesh.userData = { subPartId: 'aorta', keepWithGlb: true };
+    branchMesh.userData = { subPartId: 'aorta' };
     heartGroup.add(branchMesh);
   });
 
@@ -699,18 +699,8 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   ]);
   const svcGeo = createVariableTubeGeometry(svcCurve, 12, 12, () => 0.025, 0x2563eb, 0x1e3a8a);
   const svcMesh = new THREE.Mesh(svcGeo, heartMat.clone());
-  svcMesh.userData = { subPartId: 'superior_vena_cava', keepWithGlb: true };
+  svcMesh.userData = { subPartId: 'superior_vena_cava' };
   heartGroup.add(svcMesh);
-
-  // Inferior Vena Cava
-  const heartIvcCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.085, -0.14, -0.015),
-    new THREE.Vector3(-0.085, 0.02, -0.005),
-  ]);
-  const heartIvcGeo = createVariableTubeGeometry(heartIvcCurve, 10, 10, () => 0.024, 0x2563eb, 0x1e3a8a);
-  const heartIvcMesh = new THREE.Mesh(heartIvcGeo, heartMat.clone());
-  heartIvcMesh.userData = { subPartId: 'inferior_vena_cava', keepWithGlb: true };
-  heartGroup.add(heartIvcMesh);
 
   const pulmCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0.03, 0.07, 0.05),
@@ -719,46 +709,8 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   ]);
   const pulmGeo = createVariableTubeGeometry(pulmCurve, 14, 12, () => 0.026, 0x4f46e5, 0x312e81);
   const pulmMesh = new THREE.Mesh(pulmGeo, heartMat.clone());
-  pulmMesh.userData = { subPartId: 'pulmonary_artery', keepWithGlb: true };
+  pulmMesh.userData = { subPartId: 'pulmonary_artery' };
   heartGroup.add(pulmMesh);
-
-  // Pulmonary Veins (Left & Right pairs entering Left Atrium)
-  [-1, 1].forEach((side) => {
-    [-0.016, 0.016].forEach((dy) => {
-      const pvCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(side * 0.145, 0.09 + dy, -0.02),
-        new THREE.Vector3(side * 0.085, 0.085 + dy * 0.5, 0.0),
-      ]);
-      const pvGeo = createVariableTubeGeometry(pvCurve, 8, 8, () => 0.012, 0xd9383a, 0x8c191c);
-      const pvMesh = new THREE.Mesh(pvGeo, heartMat.clone());
-      pvMesh.userData = { subPartId: 'pulmonary_vein', keepWithGlb: true };
-      heartGroup.add(pvMesh);
-    });
-  });
-
-  // 4 Internal Cardiac Valves (Tricuspid, Pulmonary, Mitral, Aortic) + Right Ventricle
-  const rVentGeo = new THREE.SphereGeometry(0.11, 24, 20);
-  rVentGeo.scale(0.78, 1.15, 0.85);
-  applyOrganicVertexShading(rVentGeo, 0xb91c1c, 0x5c0a0a);
-  const rVentMesh = new THREE.Mesh(rVentGeo, heartMat.clone());
-  rVentMesh.position.set(-0.045, -0.035, 0.025);
-  rVentMesh.userData = { subPartId: 'right_ventricle' };
-  heartGroup.add(rVentMesh);
-
-  const valveConfigs: { id: string; pos: [number, number, number] }[] = [
-    { id: 'tricuspid_valve', pos: [-0.065, 0.02, 0.04] },
-    { id: 'pulmonary_valve', pos: [-0.015, 0.055, 0.055] },
-    { id: 'mitral_valve', pos: [0.065, 0.025, 0.04] },
-    { id: 'aortic_valve', pos: [0.018, 0.055, 0.035] },
-  ];
-  valveConfigs.forEach((vc) => {
-    const vGeo = new THREE.TorusGeometry(0.018, 0.006, 10, 18);
-    applyOrganicVertexShading(vGeo, 0xfef2f2, 0xfecdd3);
-    const vMesh = new THREE.Mesh(vGeo, heartMat.clone());
-    vMesh.position.set(vc.pos[0], vc.pos[1], vc.pos[2]);
-    vMesh.userData = { subPartId: vc.id };
-    heartGroup.add(vMesh);
-  });
 
   // Branching 3D Coronary Arteries wrapping the myocardium surface
   const ladCoronaryCurve = new THREE.CatmullRomCurve3([
@@ -776,7 +728,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0x991b1b
   );
   const ladMesh = new THREE.Mesh(ladGeo, heartMat.clone());
-  ladMesh.userData = { subPartId: 'left_ventricle', keepWithGlb: true };
+  ladMesh.userData = { subPartId: 'left_ventricle' };
   heartGroup.add(ladMesh);
 
   registerOrganGroup(
@@ -1277,7 +1229,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     rootGroup.traverse((obj) => {
       if ((obj as THREE.Mesh).isMesh) {
         const mesh = obj as THREE.Mesh;
-        mesh.geometry?.dispose();
+        if (!mesh.geometry?.userData?.isCachedGlb) {
+          mesh.geometry?.dispose();
+        }
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((m) => m.dispose());
         } else {
