@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { AnatomySceneGraph } from './anatomyModelBuilder';
-import { partitionOrganMeshesBySubParts } from '../data/organSubParts';
 
 /**
  * Official CC-BY 3D Medical Scan (.glb) Sources from:
@@ -875,16 +874,6 @@ export async function loadSingleRealGlbOrgan(
     record.meshes.push(subMesh);
     record.originalMaterials.set(subMesh, mat.clone());
   }
-
-  // Partition any single-primitive GLB meshes (e.g. Brain, Stomach) into distinct anatomical sub-part meshes
-  partitionOrganMeshesBySubParts(
-    record.organId,
-    record.meshName,
-    record.systemId,
-    record.group,
-    record.meshes,
-    record.originalMaterials
-  );
 
   // Compute accurate focusCenter & focusRadius across the complete organ group (including vessels)
   record.group.updateMatrixWorld(true);

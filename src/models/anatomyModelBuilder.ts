@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { BodySystemId } from '../types';
-import { partitionOrganMeshesBySubParts } from '../data/organSubParts';
 
 export interface OrganMeshRecord {
   organId: string;
@@ -151,16 +150,6 @@ function registerOrganGroup(
       }
     }
   });
-
-  // Partition any unassigned mesh triangles into distinct anatomical sub-part meshes (zero visual change)
-  partitionOrganMeshesBySubParts(
-    organId,
-    meshName,
-    systemId,
-    group,
-    meshes,
-    originalMaterials
-  );
 
   organRecords.set(organId, {
     organId,

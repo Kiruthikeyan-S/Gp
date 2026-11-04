@@ -49,9 +49,6 @@ export const ExplorerScreen: React.FC = () => {
   const [selectedSubPartId, setSelectedSubPartId] = useState<string | null>(
     null
   );
-  const [touchPoint, setTouchPoint] = useState<{ x: number; y: number } | null>(
-    null
-  );
   const [shellMode, setShellMode] = useState<ShellMode>('xray');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [showSkeletal, setShowSkeletal] = useState<boolean>(true);
@@ -66,7 +63,6 @@ export const ExplorerScreen: React.FC = () => {
     if (route.params?.targetOrganId) {
       selectOrgan(route.params.targetOrganId);
       setSelectedSubPartId(null);
-      setTouchPoint(null);
       setViewMode('isolate');
       setZoomLevel(100);
       setIsCardMinimized(false);
@@ -74,7 +70,6 @@ export const ExplorerScreen: React.FC = () => {
     if (route.params?.targetSystemId) {
       selectSystem(route.params.targetSystemId);
       setSelectedSubPartId(null);
-      setTouchPoint(null);
       setViewMode('body');
       setZoomLevel(100);
     }
@@ -126,78 +121,19 @@ export const ExplorerScreen: React.FC = () => {
           showVascular={showVascular}
           animatePhysiology={animatePhysiology}
           onSelectOrgan={(organId) => {
+            if (organId !== activeOrgan.id || viewMode !== 'isolate') {
+              setSelectedSubPartId(null);
+            }
             selectOrgan(organId);
             setViewMode('isolate');
             setZoomLevel(100);
             setIsCardMinimized(false);
           }}
-          onSelectSubPart={(subPartId, pt) => {
+          onSelectSubPart={(subPartId) => {
             setSelectedSubPartId(subPartId);
-            setTouchPoint(pt ?? null);
-            if (subPartId) {
-              setIsCardMinimized(false);
-            }
+            setIsCardMinimized(false);
           }}
         />
-
-        {/* TOUCH-POINT 3D PART CALLOUT POINTER (Appears ONLY at the touched spot when a part is touched) */}
-        {!hideInterface && activeSubPart && touchPoint && (
-          <View
-            pointerEvents="box-none"
-            style={[
-              styles.touchPinOverlay,
-              {
-                left: Math.max(66, Math.min(touchPoint.x - 12, 260)),
-                top: Math.max(76, Math.min(touchPoint.y - 42, 430)),
-              },
-            ]}
-          >
-            <View style={styles.touchPinCard}>
-              <View
-                style={[
-                  styles.touchPinDot,
-                  { backgroundColor: activeSubPart.color },
-                ]}
-              />
-              <View style={styles.touchPinTextCol}>
-                <Text style={styles.touchPinOrganTag} numberOfLines={1}>
-                  {activeOrgan.name.toUpperCase()} PART
-                </Text>
-                <Text style={styles.touchPinPartName} numberOfLines={1}>
-                  {activeSubPart.name}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedSubPartId(null);
-                  setTouchPoint(null);
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close-circle" size={16} color="#94A3B8" />
-              </TouchableOpacity>
-            </View>
-            <View
-              style={[
-                styles.touchPinStem,
-                { backgroundColor: activeSubPart.color },
-              ]}
-            />
-            <View
-              style={[
-                styles.touchPinTargetRing,
-                { borderColor: activeSubPart.color },
-              ]}
-            >
-              <View
-                style={[
-                  styles.touchPinTargetCenter,
-                  { backgroundColor: activeSubPart.color },
-                ]}
-              />
-            </View>
-          </View>
-        )}
 
         {/* TOP FLOATING BAR: View Mode Switcher (Full Body vs Isolated Organ) & Systems Button */}
         {!hideInterface && (
@@ -238,7 +174,6 @@ export const ExplorerScreen: React.FC = () => {
                   ]}
                   onPress={() => {
                     setSelectedSubPartId(null);
-                    setTouchPoint(null);
                     setViewMode('body');
                     setZoomLevel(100);
                   }}
@@ -265,7 +200,6 @@ export const ExplorerScreen: React.FC = () => {
                   ]}
                   onPress={() => {
                     setSelectedSubPartId(null);
-                    setTouchPoint(null);
                     setViewMode('isolate');
                     setZoomLevel(100);
                   }}
@@ -361,14 +295,10 @@ export const ExplorerScreen: React.FC = () => {
                   ]}
                 />
                 <Text style={styles.touchedPartLabel} numberOfLines={1}>
-                  {activeOrgan.name.toUpperCase()} •{' '}
                   {activeSubPart.name.toUpperCase()}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => {
-                    setSelectedSubPartId(null);
-                    setTouchPoint(null);
-                  }}
+                  onPress={() => setSelectedSubPartId(null)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Ionicons name="close-circle" size={17} color="#94A3B8" />
@@ -542,7 +472,6 @@ export const ExplorerScreen: React.FC = () => {
                       onPress={() => {
                         selectOrgan(organ.id);
                         setSelectedSubPartId(null);
-                        setTouchPoint(null);
                         setViewMode('isolate');
                         setZoomLevel(100);
                         setIsCardMinimized(false);
@@ -634,22 +563,6 @@ export const ExplorerScreen: React.FC = () => {
                   </View>
 
                   <View style={styles.cardTopActions}>
-                    {activeSubPart && (
-                      <TouchableOpacity
-                        style={styles.clearPartPill}
-                        onPress={() => {
-                          setSelectedSubPartId(null);
-                          setTouchPoint(null);
-                        }}
-                      >
-                        <Text style={styles.clearPartText}>Clear Part</Text>
-                        <Ionicons
-                          name="close-circle"
-                          size={14}
-                          color="#94A3B8"
-                        />
-                      </TouchableOpacity>
-                    )}
                     <TouchableOpacity
                       style={styles.cardIconAction}
                       onPress={() => toggleBookmark(activeOrgan.id)}
@@ -681,39 +594,13 @@ export const ExplorerScreen: React.FC = () => {
                 <Text style={styles.cardLocationText} numberOfLines={1}>
                   {activeSubPart
                     ? `🔬 Part of ${activeOrgan.name} (${activeOrgan.location})`
-                    : `📍 ${activeOrgan.location} • Touch any part on the 3D model to inspect`}
+                    : `📍 ${activeOrgan.location}`}
                 </Text>
-
-                {activeSubPart ? (
-                  <View style={styles.subPartDetailsBox}>
-                    <View style={styles.subPartDetailRow}>
-                      <Text style={styles.subPartDetailBadge}>USED FOR</Text>
-                      <Text style={styles.subPartDetailValue} numberOfLines={2}>
-                        {activeSubPart.usedFor}
-                      </Text>
-                    </View>
-                    <View style={styles.subPartDetailRow}>
-                      <Text
-                        style={[
-                          styles.subPartDetailBadge,
-                          {
-                            backgroundColor: 'rgba(16, 185, 129, 0.18)',
-                            color: '#34D399',
-                          },
-                        ]}
-                      >
-                        ACTIVITY
-                      </Text>
-                      <Text style={styles.subPartDetailValue} numberOfLines={2}>
-                        {activeSubPart.activity}
-                      </Text>
-                    </View>
-                  </View>
-                ) : (
-                  <Text style={styles.cardFunctionText} numberOfLines={2}>
-                    {activeOrgan.function}
-                  </Text>
-                )}
+                <Text style={styles.cardFunctionText} numberOfLines={2}>
+                  {activeSubPart
+                    ? activeSubPart.description
+                    : activeOrgan.function}
+                </Text>
 
                 <View style={styles.cardActionRow}>
                   <TouchableOpacity
@@ -721,7 +608,6 @@ export const ExplorerScreen: React.FC = () => {
                     onPress={() => {
                       setViewMode((m) => (m === 'body' ? 'isolate' : 'body'));
                       setSelectedSubPartId(null);
-                      setTouchPoint(null);
                     }}
                   >
                     <MaterialCommunityIcons
@@ -1112,111 +998,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#F8FAFC',
     letterSpacing: 0.4,
-  },
-  touchPinOverlay: {
-    position: 'absolute',
-    zIndex: 18,
-    alignItems: 'flex-start',
-    maxWidth: 215,
-  },
-  touchPinCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(11, 15, 25, 0.94)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.65)',
-    gap: 7,
-  },
-  touchPinDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  touchPinTextCol: {
-    flexShrink: 1,
-  },
-  touchPinOrganTag: {
-    fontSize: 8.5,
-    fontWeight: '800',
-    color: '#38BDF8',
-    letterSpacing: 0.5,
-  },
-  touchPinPartName: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  touchPinStem: {
-    width: 2,
-    height: 14,
-    marginLeft: 12,
-    opacity: 0.9,
-  },
-  touchPinTargetRing: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    marginLeft: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
-  },
-  touchPinTargetCenter: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  clearPartPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 41, 59, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.3)',
-    gap: 4,
-  },
-  clearPartText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#CBD5E1',
-  },
-  subPartDetailsBox: {
-    backgroundColor: 'rgba(30, 41, 59, 0.55)',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 11,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.18)',
-    gap: 6,
-  },
-  subPartDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  subPartDetailBadge: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#38BDF8',
-    backgroundColor: 'rgba(56, 189, 248, 0.16)',
-    paddingHorizontal: 6,
-    paddingVertical: 2.5,
-    borderRadius: 5,
-    overflow: 'hidden',
-    letterSpacing: 0.4,
-    marginTop: 1,
-  },
-  subPartDetailValue: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 16,
-    color: '#E2E8F0',
   },
 });

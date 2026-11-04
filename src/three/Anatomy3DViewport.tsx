@@ -16,10 +16,7 @@ import {
   AnatomySceneGraph,
 } from '../models/anatomyModelBuilder';
 import { loadAllRealMedicalGlbModels } from '../models/realGlbLoader';
-import {
-  ORGAN_SUB_PARTS,
-  findNearestSubPartByWorldPoint,
-} from '../data/organSubParts';
+import { ORGAN_SUB_PARTS } from '../data/organSubParts';
 import { BodySystemId } from '../types';
 import { CameraPreset } from '../state/useAnatomyStore';
 import { theme } from '../theme';
@@ -40,10 +37,7 @@ interface Anatomy3DViewportProps {
   showVascular: boolean;
   animatePhysiology: boolean;
   onSelectOrgan: (organId: string) => void;
-  onSelectSubPart?: (
-    subPartId: string | null,
-    touchPoint?: { x: number; y: number } | null
-  ) => void;
+  onSelectSubPart?: (subPartId: string | null) => void;
 }
 
 /**
@@ -419,29 +413,35 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       const hitMesh = hit.object;
       const hitOrganId = hitMesh.userData?.organId;
       if (hitOrganId) {
-        let hitSubPartId: string | null = hitMesh.userData?.subPartId || null;
-
-        const record = graph.organRecords.get(hitOrganId);
-        if (!hitSubPartId && record) {
-          hitSubPartId = findNearestSubPartByWorldPoint(
-            hitOrganId,
-            record.group,
-            hit.point
-          );
-        }
+        const wasAlreadyIsolatedOnThisOrgan =
+          stateRef.current.viewMode === 'isolate' &&
+          stateRef.current.selectedOrganId === hitOrganId;
 
         stateRef.current.onSelectOrgan(hitOrganId);
-        if (stateRef.current.onSelectSubPart) {
-          stateRef.current.onSelectSubPart(hitSubPartId, {
-            x: touchX,
-            y: touchY,
-          });
+
+        // Only resolve & highlight a specific sub-part when touching the 3D organ in Separate 3D (isolate) mode
+        if (wasAlreadyIsolatedOnThisOrgan && stateRef.current.onSelectSubPart) {
+          let hitSubPartId: string | null = hitMesh.userData?.subPartId || null;
+
+          const subParts = ORGAN_SUB_PARTS[hitOrganId];
+          const record = graph.organRecords.get(hitOrganId);
+          if (!hitSubPartId && subParts && subParts.length > 0 && record) {
+            const localPt = record.group.worldToLocal(hit.point.clone());
+            let bestDist = Infinity;
+            for (const sp of subParts) {
+              const dx = localPt.x - sp.localAnchor[0];
+              const dy = localPt.y - sp.localAnchor[1];
+              const dz = localPt.z - sp.localAnchor[2];
+              const dist = dx * dx + dy * dy + dz * dz;
+              if (dist < bestDist) {
+                bestDist = dist;
+                hitSubPartId = sp.id;
+              }
+            }
+          }
+
+          stateRef.current.onSelectSubPart(hitSubPartId);
         }
-      }
-    } else {
-      // Tapping empty space clears the touched sub-part label
-      if (stateRef.current.onSelectSubPart) {
-        stateRef.current.onSelectSubPart(null, null);
       }
     }
   }, []);
@@ -668,8 +668,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
               sceneGraphRef.current.lungsGroup?.scale.setScalar(1);
             }
 
-            // Subtle emissive highlight pulse on selected organ (in body mode) or selected sub-part (in isolate mode)
-            const activeSubId = stateRef.current.selectedSubPartId;
+            // Subtle emissive highlight pulse only in full body mode so isolated organ retains pure tissue colors
             if (selId && mode === 'body') {
               const selRecord = sceneGraphRef.current.organRecords.get(selId);
               if (selRecord) {
@@ -678,20 +677,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
                   const mat = m.material as THREE.MeshStandardMaterial;
                   if (mat && mat.emissive) {
                     mat.emissiveIntensity = pulse;
-                  }
-                });
-              }
-            } else if (selId && mode === 'isolate' && activeSubId) {
-              const selRecord = sceneGraphRef.current.organRecords.get(selId);
-              if (selRecord) {
-                const pulse = 0.42 + Math.sin(clock * 3.2) * 0.18;
-                selRecord.meshes.forEach((m) => {
-                  const mat = m.material as THREE.MeshStandardMaterial;
-                  if (!mat || !mat.emissive) return;
-                  if (m.userData?.subPartId === activeSubId) {
-                    mat.emissiveIntensity = pulse;
-                  } else {
-                    mat.emissiveIntensity = 0;
                   }
                 });
               }

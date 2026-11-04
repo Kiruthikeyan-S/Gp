@@ -1,994 +1,578 @@
-import * as THREE from 'three';
-
 export interface OrganSubPart {
   id: string;
   name: string;
   side: 'left' | 'right';
   /**
-   * 3D anchor coordinates in the organ group's local space.
+   * 3D anchor coordinates in the organ group's local space (or world-offset relative to focusCenter).
    */
   localAnchor: [number, number, number];
-  /**
-   * Normalized 3D coordinates [-1..1, -1..1, -1..1] inside the organ's bounding box
-   * used to partition unified 3D meshes into distinct selectable anatomical parts
-   * without altering the 3D geometry or visual appearance.
-   */
-  normalizedAnchor: [number, number, number];
   color: string;
-  /**
-   * What this specific anatomical part is used for.
-   */
-  usedFor: string;
-  /**
-   * The physiological activity / action performed by this part.
-   */
-  activity: string;
   description: string;
 }
 
 export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
-  // =========================================================================
-  // 1. HEART — 13 Divided Anatomical Parts (Chambers, Valves & Great Vessels)
-  // =========================================================================
+  // 1. HEART — All 13 Labeled Cross-Section Parts matching Reference Diagram
   heart: [
+    // Left Column (top to bottom)
     {
       id: 'superior_vena_cava',
-      name: 'Superior Vena Cava',
+      name: 'superior vena cava',
       side: 'left',
-      localAnchor: [-0.095, 0.22, -0.01],
-      normalizedAnchor: [-0.55, 0.72, -0.05],
+      localAnchor: [-0.118, 0.21, 0.015],
       color: '#0284C7',
-      usedFor: 'Returning deoxygenated venous blood from the upper body (head, neck, arms, and chest) into the heart.',
-      activity: 'Channels low-oxygen venous blood downward directly into the upper wall of the right atrium.',
       description:
         'Large venous trunk returning deoxygenated blood from the head, neck, chest, and arms into the right atrium.',
     },
     {
       id: 'pulmonary_vein',
-      name: 'Pulmonary Veins',
+      name: 'pulmonary vein',
       side: 'left',
-      localAnchor: [-0.14, 0.085, -0.02],
-      normalizedAnchor: [-0.78, 0.25, -0.25],
+      localAnchor: [-0.165, 0.082, 0.0],
       color: '#EF4444',
-      usedFor: 'Transporting freshly oxygenated blood from the left and right lungs into the heart.',
-      activity: 'Delivers oxygen-rich arterial blood into the posterior left atrium to fuel systemic circulation.',
       description:
         'Delivers freshly oxygenated blood from the lungs into the posterior wall of the left atrium.',
     },
     {
       id: 'right_atrium',
-      name: 'Right Atrium',
+      name: 'right atrium',
       side: 'left',
-      localAnchor: [-0.085, 0.06, 0.02],
-      normalizedAnchor: [-0.58, 0.12, 0.15],
+      localAnchor: [-0.102, 0.035, 0.055],
       color: '#9F1239',
-      usedFor: 'Receiving deoxygenated blood from the Superior Vena Cava, Inferior Vena Cava, and Coronary Sinus.',
-      activity: 'Contains the sinoatrial (SA) natural pacemaker node; contracts to push blood through the tricuspid valve into the right ventricle.',
       description:
         'Upper-right cardiac chamber that receives deoxygenated venous blood from the venae cavae and coronary sinus.',
     },
     {
       id: 'pulmonary_valve',
-      name: 'Pulmonary Valve',
+      name: 'pulmonary valve',
       side: 'left',
-      localAnchor: [-0.015, 0.055, 0.055],
-      normalizedAnchor: [-0.12, 0.15, 0.55],
+      localAnchor: [-0.022, 0.018, 0.076],
       color: '#F8FAFC',
-      usedFor: 'One-way flow control between the right ventricle and the pulmonary artery trunk.',
-      activity: 'Opens during ventricular systole to let blood enter the lungs and snaps shut during diastole to prevent backflow.',
       description:
         'Three-cusp semilunar valve at the entrance of the pulmonary trunk that prevents backflow into the right ventricle.',
     },
     {
       id: 'tricuspid_valve',
-      name: 'Tricuspid Valve',
+      name: 'tricuspid valve',
       side: 'left',
-      localAnchor: [-0.065, 0.015, 0.04],
-      normalizedAnchor: [-0.42, -0.08, 0.35],
+      localAnchor: [-0.076, -0.024, 0.068],
       color: '#F8FAFC',
-      usedFor: 'Separating the upper right atrium from the lower right ventricle.',
-      activity: 'Opens to allow right ventricular filling, then seals its three leaflets tethered by chordae tendineae during contraction.',
       description:
         'Right atrioventricular valve with three leaflets preventing regurgitation from the right ventricle into the right atrium.',
     },
     {
       id: 'inferior_vena_cava',
-      name: 'Inferior Vena Cava',
+      name: 'inferior vena cava',
       side: 'left',
-      localAnchor: [-0.085, -0.12, -0.015],
-      normalizedAnchor: [-0.55, -0.68, -0.25],
+      localAnchor: [-0.125, -0.165, -0.01],
       color: '#0284C7',
-      usedFor: 'Collecting deoxygenated blood from the lower body, abdomen, pelvis, and legs.',
-      activity: 'Ascends through the diaphragm to empty venous blood into the inferior aspect of the right atrium.',
       description:
         'Largest vein in the human body, carrying deoxygenated blood from the abdomen and lower limbs up into the right atrium.',
     },
     {
       id: 'right_ventricle',
-      name: 'Right Ventricle',
+      name: 'right ventricle',
       side: 'left',
-      localAnchor: [-0.045, -0.06, 0.04],
-      normalizedAnchor: [-0.32, -0.42, 0.35],
-      color: '#E11D48',
-      usedFor: 'Pumping deoxygenated blood to the lungs for gas exchange (pulmonary circulation).',
-      activity: 'Contracts with moderate pressure to eject venous blood upward through the pulmonary valve into the pulmonary trunk.',
+      localAnchor: [-0.042, -0.105, 0.062],
+      color: '#9F1239',
       description:
         'Muscular lower chamber that pumps deoxygenated blood upward through the pulmonary valve into the pulmonary artery.',
     },
+
+    // Right Column (top to bottom)
     {
       id: 'aorta',
-      name: 'Aorta & Aortic Arch',
+      name: 'aorta',
       side: 'right',
-      localAnchor: [0.0, 0.22, 0.01],
-      normalizedAnchor: [0.05, 0.78, 0.05],
+      localAnchor: [0.025, 0.215, 0.015],
       color: '#EF4444',
-      usedFor: 'Distributing oxygenated blood from the left ventricle to every organ and tissue in the body.',
-      activity: 'Withstands high systolic pressure and branches into the brachiocephalic, left common carotid, and left subclavian arteries.',
       description:
         'Main systemic artery arching from the left ventricle with three superior branches supplying oxygenated blood to the body.',
     },
     {
       id: 'pulmonary_artery',
-      name: 'Pulmonary Artery Trunk',
+      name: 'pulmonary artery',
       side: 'right',
-      localAnchor: [0.02, 0.15, 0.045],
-      normalizedAnchor: [0.18, 0.45, 0.45],
-      color: '#3B82F6',
-      usedFor: 'Carrying deoxygenated blood from the right ventricle to the left and right lungs.',
-      activity: 'Bifurcates into left and right pulmonary arteries so red blood cells can release CO₂ and absorb fresh O₂ in the alveoli.',
+      localAnchor: [0.095, 0.162, 0.045],
+      color: '#0284C7',
       description:
         'Arterial trunk carrying deoxygenated blood from the right ventricle to the left and right lungs for oxygenation.',
     },
     {
       id: 'left_atrium',
-      name: 'Left Atrium',
+      name: 'left atrium',
       side: 'right',
-      localAnchor: [0.095, 0.075, 0.01],
-      normalizedAnchor: [0.58, 0.18, -0.1],
-      color: '#BE123C',
-      usedFor: 'Receiving newly oxygenated blood returning from the four pulmonary veins.',
-      activity: 'Acts as a holding reservoir and contracts (atrial kick) to complete filling of the thick-walled left ventricle.',
+      localAnchor: [0.092, 0.065, 0.052],
+      color: '#9F1239',
       description:
         'Upper-left cardiac chamber that receives oxygenated blood from four pulmonary veins and funnels it into the left ventricle.',
     },
     {
       id: 'mitral_valve',
-      name: 'Mitral (Bicuspid) Valve',
+      name: 'mitral valve',
       side: 'right',
-      localAnchor: [0.065, 0.02, 0.04],
-      normalizedAnchor: [0.42, -0.05, 0.32],
+      localAnchor: [0.082, 0.005, 0.068],
       color: '#F8FAFC',
-      usedFor: 'Regulating one-way oxygenated blood flow between the left atrium and left ventricle.',
-      activity: 'Closes tightly under high left-ventricular pressure so blood is forced exclusively into the aorta.',
       description:
         'Bicuspid valve between the left atrium and left ventricle that seals shut during ventricular systole.',
     },
     {
       id: 'aortic_valve',
-      name: 'Aortic Valve',
+      name: 'aortic valve',
       side: 'right',
-      localAnchor: [0.018, 0.05, 0.035],
-      normalizedAnchor: [0.12, 0.12, 0.25],
+      localAnchor: [0.032, 0.014, 0.072],
       color: '#F8FAFC',
-      usedFor: 'Guarding the exit from the left ventricle into the ascending aorta.',
-      activity: 'Opens during peak ventricular contraction and closes during relaxation to maintain systemic diastolic blood pressure and fill the coronary arteries.',
       description:
         'High-pressure semilunar valve between the left ventricle and ascending aorta.',
     },
     {
       id: 'left_ventricle',
-      name: 'Left Ventricle & Apex',
+      name: 'left ventricle',
       side: 'right',
-      localAnchor: [0.055, -0.07, 0.04],
-      normalizedAnchor: [0.38, -0.48, 0.25],
-      color: '#DC2626',
-      usedFor: 'Powering systemic circulation to supply oxygen-rich blood to the entire human body.',
-      activity: 'Features the thickest myocardium (3× thicker than the right ventricle) to generate ~120 mmHg systolic pumping pressure.',
+      localAnchor: [0.068, -0.095, 0.062],
+      color: '#9F1239',
       description:
         'Thickest-walled chamber of the heart; contracts powerfully to pump oxygenated blood through the aortic arch.',
     },
   ],
 
-  // =========================================================================
-  // 2. BRAIN — Divided Cortical Lobes, Cerebellum & Brainstem
-  // =========================================================================
+  // 2. BRAIN — Cortical Lobes, Cerebellum & Brainstem
   brain: [
     {
-      id: 'frontal_lobe_left',
-      name: 'Left Frontal Lobe',
-      side: 'right',
-      localAnchor: [0.08, 0.08, 0.12],
-      normalizedAnchor: [0.38, 0.35, 0.55],
-      color: '#F472B6',
-      usedFor: 'Executive decision-making, logical reasoning, speech production (Broca’s area), and voluntary motor control of the right side of the body.',
-      activity: 'Generates motor commands in the precentral gyrus, coordinates expressive language, and regulates working memory and concentration.',
-      description:
-        'Anterior-left cerebral cortex governing executive planning, speech production, and right-body motor control.',
-    },
-    {
-      id: 'frontal_lobe_right',
-      name: 'Right Frontal Lobe',
+      id: 'frontal_lobe',
+      name: 'frontal lobe',
       side: 'left',
-      localAnchor: [-0.08, 0.08, 0.12],
-      normalizedAnchor: [-0.38, 0.35, 0.55],
-      color: '#FB7185',
-      usedFor: 'Spatial attention, emotional expression, non-verbal problem-solving, and voluntary motor control of the left side of the body.',
-      activity: 'Plans complex movements for the left limbs and integrates social-emotional cues and creative synthesis.',
+      localAnchor: [-0.095, 2.04, 0.12],
+      color: '#F4B4AA',
       description:
-        'Anterior-right cerebral cortex governing spatial reasoning, emotional tone, and left-body motor control.',
-    },
-    {
-      id: 'parietal_lobe',
-      name: 'Parietal Lobe (Somatosensory Cortex)',
-      side: 'left',
-      localAnchor: [0.0, 0.14, -0.02],
-      normalizedAnchor: [0.0, 0.68, -0.05],
-      color: '#C084FC',
-      usedFor: 'Processing touch, temperature, pain, pressure, and 3D spatial body awareness (proprioception).',
-      activity: 'Maps tactile sensory signals from the skin and muscles onto the postcentral gyrus sensory homunculus.',
-      description:
-        'Superior cortical region that integrates touch, temperature, pain, pressure, and 3D spatial awareness.',
+        'Anterior cerebral cortex governing executive decision-making, voluntary motor control, and speech production.',
     },
     {
       id: 'temporal_lobe',
-      name: 'Temporal Lobe & Auditory Cortex',
-      side: 'right',
-      localAnchor: [0.14, -0.02, 0.03],
-      normalizedAnchor: [0.68, -0.08, 0.12],
-      color: '#A855F7',
-      usedFor: 'Hearing, language comprehension (Wernicke’s area), facial recognition, and long-term memory formation.',
-      activity: 'Decodes sound frequencies from the inner ear and works with the hippocampus to encode declarative memories.',
+      name: 'temporal lobe',
+      side: 'left',
+      localAnchor: [-0.145, 1.87, 0.05],
+      color: '#E89B90',
       description:
-        'Lateral lobe responsible for auditory processing, language comprehension, and memory encoding.',
+        'Lateral cerebral lobe responsible for auditory processing, language comprehension, and memory encoding.',
+    },
+    {
+      id: 'pons_medulla',
+      name: 'brainstem',
+      side: 'left',
+      localAnchor: [0.0, 1.72, -0.04],
+      color: '#F5D0C8',
+      description:
+        'Pons and medulla oblongata regulating autonomous breathing, heart rate, and cranial nerve reflexes.',
+    },
+    {
+      id: 'parietal_lobe',
+      name: 'parietal lobe',
+      side: 'right',
+      localAnchor: [0.098, 2.06, -0.04],
+      color: '#F4B4AA',
+      description:
+        'Superior cortical region integrating somatosensory touch, temperature, proprioception, and spatial awareness.',
     },
     {
       id: 'occipital_lobe',
-      name: 'Occipital Lobe (Visual Cortex)',
-      side: 'left',
-      localAnchor: [0.0, 0.04, -0.15],
-      normalizedAnchor: [0.0, 0.22, -0.68],
-      color: '#818CF8',
-      usedFor: 'Visual perception—interpreting color, shape, depth, motion, and written text from the retinas.',
-      activity: 'Receives optic tract signals via the thalamus and constructs a real-time 3D visual representation of the world.',
+      name: 'occipital lobe',
+      side: 'right',
+      localAnchor: [0.085, 1.94, -0.16],
+      color: '#E09287',
       description:
-        'Posterior cortical pole dedicated to decoding visual signals from the retinas.',
+        'Posterior cerebral cortex housing the primary visual cortex for processing sight, color, and motion.',
     },
     {
       id: 'cerebellum',
-      name: 'Cerebellum',
+      name: 'cerebellum',
       side: 'right',
-      localAnchor: [0.0, -0.11, -0.12],
-      normalizedAnchor: [0.0, -0.52, -0.52],
-      color: '#E879F9',
-      usedFor: 'Balance, posture, equilibrium, and fine motor coordination.',
-      activity: 'Continuously compares intended movement with proprioceptive feedback to smooth out muscle contractions and prevent tremor.',
+      localAnchor: [0.075, 1.79, -0.13],
+      color: '#DFA099',
       description:
-        'Finely striated hindbrain structure that coordinates balance, posture, and precision motor timing.',
-    },
-    {
-      id: 'brainstem',
-      name: 'Brainstem (Midbrain, Pons & Medulla)',
-      side: 'left',
-      localAnchor: [0.0, -0.16, -0.02],
-      normalizedAnchor: [0.0, -0.78, 0.05],
-      color: '#F9A8D4',
-      usedFor: 'Connecting the brain to the spinal cord and sustaining automatic life-support functions.',
-      activity: 'Autonomously regulates heart rate, blood pressure, breathing rhythm, swallowing, and sleep-wake cycles.',
-      description:
-        'Vital relay stalk regulating automatic breathing, heart rate, blood pressure, and cranial nerve reflexes.',
+        'Striated hindbrain structure coordinating fine motor precision, posture, balance, and motor learning.',
     },
   ],
 
-  // =========================================================================
   // 3. LUNGS — Trachea, Bronchi & Pulmonary Lobes
-  // =========================================================================
   lungs: [
     {
       id: 'trachea',
-      name: 'Trachea (Windpipe)',
+      name: 'trachea',
       side: 'left',
-      localAnchor: [0.0, 0.28, 0.0],
-      normalizedAnchor: [0.0, 0.78, 0.05],
-      color: '#BAE6FD',
-      usedFor: 'Conducting inhaled air from the larynx down into the chest cavity.',
-      activity: 'Uses C-shaped hyaline cartilage rings to stay open during inhalation while ciliated mucosa traps and clears dust.',
+      localAnchor: [0.0, 0.34, 0.01],
+      color: '#93C5FD',
       description:
-        'Cartilage-ringed airway conducting inhaled air from the larynx down into the mainstem bronchi.',
+        'Cartilaginous C-ringed windpipe conducting inhaled air from the larynx down to the bronchial carina.',
     },
     {
-      id: 'right_upper_lobe',
-      name: 'Right Superior Pulmonary Lobe',
+      id: 'right_superior_lobe',
+      name: 'right upper lobe',
       side: 'left',
-      localAnchor: [-0.18, 0.14, 0.02],
-      normalizedAnchor: [-0.55, 0.42, 0.1],
-      color: '#FB7185',
-      usedFor: 'Gas exchange in the upper right thoracic cavity (apical, anterior, and posterior segments).',
-      activity: 'Expands during inspiration to diffuse oxygen across millions of alveolar-capillary membranes into the bloodstream.',
+      localAnchor: [-0.175, 0.14, 0.04],
+      color: '#E67E76',
       description:
-        'Apical and upper segment of the right lung where oxygen diffuses across millions of alveoli.',
+        'Apical section of the three-lobed right lung sitting superior to the horizontal fissure.',
     },
     {
-      id: 'right_middle_lobe',
-      name: 'Right Middle Pulmonary Lobe',
+      id: 'right_inferior_lobe',
+      name: 'right lower lobe',
       side: 'left',
-      localAnchor: [-0.20, -0.02, 0.05],
-      normalizedAnchor: [-0.58, -0.05, 0.35],
-      color: '#F43F5E',
-      usedFor: 'Anterior-medial ventilation of the right lung between the horizontal and oblique fissures.',
-      activity: 'Ventilates the anterior chest wall and exchanges O₂ and CO₂ during normal tidal breathing.',
+      localAnchor: [-0.195, -0.14, 0.02],
+      color: '#D1655D',
       description:
-        'Wedge-shaped middle lobe of the right lung separated by the horizontal and oblique fissures.',
+        'Broad diaphragmatic base of the right lung containing dense alveolar capillary beds for gas exchange.',
     },
     {
-      id: 'right_lower_lobe',
-      name: 'Right Inferior Pulmonary Lobe',
-      side: 'left',
-      localAnchor: [-0.21, -0.18, -0.02],
-      normalizedAnchor: [-0.58, -0.58, -0.15],
-      color: '#E11D48',
-      usedFor: 'Primary high-volume gas exchange at the base of the right lung resting on the diaphragm.',
-      activity: 'Receives the largest share of gravitational blood perfusion and expands deeply when the diaphragm contracts downward.',
-      description:
-        'Large diaphragmatic base of the right lung responsible for the majority of tidal gas exchange.',
-    },
-    {
-      id: 'bronchi',
-      name: 'Mainstem Bronchi & Carina',
+      id: 'left_superior_lobe',
+      name: 'left upper lobe',
       side: 'right',
-      localAnchor: [0.0, 0.12, 0.0],
-      normalizedAnchor: [0.0, 0.25, 0.0],
-      color: '#38BDF8',
-      usedFor: 'Splitting airflow from the trachea into the left and right lungs at the bronchial carina.',
-      activity: 'Branches into lobar and segmental bronchioles with smooth muscle that adjusts airway diameter.',
+      localAnchor: [0.175, 0.14, 0.04],
+      color: '#E67E76',
       description:
-        'Primary left and right airway branches entering the pulmonary hilum of each lung.',
+        'Upper division of the left lung featuring the lingula and oblique interlobar fissure.',
     },
     {
-      id: 'left_upper_lobe',
-      name: 'Left Superior Lobe & Cardiac Notch',
+      id: 'cardiac_notch',
+      name: 'cardiac notch',
       side: 'right',
-      localAnchor: [0.18, 0.12, 0.02],
-      normalizedAnchor: [0.55, 0.38, 0.1],
-      color: '#FB7185',
-      usedFor: 'Upper-left pulmonary gas exchange while accommodating the heart’s apex via the cardiac notch.',
-      activity: 'Oxygenates blood flowing through the left upper pulmonary capillaries and includes the tongue-like lingula.',
+      localAnchor: [0.115, -0.04, 0.05],
+      color: '#F87171',
       description:
-        'Upper lobe of the left lung featuring the cardiac notch that curves around the apex of the heart.',
+        'Medial concavity on the anterior border of the left lung accommodating the apex of the heart.',
     },
     {
-      id: 'left_lower_lobe',
-      name: 'Left Inferior Pulmonary Lobe',
+      id: 'left_inferior_lobe',
+      name: 'left lower lobe',
       side: 'right',
-      localAnchor: [0.20, -0.16, -0.02],
-      normalizedAnchor: [0.58, -0.55, -0.15],
-      color: '#E11D48',
-      usedFor: 'Deep respiratory ventilation above the left hemidiaphragm.',
-      activity: 'Draws air into the basal alveoli during diaphragmatic descent and expels carbon dioxide during exhalation.',
+      localAnchor: [0.195, -0.15, 0.02],
+      color: '#D1655D',
       description:
-        'Inferior lobe of the left lung expanding against the left hemidiaphragm during inhalation.',
+        'Inferior lobe of the left lung resting directly upon the left dome of the thoracic diaphragm.',
     },
   ],
 
-  // =========================================================================
-  // 4. LIVER — Hepatic Lobes, Caudate Lobe & Gallbladder / Porta Hepatis
-  // =========================================================================
+  // 4. LIVER — Hepatic Lobes, Ligament & Gallbladder
   liver: [
     {
-      id: 'right_lobe',
-      name: 'Right Hepatic Lobe',
+      id: 'right_hepatic_lobe',
+      name: 'right hepatic lobe',
       side: 'left',
-      localAnchor: [-0.14, 0.02, 0.02],
-      normalizedAnchor: [-0.48, 0.08, 0.1],
-      color: '#B45309',
-      usedFor: 'Metabolic processing, detoxification, glycogen storage, and bile synthesis (largest lobe of the liver).',
-      activity: 'Hepatocytes filter portal blood, neutralize toxins and medications, synthesize plasma proteins, and secrete bile.',
+      localAnchor: [-0.14, 0.54, 0.1],
+      color: '#853228',
       description:
-        'Largest hepatic division (~65% of liver mass) performing metabolic synthesis, detoxification, and glycogen storage.',
+        'Largest functional lobe of the liver, performing metabolic detoxification, glycogen storage, and bile synthesis.',
     },
     {
       id: 'gallbladder',
-      name: 'Gallbladder & Biliary Tract (Porta Hepatis)',
+      name: 'gallbladder',
       side: 'left',
-      localAnchor: [-0.04, -0.12, 0.06],
-      normalizedAnchor: [-0.15, -0.58, 0.35],
-      color: '#22C55E',
-      usedFor: 'Storing and concentrating bile produced by the liver, and serving as the vascular gateway (porta hepatis).',
-      activity: 'Contracts in response to cholecystokinin (CCK) after fatty meals to eject concentrated bile into the duodenum.',
+      localAnchor: [-0.14, 0.41, 0.14],
+      color: '#65A30D',
       description:
-        'Pear-shaped sac storing and concentrating bile to emulsify dietary fats in the duodenum.',
+        'Pear-shaped biliary sac tucked beneath the right lobe that stores and concentrates bile for lipid digestion.',
     },
     {
-      id: 'left_lobe',
-      name: 'Left Hepatic Lobe',
+      id: 'falciform_ligament',
+      name: 'falciform ligament',
       side: 'right',
-      localAnchor: [0.16, 0.04, 0.02],
-      normalizedAnchor: [0.55, 0.15, 0.15],
-      color: '#D97706',
-      usedFor: 'Carbohydrate and lipid metabolism, clotting factor synthesis, and bile drainage across the midline.',
-      activity: 'Converts excess glucose into glycogen, regulates blood cholesterol, and drains bile into the left hepatic duct.',
+      localAnchor: [-0.03, 0.54, 0.17],
+      color: '#F8FAFC',
       description:
-        'Tapered medial lobe extending across the epigastrium anterior to the stomach.',
+        'Fibrous peritoneal fold anatomically dividing the right and left lobes and anchoring the liver to the anterior wall.',
     },
     {
-      id: 'caudate_lobe',
-      name: 'Caudate Lobe & Hepatic Venous Outflow',
+      id: 'left_hepatic_lobe',
+      name: 'left hepatic lobe',
       side: 'right',
-      localAnchor: [0.0, 0.08, -0.08],
-      normalizedAnchor: [0.0, 0.35, -0.55],
-      color: '#92400E',
-      usedFor: 'Independent dual-vascular hepatic processing and draining filtered blood directly into the Inferior Vena Cava.',
-      activity: 'Receives blood from both right and left portal branches and empties purified blood directly into the vena cava.',
+      localAnchor: [0.06, 0.56, 0.11],
+      color: '#993B30',
       description:
-        'Posterior-superior hepatic segment draining filtered blood into the Inferior Vena Cava.',
+        'Tapered medial lobe extending across the epigastrium superior to the lesser curvature of the stomach.',
     },
   ],
 
-  // =========================================================================
-  // 5. STOMACH — Cardia, Fundus, Body, Antrum & Pylorus
-  // =========================================================================
+  // 5. STOMACH — Cardia, Fundus, Body & Pylorus
   stomach: [
     {
       id: 'cardia',
-      name: 'Cardia & Lower Esophageal Junction',
+      name: 'cardia',
       side: 'left',
-      localAnchor: [0.02, 0.14, 0.0],
-      normalizedAnchor: [-0.25, 0.65, 0.0],
-      color: '#FB7185',
-      usedFor: 'Entry gateway where swallowed food passes from the esophagus into the stomach.',
-      activity: 'Secretes protective mucus and coordinates with the lower esophageal sphincter to prevent acid reflux.',
+      localAnchor: [0.04, 0.63, 0.04],
+      color: '#F0938C',
       description:
-        'Superior inlet where swallowed food enters the stomach through the lower esophageal sphincter.',
+        'Superior inlet where ingested food passes from the esophagus through the lower esophageal sphincter.',
     },
     {
-      id: 'pyloric_antrum',
-      name: 'Pyloric Antrum',
+      id: 'lesser_curvature',
+      name: 'lesser curvature',
       side: 'left',
-      localAnchor: [-0.06, -0.12, 0.02],
-      normalizedAnchor: [-0.35, -0.58, 0.15],
-      color: '#F43F5E',
-      usedFor: 'Grinding solid food particles into smooth chyme and secreting gastrin hormone.',
-      activity: 'Generates strong peristaltic mixing waves and releases gastrin from G-cells to stimulate gastric acid secretion.',
+      localAnchor: [0.09, 0.48, 0.08],
+      color: '#D9726B',
       description:
-        'Distal mixing chamber that grinds food particles into smooth chyme before duodenal emptying.',
+        'Concave medial border of the stomach anchoring the lesser omentum and gastric vasculature.',
     },
     {
-      id: 'pyloric_sphincter',
-      name: 'Pyloric Canal & Sphincter',
+      id: 'pylorus',
+      name: 'pyloric sphincter',
       side: 'left',
-      localAnchor: [-0.14, -0.08, 0.0],
-      normalizedAnchor: [-0.72, -0.35, 0.0],
-      color: '#E11D48',
-      usedFor: 'Controlling the metered release of acidic chyme from the stomach into the duodenum.',
-      activity: 'Acts as a muscular gatekeeper that allows only small liquid aliquots into the small intestine at a time.',
+      localAnchor: [0.02, 0.37, 0.08],
+      color: '#C25953',
       description:
-        'Thick muscular ring regulating the metered release of acidic chyme into the duodenum.',
+        'Muscular outlet valve regulating the release of acidic chyme into the duodenum of the small intestine.',
     },
     {
       id: 'gastric_fundus',
-      name: 'Gastric Fundus',
+      name: 'gastric fundus',
       side: 'right',
-      localAnchor: [0.10, 0.14, -0.01],
-      normalizedAnchor: [0.52, 0.62, -0.1],
-      color: '#FDA4AF',
-      usedFor: 'Accommodating meal volume, collecting swallowed air, and signaling hunger via ghrelin.',
-      activity: 'Relaxes (receptive relaxation) when food enters and houses parietal and chief cells that secrete HCl and pepsinogen.',
+      localAnchor: [0.18, 0.58, 0.06],
+      color: '#F0938C',
       description:
-        'Superior dome resting beneath the left diaphragm that stores undigested food and secretes ghrelin.',
+        'Dome-shaped superior bulge beneath the left diaphragm that collects digestive gases and secretes pepsinogen.',
     },
     {
-      id: 'gastric_body',
-      name: 'Gastric Body (Corpus & Rugae)',
+      id: 'greater_curvature',
+      name: 'greater curvature',
       side: 'right',
-      localAnchor: [0.08, -0.02, 0.02],
-      normalizedAnchor: [0.48, -0.08, 0.15],
-      color: '#FB7185',
-      usedFor: 'Chemical and mechanical breakdown of proteins using hydrochloric acid and pepsin.',
-      activity: 'Churns food with gastric juice (pH 1.5–2.0) while longitudinal mucosal folds (rugae) flatten to expand stomach capacity.',
+      localAnchor: [0.22, 0.45, 0.09],
+      color: '#E58079',
       description:
-        'Central muscular chamber lined with rugae folds that secretes hydrochloric acid and pepsinogen.',
+        'Long convex lateral border lined with deep gastric rugae folds that expand during meals.',
     },
   ],
 
-  // =========================================================================
-  // 6. KIDNEYS — Right/Left Kidneys, Renal Hilum, Ureters & Bladder
-  // =========================================================================
+  // 6. KIDNEYS — Renal Cortex, Hilum, Adrenals, Ureters & Bladder
   kidneys: [
     {
       id: 'right_kidney',
-      name: 'Right Kidney (Cortex & Medullary Pyramids)',
+      name: 'right kidney',
       side: 'left',
-      localAnchor: [-0.18, 0.25, -0.02],
-      normalizedAnchor: [-0.55, 0.55, -0.1],
-      color: '#EF4444',
-      usedFor: 'Filtering blood plasma through ~1 million nephrons to remove urea, creatinine, and excess salts.',
-      activity: 'Performs glomerular filtration, tubular reabsorption of water/glucose, and secretes erythropoietin and renin.',
+      localAnchor: [-0.17, 0.21, -0.06],
+      color: '#A13D2D',
       description:
-        'Bean-shaped retroperitoneal organ filtering blood through ~1 million nephrons; positioned slightly lower beneath the liver.',
+        'Bean-shaped retroperitoneal organ containing ~1 million nephrons that filter blood plasma and regulate electrolytes.',
     },
     {
       id: 'renal_hilum',
-      name: 'Renal Hilum, Pelvis & Calyces',
+      name: 'renal hilum',
       side: 'left',
-      localAnchor: [-0.11, 0.22, 0.0],
-      normalizedAnchor: [-0.28, 0.42, 0.05],
-      color: '#F59E0B',
-      usedFor: 'Funneling newly formed urine from the renal pyramids into the ureter and housing the renal artery and vein.',
-      activity: 'Collects urine dripping from the renal papillae into minor and major calyces and propels it into the ureter.',
+      localAnchor: [-0.13, 0.19, -0.05],
+      color: '#FEF08A',
       description:
-        'Medial gateway where the renal artery enters, renal vein exits, and renal pelvis funnels urine.',
-    },
-    {
-      id: 'right_ureter',
-      name: 'Right Ureter',
-      side: 'left',
-      localAnchor: [-0.10, -0.02, 0.0],
-      normalizedAnchor: [-0.32, -0.05, 0.0],
-      color: '#FBBF24',
-      usedFor: 'Transporting urine from the right renal pelvis down to the urinary bladder.',
-      activity: 'Uses rhythmic smooth-muscle peristaltic waves every 10–30 seconds to push urine downward into the bladder.',
-      description:
-        'Muscular duct propelling urine from the right kidney to the bladder via peristaltic waves.',
-    },
-    {
-      id: 'left_kidney',
-      name: 'Left Kidney (Cortex & Medullary Pyramids)',
-      side: 'right',
-      localAnchor: [0.18, 0.28, -0.02],
-      normalizedAnchor: [0.55, 0.62, -0.1],
-      color: '#EF4444',
-      usedFor: 'Ultrafiltration of blood plasma, electrolyte balance (Na⁺, K⁺, Ca²⁺), and blood pH regulation.',
-      activity: 'Filters ~90 mL/min of filtrate across Bowman’s capsules and concentrates urine in the Loops of Henle.',
-      description:
-        'Superior-left retroperitoneal kidney regulating fluid volume, electrolytes, and blood pressure.',
-    },
-    {
-      id: 'left_ureter',
-      name: 'Left Ureter',
-      side: 'right',
-      localAnchor: [0.10, -0.02, 0.0],
-      normalizedAnchor: [0.32, -0.05, 0.0],
-      color: '#FBBF24',
-      usedFor: 'Conveying urine from the left kidney to the posterior bladder wall.',
-      activity: 'Contracts peristaltically and enters the bladder obliquely to prevent vesicoureteral reflux.',
-      description:
-        'Peristaltic fibromuscular tube conveying urine from the left renal pelvis to the bladder.',
+        'Concave medial fissure where the renal artery enters and the renal vein and ureter exit.',
     },
     {
       id: 'urinary_bladder',
-      name: 'Urinary Bladder (Detrusor & Trigone)',
-      side: 'right',
-      localAnchor: [0.0, -0.35, 0.04],
-      normalizedAnchor: [0.0, -0.75, 0.25],
-      color: '#F97316',
-      usedFor: 'Temporary low-pressure storage of urine collected from both kidneys.',
-      activity: ' Stretches its transitional epithelium up to 400–600 mL and contracts its detrusor muscle during urination.',
+      name: 'urinary bladder',
+      side: 'left',
+      localAnchor: [0.0, -0.45, 0.07],
+      color: '#D97757',
       description:
-        'Hollow muscular reservoir in the pelvis that stores urine prior to micturition.',
+        'Hollow muscular pelvic reservoir lined by transitional epithelium that stores urine prior to micturition.',
+    },
+    {
+      id: 'adrenal_gland',
+      name: 'adrenal gland',
+      side: 'right',
+      localAnchor: [0.155, 0.38, -0.06],
+      color: '#F59E0B',
+      description:
+        'Suprarenal endocrine cap secreting cortisol, aldosterone, adrenaline, and noradrenaline.',
+    },
+    {
+      id: 'left_kidney',
+      name: 'left kidney',
+      side: 'right',
+      localAnchor: [0.17, 0.25, -0.06],
+      color: '#A13D2D',
+      description:
+        'Left renal parenchyma positioned slightly higher than the right kidney beneath the spleen.',
+    },
+    {
+      id: 'ureter',
+      name: 'ureter',
+      side: 'right',
+      localAnchor: [0.11, -0.12, -0.03],
+      color: '#FDE047',
+      description:
+        'Fibromuscular tube propelling urine downward from the renal pelvis to the bladder via peristaltic waves.',
     },
   ],
 
-  // =========================================================================
-  // 7. SMALL INTESTINE — Duodenum, Jejunum, Ileum & Ileocecal Junction
-  // =========================================================================
+  // 7. SMALL INTESTINE — Duodenum, Jejunum & Ileum
   small_intestine: [
     {
       id: 'duodenum',
-      name: 'Duodenum (C-Loop)',
+      name: 'duodenum',
       side: 'left',
-      localAnchor: [-0.06, 0.22, 0.0],
-      normalizedAnchor: [-0.28, 0.68, 0.0],
-      color: '#FB923C',
-      usedFor: 'Mixing acidic chyme with alkaline pancreatic enzymes and hepatic bile.',
-      activity: 'Neutralizes stomach acid with bicarbonate from Brunner’s glands and initiates enzymatic digestion of fats, carbs, and proteins.',
+      localAnchor: [-0.12, 0.14, 0.09],
+      color: '#EB8C86',
       description:
-        'First C-shaped segment receiving bile from the liver/gallbladder and digestive enzymes from the pancreas.',
-    },
-    {
-      id: 'ileocecal_junction',
-      name: 'Terminal Ileum & Ileocecal Junction',
-      side: 'left',
-      localAnchor: [-0.14, -0.22, 0.0],
-      normalizedAnchor: [-0.58, -0.68, 0.0],
-      color: '#EA580C',
-      usedFor: 'Absorbing Vitamin B12 and bile salts and preventing colonic bacteria from backing up into the small intestine.',
-      activity: 'Regulates passage of digested chyme into the cecum through the muscular ileocecal sphincter.',
-      description:
-        'Sphincter valve controlling flow from the small intestine into the cecum while preventing bacterial reflux.',
-    },
-    {
-      id: 'jejunum',
-      name: 'Jejunum (Upper Coils)',
-      side: 'right',
-      localAnchor: [0.08, 0.08, 0.04],
-      normalizedAnchor: [0.38, 0.25, 0.25],
-      color: '#F97316',
-      usedFor: 'Primary absorption of simple sugars, amino acids, fatty acids, and water-soluble vitamins.',
-      activity: 'Uses tall circular folds (plicae circulares) and dense villi brush-border enzymes to transport nutrients into blood and lacteals.',
-      description:
-        'Thick-walled upper coils with dense villi that absorb the majority of sugars, amino acids, and fatty acids.',
+        'First C-shaped segment receiving chyme from the stomach along with pancreatic enzymes and bile.',
     },
     {
       id: 'ileum',
-      name: 'Ileum (Lower Coils)',
-      side: 'right',
-      localAnchor: [0.06, -0.16, 0.03],
-      normalizedAnchor: [0.32, -0.45, 0.2],
-      color: '#EA580C',
-      usedFor: 'Final nutrient absorption, bile acid recycling, and gut immune surveillance.',
-      activity: 'Contains Peyer’s patches (lymphoid nodules) that monitor intestinal flora and reabsorbs 95% of bile salts for the liver.',
+      name: 'ileum',
+      side: 'left',
+      localAnchor: [-0.11, -0.24, 0.09],
+      color: '#D9736C',
       description:
-        'Distal coiled section rich in Peyer’s patches that absorbs Vitamin B12 and recycles bile salts.',
+        'Distal coiled section absorbing vitamin B12, bile salts, and remaining nutrients before joining the cecum.',
+    },
+    {
+      id: 'jejunum',
+      name: 'jejunum',
+      side: 'right',
+      localAnchor: [0.12, 0.04, 0.11],
+      color: '#EB8C86',
+      description:
+        'Middle intestinal coils lined with dense circular folds and villi for rapid absorption of sugars, amino acids, and fatty acids.',
+    },
+    {
+      id: 'mesenteric_coils',
+      name: 'intestinal coils',
+      side: 'right',
+      localAnchor: [0.1, -0.14, 0.1],
+      color: '#E07D77',
+      description:
+        'Peristaltic smooth-muscle loops providing over 250 square meters of absorptive mucosal surface area.',
     },
   ],
 
-  // =========================================================================
-  // 8. LARGE INTESTINE — Cecum, Ascending, Transverse, Descending, Sigmoid & Rectum
-  // =========================================================================
+  // 8. LARGE INTESTINE — Cecum, Colon & Rectum
   large_intestine: [
     {
-      id: 'cecum_appendix',
-      name: 'Cecum & Vermiform Appendix',
-      side: 'left',
-      localAnchor: [-0.22, -0.22, 0.02],
-      normalizedAnchor: [-0.65, -0.42, 0.15],
-      color: '#FB923C',
-      usedFor: 'Receiving liquid chyme from the ileum and sheltering beneficial gut microbiome flora.',
-      activity: 'Initiates water and electrolyte absorption while the lymphoid-rich appendix acts as a safe reservoir for commensal bacteria.',
-      description:
-        'First pouch of the colon receiving chyme from the ileum, attached to the lymphoid-rich appendix.',
-    },
-    {
       id: 'ascending_colon',
-      name: 'Ascending Colon & Hepatic Flexure',
+      name: 'ascending colon',
       side: 'left',
-      localAnchor: [-0.22, 0.08, 0.01],
-      normalizedAnchor: [-0.65, 0.22, 0.05],
-      color: '#F97316',
-      usedFor: 'Reabsorbing water and sodium from liquid intestinal contents on the right side of the abdomen.',
-      activity: 'Uses haustral contractions (powered by taeniae coli) to slowly churn chyme upward to the hepatic flexure beneath the liver.',
+      localAnchor: [-0.24, -0.04, 0.07],
+      color: '#E5857B',
       description:
-        'Right-sided vertical colonic segment absorbing water and electrolytes as chyme moves upward.',
+        'Right-sided vertical segment ascending from the cecum to the hepatic flexure while absorbing water and electrolytes.',
     },
     {
-      id: 'transverse_colon',
-      name: 'Transverse Colon',
+      id: 'cecum',
+      name: 'cecum',
       side: 'left',
-      localAnchor: [0.0, 0.28, 0.06],
-      normalizedAnchor: [0.0, 0.65, 0.35],
-      color: '#F59E0B',
-      usedFor: 'Propelling semi-solid stool horizontally across the upper abdomen from right to left.',
-      activity: 'Performs haustral shuttling and mass peristaltic movements while bacteria ferment dietary fiber and produce Vitamin K.',
+      localAnchor: [-0.22, -0.26, 0.08],
+      color: '#D46E64',
       description:
-        'Horizontal colonic arch crossing the upper abdomen from the hepatic flexure to the splenic flexure.',
-    },
-    {
-      id: 'descending_colon',
-      name: 'Descending Colon & Splenic Flexure',
-      side: 'right',
-      localAnchor: [0.22, 0.06, 0.01],
-      normalizedAnchor: [0.65, 0.18, 0.05],
-      color: '#F97316',
-      usedFor: 'Consolidating and storing formed stool along the left abdominal wall.',
-      activity: 'Absorbs remaining water and electrolytes while mucus secreted by goblet cells lubricates the descending stool.',
-      description:
-        'Left-sided colonic segment that consolidates and stores stool before entering the sigmoid colon.',
-    },
-    {
-      id: 'sigmoid_colon',
-      name: 'Sigmoid Colon',
-      side: 'right',
-      localAnchor: [0.14, -0.25, 0.01],
-      normalizedAnchor: [0.42, -0.48, 0.05],
-      color: '#EA580C',
-      usedFor: 'Holding formed stool in the pelvis and generating pressure waves to fill the rectum.',
-      activity: 'Contracts its S-shaped muscular walls during mass peristalsis (gastrocolic reflex) to move stool into the rectum.',
-      description:
-        'S-shaped muscular pelvic loop that propels formed stool into the rectum.',
+        'Proximal pouch in the right iliac fossa receiving digested material from the terminal ileum.',
     },
     {
       id: 'rectum',
-      name: 'Rectum & Anal Canal',
-      side: 'right',
-      localAnchor: [0.0, -0.42, -0.02],
-      normalizedAnchor: [0.0, -0.82, -0.15],
-      color: '#DC2626',
-      usedFor: 'Final temporary storage of stool and triggering the defecation reflex.',
-      activity: 'Stretch receptors in the rectal wall signal the spinal cord and brain to coordinate internal and external sphincter relaxation.',
+      name: 'rectum',
+      side: 'left',
+      localAnchor: [0.0, -0.48, -0.03],
+      color: '#B84D43',
       description:
-        'Terminal straight chamber of the large intestine that coordinates the defecation reflex.',
+        'Terminal pelvic chamber storing formed stool prior to defecation.',
+    },
+    {
+      id: 'transverse_colon',
+      name: 'transverse colon',
+      side: 'right',
+      localAnchor: [0.02, 0.21, 0.14],
+      color: '#E5857B',
+      description:
+        'Horizontal haustrated arch spanning across the upper abdomen from the hepatic flexure to the splenic flexure.',
+    },
+    {
+      id: 'descending_colon',
+      name: 'descending colon',
+      side: 'right',
+      localAnchor: [0.25, -0.04, 0.06],
+      color: '#D46E64',
+      description:
+        'Left-sided vertical colon segment consolidating luminal contents as they move toward the pelvis.',
+    },
+    {
+      id: 'sigmoid_colon',
+      name: 'sigmoid colon',
+      side: 'right',
+      localAnchor: [0.12, -0.32, 0.04],
+      color: '#C45B51',
+      description:
+        'S-shaped muscular segment linking the descending colon to the rectum.',
     },
   ],
 
-  // =========================================================================
   // 9. PANCREAS — Head, Neck, Body & Tail
-  // =========================================================================
   pancreas: [
     {
-      id: 'pancreatic_head',
-      name: 'Head of Pancreas & Uncinate Process',
+      id: 'pancreas_head',
+      name: 'head of pancreas',
       side: 'left',
-      localAnchor: [-0.10, -0.02, 0.0],
-      normalizedAnchor: [-0.58, -0.25, 0.0],
+      localAnchor: [-0.02, 0.28, 0.02],
       color: '#FBBF24',
-      usedFor: 'Delivering digestive enzymes and bicarbonate into the curve of the duodenum via the ampulla of Vater.',
-      activity: 'Merges the main pancreatic duct with the common bile duct to empty lipase, amylase, and proteases into the small intestine.',
       description:
-        'Broad right extremity nestled inside the C-loop of the duodenum where the main pancreatic duct exits.',
+        'Broad medial portion nestled within the C-loop of the duodenum where the main pancreatic duct joins the bile duct.',
     },
     {
-      id: 'pancreatic_neck',
-      name: 'Neck of Pancreas',
+      id: 'pancreas_neck',
+      name: 'neck of pancreas',
       side: 'left',
-      localAnchor: [-0.02, 0.0, 0.02],
-      normalizedAnchor: [-0.12, -0.05, 0.15],
+      localAnchor: [0.04, 0.33, 0.01],
       color: '#F59E0B',
-      usedFor: 'Connecting the pancreatic head to the body directly anterior to the portal vein.',
-      activity: 'Conducts exocrine pancreatic juice through the central duct of Wirsung toward the duodenum.',
       description:
-        'Constricted bridge connecting the pancreatic head and body anterior to the superior mesenteric vessels.',
+        'Constricted bridge overlying the superior mesenteric vessels between the pancreatic head and body.',
     },
     {
-      id: 'pancreatic_body',
-      name: 'Body of Pancreas',
+      id: 'pancreas_body',
+      name: 'body of pancreas',
       side: 'right',
-      localAnchor: [0.05, 0.02, 0.01],
-      normalizedAnchor: [0.25, 0.15, 0.05],
+      localAnchor: [0.14, 0.36, 0.0],
       color: '#FBBF24',
-      usedFor: 'Dual exocrine enzyme synthesis (acinar cells) and endocrine blood-sugar regulation.',
-      activity: 'Acinar clusters secrete trypsinogen, chymotrypsinogen, pancreatic lipase, and amylase into the main duct.',
       description:
-        'Elongated central prism housing acinar cells that secrete amylase, lipase, and proteases.',
+        'Elongated lobulated parenchyma containing acinar cells (digestive enzymes) and islets of Langerhans (insulin & glucagon).',
     },
     {
-      id: 'pancreatic_tail',
-      name: 'Tail of Pancreas (Islets of Langerhans)',
+      id: 'pancreas_tail',
+      name: 'tail of pancreas',
       side: 'right',
-      localAnchor: [0.12, 0.05, -0.02],
-      normalizedAnchor: [0.68, 0.42, -0.15],
+      localAnchor: [0.25, 0.41, -0.02],
       color: '#D97706',
-      usedFor: 'Endocrine hormone secretion (insulin and glucagon) directly into the bloodstream.',
-      activity: 'Beta cells release insulin to lower blood glucose after meals, while alpha cells release glucagon to raise glucose during fasting.',
       description:
-        'Tapered left tip reaching the splenic hilum, densely packed with insulin- and glucagon-producing islets.',
+        'Tapered left extremity extending within the splenorenal ligament to reach the hilum of the spleen.',
     },
   ],
 
-  // =========================================================================
-  // 10. SPLEEN — Diaphragmatic Surface, Splenic Hilum, Anterior & Posterior Poles
-  // =========================================================================
+  // 10. SPLEEN — Surfaces, Poles & Hilum
   spleen: [
     {
-      id: 'diaphragmatic_surface',
-      name: 'Diaphragmatic Surface (Red Pulp)',
-      side: 'left',
-      localAnchor: [-0.03, 0.04, -0.02],
-      normalizedAnchor: [-0.35, 0.35, -0.25],
-      color: '#A855F7',
-      usedFor: 'Mechanical filtration of blood and recycling of aged or damaged red blood cells (erythrocytes).',
-      activity: 'Macrophages in the splenic cords break down senescent red blood cells and salvage iron for new hemoglobin synthesis.',
-      description:
-        'Smooth convex outer capsule resting against the left diaphragm and ribs 9–11.',
-    },
-    {
       id: 'splenic_hilum',
-      name: 'Splenic Hilum & White Pulp',
+      name: 'splenic hilum',
       side: 'left',
-      localAnchor: [-0.02, -0.01, 0.03],
-      normalizedAnchor: [-0.25, -0.05, 0.45],
-      color: '#9333EA',
-      usedFor: 'Vascular gateway for the splenic artery/vein and immune surveillance against blood-borne pathogens.',
-      activity: 'White pulp lymphoid sheaths activate B-lymphocytes and T-lymphocytes to produce antibodies against bacteria and viruses.',
+      localAnchor: [0.27, 0.45, 0.01],
+      color: '#A855F7',
       description:
-        'Medial fissure where the splenic artery and vein enter to perfuse the white and red pulp.',
+        'Medial fissure where the splenic artery and splenic vein enter and exit the lymphoid parenchyma.',
     },
     {
-      id: 'posterior_extremity',
-      name: 'Superior (Posterior) Pole',
-      side: 'right',
-      localAnchor: [0.02, 0.08, -0.02],
-      normalizedAnchor: [0.25, 0.65, -0.2],
+      id: 'inferior_pole',
+      name: 'inferior pole',
+      side: 'left',
+      localAnchor: [0.33, 0.36, -0.03],
       color: '#7E22CE',
-      usedFor: 'Storing reserve platelets and monocytes near the upper pole of the left kidney.',
-      activity: 'Maintains ~30% of the body’s platelet pool ready to be released into circulation during bleeding or tissue injury.',
       description:
-        'Rounded upper pole directed toward the vertebral column and left kidney.',
+        'Lower margin resting near the left colic flexure and left kidney.',
     },
     {
-      id: 'anterior_extremity',
-      name: 'Inferior (Anterior) Pole',
+      id: 'superior_pole',
+      name: 'superior pole',
       side: 'right',
-      localAnchor: [0.03, -0.08, 0.02],
-      normalizedAnchor: [0.35, -0.65, 0.25],
-      color: '#6B21A8',
-      usedFor: 'Supporting the splenic flexure of the colon and clearing opsonized microbes from blood.',
-      activity: 'Filters circulating blood through venous sinusoids and removes encapsulated bacteria.',
+      localAnchor: [0.29, 0.56, -0.03],
+      color: '#9333EA',
       description:
-        'Broad lower pole resting on the splenic flexure of the colon.',
+        'Upper extremity curving medially beneath the left dome of the diaphragm.',
+    },
+    {
+      id: 'diaphragmatic_surface',
+      name: 'red & white pulp',
+      side: 'right',
+      localAnchor: [0.35, 0.46, -0.04],
+      color: '#862E73',
+      description:
+        'Vascular red pulp filters senescent erythrocytes while lymphoid white pulp mounts adaptive immune responses.',
     },
   ],
 };
-
-/**
- * Given a 3D world intersection point on an organ group, resolves the closest OrganSubPart
- * using normalized bounding-box coordinates [-1..1] so it works identically on both
- * procedural meshes and real .glb medical scans.
- */
-export function findNearestSubPartByWorldPoint(
-  organId: string,
-  group: THREE.Group,
-  worldPoint: THREE.Vector3
-): string | null {
-  const subParts = ORGAN_SUB_PARTS[organId];
-  if (!subParts || subParts.length === 0) return null;
-
-  group.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(group);
-  const center = new THREE.Vector3();
-  const size = new THREE.Vector3();
-  box.getCenter(center);
-  box.getSize(size);
-
-  const hx = Math.max(size.x * 0.5, 0.001);
-  const hy = Math.max(size.y * 0.5, 0.001);
-  const hz = Math.max(size.z * 0.5, 0.001);
-
-  const nx = (worldPoint.x - center.x) / hx;
-  const ny = (worldPoint.y - center.y) / hy;
-  const nz = (worldPoint.z - center.z) / hz;
-
-  let bestId = subParts[0].id;
-  let bestDist = Infinity;
-
-  for (const sp of subParts) {
-    const dx = nx - sp.normalizedAnchor[0];
-    const dy = ny - sp.normalizedAnchor[1];
-    const dz = nz - sp.normalizedAnchor[2];
-    const dist = dx * dx + dy * dy + dz * dz;
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestId = sp.id;
-    }
-  }
-
-  return bestId;
-}
-
-/**
- * Partitions any mesh in `group` that does not yet have an explicit `userData.subPartId`
- * into multiple sub-meshes (sharing the exact same vertex position/normal/color buffers,
- * splitting only the triangle index list by normalized anatomical zone).
- * This preserves 100% of the exact 3D visual appearance while enabling per-part 3D highlighting
- * on single-primitive scans like Brain and Stomach as well as multi-part organs.
- */
-export function partitionOrganMeshesBySubParts(
-  organId: string,
-  meshName: string,
-  systemId: string,
-  group: THREE.Group,
-  meshes: THREE.Mesh[],
-  originalMaterials: Map<THREE.Mesh, THREE.MeshStandardMaterial>
-): void {
-  const subParts = ORGAN_SUB_PARTS[organId];
-  if (!subParts || subParts.length === 0) return;
-
-  group.updateMatrixWorld(true);
-  const organBox = new THREE.Box3().setFromObject(group);
-  const center = new THREE.Vector3();
-  const size = new THREE.Vector3();
-  organBox.getCenter(center);
-  organBox.getSize(size);
-
-  const hx = Math.max(size.x * 0.5, 0.001);
-  const hy = Math.max(size.y * 0.5, 0.001);
-  const hz = Math.max(size.z * 0.5, 0.001);
-
-  const currentMeshes = [...meshes];
-  for (const mesh of currentMeshes) {
-    if (mesh.userData?.subPartId) {
-      continue;
-    }
-
-    const geo = mesh.geometry as THREE.BufferGeometry;
-    const posAttr = geo.getAttribute('position');
-    if (!posAttr || posAttr.count < 3) continue;
-
-    const indexAttr = geo.getIndex();
-    const triCount = indexAttr
-      ? Math.floor(indexAttr.count / 3)
-      : Math.floor(posAttr.count / 3);
-    if (triCount === 0) continue;
-
-    const buckets = new Map<string, number[]>();
-    const vWorld = new THREE.Vector3();
-    const matWorld = mesh.matrixWorld;
-
-    for (let t = 0; t < triCount; t++) {
-      const i0 = indexAttr ? indexAttr.getX(t * 3) : t * 3;
-      const i1 = indexAttr ? indexAttr.getX(t * 3 + 1) : t * 3 + 1;
-      const i2 = indexAttr ? indexAttr.getX(t * 3 + 2) : t * 3 + 2;
-
-      const cx = (posAttr.getX(i0) + posAttr.getX(i1) + posAttr.getX(i2)) / 3;
-      const cy = (posAttr.getY(i0) + posAttr.getY(i1) + posAttr.getY(i2)) / 3;
-      const cz = (posAttr.getZ(i0) + posAttr.getZ(i1) + posAttr.getZ(i2)) / 3;
-
-      vWorld.set(cx, cy, cz).applyMatrix4(matWorld);
-
-      const nx = (vWorld.x - center.x) / hx;
-      const ny = (vWorld.y - center.y) / hy;
-      const nz = (vWorld.z - center.z) / hz;
-
-      let bestId = subParts[0].id;
-      let bestDist = Infinity;
-      for (const sp of subParts) {
-        const dx = nx - sp.normalizedAnchor[0];
-        const dy = ny - sp.normalizedAnchor[1];
-        const dz = nz - sp.normalizedAnchor[2];
-        const d = dx * dx + dy * dy + dz * dz;
-        if (d < bestDist) {
-          bestDist = d;
-          bestId = sp.id;
-        }
-      }
-
-      let list = buckets.get(bestId);
-      if (!list) {
-        list = [];
-        buckets.set(bestId, list);
-      }
-      list.push(i0, i1, i2);
-    }
-
-    if (buckets.size <= 1) {
-      const onlyId = buckets.keys().next().value || subParts[0].id;
-      mesh.userData = { ...mesh.userData, subPartId: onlyId };
-      continue;
-    }
-
-    const parent = mesh.parent || group;
-    const baseMat = (
-      originalMaterials.get(mesh) || (mesh.material as THREE.MeshStandardMaterial)
-    ).clone();
-
-    // Remove the unpartitioned mesh and replace with sub-indexed meshes sharing the vertex attributes
-    parent.remove(mesh);
-    const meshIdx = meshes.indexOf(mesh);
-    if (meshIdx !== -1) {
-      meshes.splice(meshIdx, 1);
-    }
-    originalMaterials.delete(mesh);
-
-    const useUint32 = posAttr.count > 65535;
-    for (const [subId, triIndices] of buckets) {
-      const subGeo = new THREE.BufferGeometry();
-      subGeo.setAttribute('position', posAttr);
-      const normAttr = geo.getAttribute('normal');
-      if (normAttr) subGeo.setAttribute('normal', normAttr);
-      const colAttr = geo.getAttribute('color');
-      if (colAttr) subGeo.setAttribute('color', colAttr);
-
-      const idxArray = useUint32
-        ? new Uint32Array(triIndices)
-        : new Uint16Array(triIndices);
-      subGeo.setIndex(new THREE.BufferAttribute(idxArray, 1));
-
-      const subMat = baseMat.clone();
-      const subMesh = new THREE.Mesh(subGeo, subMat);
-      subMesh.name = `${meshName}_${subId}`;
-      subMesh.position.copy(mesh.position);
-      subMesh.rotation.copy(mesh.rotation);
-      subMesh.scale.copy(mesh.scale);
-      subMesh.userData = {
-        ...mesh.userData,
-        organId,
-        meshName,
-        systemId,
-        subPartId: subId,
-      };
-
-      parent.add(subMesh);
-      meshes.push(subMesh);
-      originalMaterials.set(subMesh, subMat.clone());
-    }
-  }
-}
-
