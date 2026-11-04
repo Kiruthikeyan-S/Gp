@@ -617,6 +617,23 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const onContextCreate = useCallback(
     async (gl: ExpoWebGLRenderingContext) => {
       try {
+        if (!gl || (gl as any).isPendingContext) {
+          await new Promise((r) => setTimeout(r, 80));
+          const contexts = (globalThis as any).__EXGLContexts;
+          const ctxId = (gl as any)?.contextId;
+          const realGl = ctxId && contexts ? contexts[String(ctxId)] : null;
+          if (realGl && !realGl.isPendingContext) {
+            gl = realGl;
+          }
+        }
+
+        if (!gl || (gl as any).isPendingContext) {
+          if (isMountedRef.current) {
+            setTimeout(() => setGlKey((k) => k + 1), 100);
+          }
+          return;
+        }
+
         const { canvasShim, width, height } = patchExpoGlForThree(gl);
 
         const renderer = new THREE.WebGLRenderer({
