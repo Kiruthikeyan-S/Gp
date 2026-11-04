@@ -21,11 +21,93 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
+interface PopularOrganItem {
+  id: string;
+  name: string;
+  systemTag: string;
+  subText: string;
+  icon: string;
+  accentColor: string;
+}
+
+const POPULAR_ORGANS: PopularOrganItem[] = [
+  {
+    id: 'brain',
+    name: 'Brain',
+    systemTag: 'NERVOUS',
+    subText: 'Cerebral Cortex & Nuclei',
+    icon: 'brain',
+    accentColor: '#7C3AED',
+  },
+  {
+    id: 'heart',
+    name: 'Heart',
+    systemTag: 'CIRCULATORY',
+    subText: 'Atria & Ventricles',
+    icon: 'heart-pulse',
+    accentColor: '#DC2626',
+  },
+  {
+    id: 'lungs',
+    name: 'Lungs',
+    systemTag: 'RESPIRATORY',
+    subText: 'Lobes & Bronchioles',
+    icon: 'lungs',
+    accentColor: '#0284C7',
+  },
+  {
+    id: 'liver',
+    name: 'Liver',
+    systemTag: 'DIGESTIVE',
+    subText: 'Hepatic Lobes & Portal',
+    icon: 'leaf',
+    accentColor: '#853228',
+  },
+  {
+    id: 'stomach',
+    name: 'Stomach',
+    systemTag: 'DIGESTIVE',
+    subText: 'Fundus & Pylorus',
+    icon: 'food-drumstick',
+    accentColor: '#EA580C',
+  },
+  {
+    id: 'kidneys',
+    name: 'Kidneys',
+    systemTag: 'URINARY',
+    subText: 'Renal Cortex & Pelvis',
+    icon: 'water-outline',
+    accentColor: '#CA8A04',
+  },
+];
+
+const BOOKMARKED_ITEMS = [
+  {
+    id: 'circle_of_willis',
+    title: 'Circle of Willis',
+    subtitle: 'Cerebral arterial anastomosis',
+    icon: 'brain',
+    organId: 'brain',
+  },
+  {
+    id: 'sa_node',
+    title: 'Sinoatrial (SA) Node',
+    subtitle: 'Cardiac conduction pacemaker',
+    icon: 'heart-pulse',
+    organId: 'heart',
+  },
+  {
+    id: 'vagus_nerve',
+    title: 'Cranial Nerve X (Vagus)',
+    subtitle: 'Parasympathetic visceral branch',
+    icon: 'medical-bag',
+    organId: 'brain',
+  },
+];
+
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const {
-    completedLessonIds,
-    bookmarkedOrganIds,
     loadPersistedData,
     selectOrgan,
     selectSystem,
@@ -35,226 +117,238 @@ export const HomeScreen: React.FC = () => {
     loadPersistedData();
   }, [loadPersistedData]);
 
-  const featuredOrgan = ORGANS[1]; // Heart
+  const handleOpenOrganDetails = (organId: string) => {
+    selectOrgan(organId);
+    navigation.navigate('OrganDetails', { organId });
+  };
+
+  const handleOpenSystem = (systemId: string) => {
+    selectSystem(systemId as any);
+    navigation.navigate('SystemsTab');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Top Clinical Header Bar matching Image 1 */}
+      <View style={styles.topHeader}>
+        <View style={styles.branding}>
+          <View style={styles.logoBadge}>
+            <MaterialCommunityIcons
+              name="microscope"
+              size={22}
+              color="#0284C7"
+            />
+          </View>
+          <View>
+            <Text style={styles.appTitle}>3D Human Anatomy Explorer</Text>
+            <Text style={styles.appSuiteLabel}>CLINICAL SUITE</Text>
+          </View>
+        </View>
+
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={() => navigation.navigate('SystemsTab')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="search-outline" size={20} color="#0F172A" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={() => navigation.navigate('ChatTab')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={20} color="#0F172A" />
+            <View style={styles.notifDot} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Sleek Medical Header */}
-        <View style={styles.topHeader}>
-          <View style={styles.branding}>
-            <View style={styles.logoBadge}>
-              <MaterialCommunityIcons
-                name="cube-scan"
-                size={24}
-                color="#38BDF8"
-              />
-            </View>
-            <View>
-              <Text style={styles.appTitle}>Anatomy 3D Explorer</Text>
-              <Text style={styles.appSubtitle}>Medical Atlas & AI Tutor</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.iconCircle}
-            onPress={() => navigation.navigate('ChatTab')}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons
-              name="robot-outline"
-              size={20}
-              color="#38BDF8"
-            />
-          </TouchableOpacity>
+        {/* User Greeting matching Image 1 */}
+        <View style={styles.greetingSection}>
+          <Text style={styles.greetingTitle}>Hello, Dr. Alex</Text>
+          <Text style={styles.greetingSubtitle}>
+            Welcome to 3D Human Anatomy Explorer
+          </Text>
         </View>
 
-        {/* Hero 3D Explorer Banner */}
+        {/* Current Module Banner matching Image 1 */}
         <TouchableOpacity
-          style={styles.heroBanner}
+          style={styles.moduleCard}
           activeOpacity={0.9}
-          onPress={() => {
-            selectSystem('all');
-            navigation.navigate('ExplorerTab');
-          }}
+          onPress={() => navigation.navigate('LearnTab')}
         >
-          <View style={styles.heroContent}>
-            <View style={styles.badgePill}>
-              <View style={styles.livePulseDot} />
-              <Text style={styles.badgePillText}>Interactive 3D Atlas</Text>
+          <View style={styles.moduleHeaderRow}>
+            <View style={styles.moduleTagPill}>
+              <View style={styles.moduleTagSquare} />
+              <Text style={styles.moduleTagText}>CURRENT MODULE</Text>
             </View>
-            <Text style={styles.heroTitle}>Explore Human Anatomy in 3D</Text>
-            <Text style={styles.heroDescription}>
-              360° medical scans, isolated organ views, and multi-system layers.
-            </Text>
-            <View style={styles.heroButton}>
-              <MaterialCommunityIcons name="cube-outline" size={17} color="#0B0F19" />
-              <Text style={styles.heroButtonText}>Launch 3D Atlas</Text>
-              <Ionicons name="arrow-forward" size={15} color="#0B0F19" />
+
+            {/* Circular Progress Gauge */}
+            <View style={styles.progressRing}>
+              <Text style={styles.progressRingValue}>68%</Text>
+            </View>
+          </View>
+
+          <Text style={styles.moduleTitle}>Cardiovascular Pathology</Text>
+          <Text style={styles.moduleSubtitle}>4 of 6 modules completed</Text>
+
+          <View style={styles.moduleFooterRow}>
+            <View style={{ flex: 1 }} />
+            <View style={styles.resumeModuleBtn}>
+              <Text style={styles.resumeModuleText}>Resume Module</Text>
+              <Ionicons name="arrow-forward" size={14} color="#0284C7" />
             </View>
           </View>
         </TouchableOpacity>
 
-        {/* Quick AI Assistant Card */}
-        <TouchableOpacity
-          style={styles.aiTutorCard}
-          activeOpacity={0.88}
-          onPress={() => navigation.navigate('ChatTab')}
-        >
-          <View style={styles.aiTutorLeft}>
-            <View style={styles.aiTutorIconWrap}>
-              <MaterialCommunityIcons name="robot" size={24} color="#38BDF8" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.aiTutorTitle}>Anatomy AI Assistant</Text>
-              <Text style={styles.aiTutorSubtitle}>
-                Ask any question about organ function, circulation, or physiology
-              </Text>
-            </View>
-          </View>
-          <View style={styles.aiTutorAction}>
-            <Text style={styles.aiTutorActionText}>Chat</Text>
-            <Ionicons name="chevron-forward" size={16} color="#38BDF8" />
-          </View>
-        </TouchableOpacity>
-
-        {/* Human Body Systems Strip */}
+        {/* Body Systems Horizontal Scroll matching Image 1 */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Body Systems</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SystemsTab')}>
-            <Text style={styles.seeAllText}>View All</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionHeading}>Body Systems</Text>
         </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.systemsScroll}
         >
-          {BODY_SYSTEMS.map((system) => (
-            <TouchableOpacity
-              key={system.id}
-              style={styles.systemIconPill}
-              activeOpacity={0.8}
-              onPress={() => {
-                selectSystem(system.id);
-                navigation.navigate('ExplorerTab', { targetSystemId: system.id });
-              }}
-            >
-              <View
-                style={[
-                  styles.systemIconBubble,
-                  { backgroundColor: `${system.color}20`, borderColor: `${system.color}50` },
-                ]}
+          {BODY_SYSTEMS.map((system) => {
+            const count = ORGANS.filter((o) => o.systemId === system.id).length;
+            return (
+              <TouchableOpacity
+                key={system.id}
+                style={styles.systemBoxCard}
+                activeOpacity={0.85}
+                onPress={() => handleOpenSystem(system.id)}
               >
-                <MaterialCommunityIcons
-                  name={system.icon as any}
-                  size={22}
-                  color={system.color}
-                />
-              </View>
-              <Text style={styles.systemPillName} numberOfLines={1}>
-                {system.name.replace(' System', '')}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <View
+                  style={[
+                    styles.systemIconBubble,
+                    { backgroundColor: `${system.color}15` },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={system.icon as any}
+                    size={22}
+                    color={system.color}
+                  />
+                </View>
+                <Text style={styles.systemBoxTitle}>{system.name.replace(' System', '')}</Text>
+                <Text style={styles.systemBoxSubtitle} numberOfLines={1}>
+                  {system.id === 'circulatory'
+                    ? 'Heart & vessels'
+                    : system.id === 'respiratory'
+                    ? 'Lungs & trachea'
+                    : system.id === 'nervous'
+                    ? 'Brain & nerves'
+                    : system.id === 'digestive'
+                    ? 'Stomach & liver'
+                    : system.id === 'urinary'
+                    ? 'Kidneys & bladder'
+                    : system.id === 'skeletal'
+                    ? 'Bones & joints'
+                    : 'Muscles & fibers'}
+                </Text>
+                <View style={styles.systemOrganPill}>
+                  <Text style={styles.systemOrganPillText}>
+                    {count > 0 ? `${count} Organs` : 'Framework'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={11} color="#0284C7" />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
-        {/* Quick Organ Cards (Horizontal Scroll) */}
+        {/* Popular Organs 2-Column Grid matching Image 1 */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Key Anatomical Organs</Text>
+          <Text style={styles.sectionHeading}>Popular Organs</Text>
           <TouchableOpacity onPress={() => navigation.navigate('SystemsTab')}>
-            <Text style={styles.seeAllText}>Browse All</Text>
+            <Text style={styles.viewAllText}>VIEW ALL &gt;</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.organsScroll}
-        >
-          {ORGANS.map((organ) => (
+
+        <View style={styles.popularOrgansGrid}>
+          {POPULAR_ORGANS.map((organ) => (
             <TouchableOpacity
               key={organ.id}
-              style={styles.organQuickCard}
-              activeOpacity={0.85}
-              onPress={() => {
-                selectOrgan(organ.id);
-                navigation.navigate('ExplorerTab', { targetOrganId: organ.id });
-              }}
+              style={styles.organGridCard}
+              activeOpacity={0.88}
+              onPress={() => handleOpenOrganDetails(organ.id)}
             >
+              {/* Category Tag */}
+              <View style={styles.organTagPill}>
+                <Text style={styles.organTagText}>{organ.systemTag}</Text>
+              </View>
+
+              {/* Organ Icon / 3D Render Preview */}
               <View
                 style={[
-                  styles.organIconBox,
-                  { backgroundColor: `${organ.accentColor}18` },
+                  styles.organPreviewBox,
+                  { backgroundColor: `${organ.accentColor}12` },
                 ]}
               >
                 <MaterialCommunityIcons
                   name={organ.icon as any}
-                  size={26}
+                  size={42}
                   color={organ.accentColor}
                 />
               </View>
-              <Text style={styles.organQuickName}>{organ.name}</Text>
-              <Text style={styles.organQuickSystem}>{organ.systemName}</Text>
-              <View style={styles.organQuickInspectBtn}>
-                <MaterialCommunityIcons name="cube-scan" size={13} color="#38BDF8" />
-                <Text style={styles.organQuickInspectText}>3D View</Text>
+
+              <Text style={styles.organCardName}>{organ.name}</Text>
+              <Text style={styles.organCardSubText} numberOfLines={1}>
+                {organ.subText}
+              </Text>
+
+              <View style={styles.organCardArrowCircle}>
+                <Ionicons name="arrow-forward" size={13} color="#94A3B8" />
               </View>
             </TouchableOpacity>
           ))}
-        </ScrollView>
-
-        {/* Featured Spotlight Card */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Featured Organ Spotlight</Text>
         </View>
-        <TouchableOpacity
-          style={styles.spotlightCard}
-          activeOpacity={0.88}
-          onPress={() => {
-            selectOrgan(featuredOrgan.id);
-            navigation.navigate('ExplorerTab', { targetOrganId: featuredOrgan.id });
-          }}
-        >
-          <View style={styles.spotlightHeader}>
-            <View
-              style={[
-                styles.spotlightIconWrap,
-                { backgroundColor: `${featuredOrgan.accentColor}25` },
-              ]}
+
+        {/* Bookmarked Structures matching Image 1 */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeading}>Bookmarked Structures</Text>
+          <View style={styles.savedBadge}>
+            <Text style={styles.savedBadgeText}>3 SAVED</Text>
+          </View>
+        </View>
+
+        <View style={styles.bookmarkedList}>
+          {BOOKMARKED_ITEMS.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.bookmarkRowCard}
+              activeOpacity={0.85}
+              onPress={() => handleOpenOrganDetails(item.organId)}
             >
+              <View style={styles.bookmarkIconWrap}>
+                <MaterialCommunityIcons
+                  name={item.icon as any}
+                  size={20}
+                  color="#0284C7"
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.bookmarkTitle}>{item.title}</Text>
+                <Text style={styles.bookmarkSubtitle}>{item.subtitle}</Text>
+              </View>
+
               <MaterialCommunityIcons
-                name={featuredOrgan.icon as any}
-                size={28}
-                color={featuredOrgan.accentColor}
+                name="bookmark"
+                size={20}
+                color="#0284C7"
               />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.spotlightTitle}>{featuredOrgan.name}</Text>
-              <Text style={styles.spotlightSystem}>{featuredOrgan.systemName}</Text>
-            </View>
-            <View style={styles.spotlightBadge}>
-              <Text style={styles.spotlightBadgeText}>3D Scan</Text>
-            </View>
-          </View>
-          <Text style={styles.spotlightSnippet} numberOfLines={2}>
-            {featuredOrgan.function}
-          </Text>
-          <View style={styles.spotlightFooter}>
-            <View style={styles.spotlightMeta}>
-              <Ionicons name="location-outline" size={14} color="#94A3B8" />
-              <Text style={styles.spotlightLocation} numberOfLines={1}>
-                {featuredOrgan.location}
-              </Text>
-            </View>
-            <View style={styles.spotlightActionPill}>
-              <Text style={styles.spotlightActionText}>Inspect in 3D</Text>
-              <Ionicons name="arrow-forward" size={14} color="#38BDF8" />
-            </View>
-          </View>
-        </TouchableOpacity>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -263,343 +357,346 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
   },
   contentContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingBottom: 28,
   },
   topHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   branding: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   logoBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   appTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#F8FAFC',
-    letterSpacing: -0.3,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
   },
-  appSubtitle: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
-    marginTop: 1,
+  appSuiteLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#0284C7',
+    letterSpacing: 0.8,
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroBanner: {
-    backgroundColor: '#0F172A',
-    borderRadius: 18,
-    padding: 18,
-    marginTop: 4,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
-  },
-  heroContent: {
-    alignItems: 'flex-start',
-  },
-  badgePill: {
+  headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginBottom: 10,
-    gap: 6,
+    gap: 8,
   },
-  livePulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#38BDF8',
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  badgePillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#7DD3FC',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
+  notifDot: {
+    position: 'absolute',
+    top: 6,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
-  heroTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 6,
-    letterSpacing: -0.4,
-  },
-  heroDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#94A3B8',
+  greetingSection: {
+    marginTop: 14,
     marginBottom: 14,
   },
-  heroButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#38BDF8',
-    paddingVertical: 9,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    gap: 6,
+  greetingTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.4,
   },
-  heroButtonText: {
+  greetingSubtitle: {
     fontSize: 13,
-    color: '#0B0F19',
-    fontWeight: '700',
+    color: '#64748B',
+    marginTop: 2,
   },
-  aiTutorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(30, 41, 59, 0.7)',
-    borderRadius: 14,
-    padding: 14,
+  moduleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.2)',
-    marginBottom: 18,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 20,
   },
-  aiTutorLeft: {
+  moduleHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  moduleTagPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    flex: 1,
-    marginRight: 10,
+    gap: 6,
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  aiTutorIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+  moduleTagSquare: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    backgroundColor: '#0284C7',
+  },
+  moduleTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0284C7',
+    letterSpacing: 0.5,
+  },
+  progressRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3.5,
+    borderColor: '#0284C7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  aiTutorTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#F8FAFC',
+  progressRingValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
   },
-  aiTutorSubtitle: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
+  moduleTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 2,
   },
-  aiTutorAction: {
+  moduleSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  moduleFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    marginTop: 10,
   },
-  aiTutorActionText: {
+  resumeModuleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  resumeModuleText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#38BDF8',
+    color: '#0284C7',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    marginTop: 4,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#F8FAFC',
+  sectionHeading: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
     letterSpacing: -0.2,
   },
-  seeAllText: {
-    fontSize: 12,
-    color: '#38BDF8',
-    fontWeight: '600',
+  viewAllText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
+    letterSpacing: 0.5,
   },
   systemsScroll: {
     gap: 12,
-    paddingBottom: 8,
-    marginBottom: 12,
+    paddingBottom: 4,
+    marginBottom: 20,
   },
-  systemIconPill: {
-    alignItems: 'center',
-    width: 68,
-  },
-  systemIconBubble: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  systemPillName: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#CBD5E1',
-    textAlign: 'center',
-  },
-  organsScroll: {
-    gap: 12,
-    paddingBottom: 8,
-    marginBottom: 14,
-  },
-  organQuickCard: {
-    width: 130,
-    backgroundColor: '#0F172A',
+  systemBoxCard: {
+    width: 135,
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    alignItems: 'center',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
   },
-  organIconBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
+  systemIconBubble: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
-  organQuickName: {
+  systemBoxTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
-    textAlign: 'center',
+    color: '#0F172A',
   },
-  organQuickSystem: {
-    fontSize: 10,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginTop: 2,
-    marginBottom: 10,
+  systemBoxSubtitle: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+    marginBottom: 8,
   },
-  organQuickInspectBtn: {
+  systemOrganPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    justifyContent: 'space-between',
+    backgroundColor: '#F0F9FF',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  organQuickInspectText: {
+  systemOrganPillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#38BDF8',
+    color: '#0284C7',
   },
-  spotlightCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    marginBottom: 12,
-  },
-  spotlightHeader: {
+  popularOrgansGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 12,
-    marginBottom: 10,
+    marginBottom: 22,
   },
-  spotlightIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  organGridCard: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+    position: 'relative',
+  },
+  organTagPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  organTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#0284C7',
+    letterSpacing: 0.4,
+  },
+  organPreviewBox: {
+    width: '100%',
+    height: 78,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  organCardName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  organCardSubText: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  organCardArrowCircle: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  spotlightTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
-  spotlightSystem: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 1,
-  },
-  spotlightBadge: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  savedBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
   },
-  spotlightBadgeText: {
+  savedBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#38BDF8',
-    textTransform: 'uppercase',
+    color: '#64748B',
+    letterSpacing: 0.4,
   },
-  spotlightSnippet: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#CBD5E1',
-    marginBottom: 12,
+  bookmarkedList: {
+    gap: 10,
   },
-  spotlightFooter: {
+  bookmarkRowCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 12,
   },
-  spotlightMeta: {
-    flexDirection: 'row',
+  bookmarkIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#F0F9FF',
     alignItems: 'center',
-    gap: 4,
-    flex: 1,
-    marginRight: 8,
+    justifyContent: 'center',
   },
-  spotlightLocation: {
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  spotlightActionPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  spotlightActionText: {
-    fontSize: 11,
+  bookmarkTitle: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#38BDF8',
+    color: '#0F172A',
+  },
+  bookmarkSubtitle: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
   },
 });

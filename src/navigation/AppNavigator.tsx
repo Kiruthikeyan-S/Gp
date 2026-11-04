@@ -24,16 +24,20 @@ function BottomTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#38BDF8',
+        tabBarActiveTintColor: '#0284C7',
         tabBarInactiveTintColor: '#64748B',
         tabBarStyle: {
-          backgroundColor: '#0F172A',
-          borderTopColor: '#1E293B',
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#E2E8F0',
           borderTopWidth: 1,
           height: 56 + bottomPad,
           paddingBottom: bottomPad,
           paddingTop: 6,
-          elevation: 10,
+          elevation: 6,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 6,
         },
         tabBarItemStyle: {
           paddingVertical: 2,
@@ -63,7 +67,7 @@ function BottomTabs() {
         name="ExplorerTab"
         component={ExplorerScreen}
         options={{
-          tabBarLabel: '3D Atlas',
+          tabBarLabel: 'Explore',
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="cube-scan" size={23} color={color} />
           ),
