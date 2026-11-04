@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -12,6 +13,7 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { theme } from '../theme';
 import { ORGANS } from '../data/anatomyData';
+import { REAL_GLB_ORGAN_SPECS } from '../models/realGlbLoader';
 import { useAnatomyStore } from '../state/useAnatomyStore';
 import { SystemBadge } from '../components/SystemBadge';
 import { Header } from '../components/Header';
@@ -32,6 +34,7 @@ export const OrganDetailsScreen: React.FC = () => {
   } = useAnatomyStore();
 
   const organ = ORGANS.find((o) => o.id === organId) || ORGANS[0];
+  const glbSpec = REAL_GLB_ORGAN_SPECS.find((s) => s.organId === organ.id);
   const bookmarked = isBookmarked(organ.id);
 
   const relatedOrgans = ORGANS.filter((o) =>
@@ -74,7 +77,9 @@ export const OrganDetailsScreen: React.FC = () => {
           <SystemBadge systemId={organ.systemId} label={organ.systemName} />
 
           <View style={styles.meshCodeBadge}>
-            <Text style={styles.meshCodeText}>3D Mesh: {organ.meshName}</Text>
+            <Text style={styles.meshCodeText}>
+              3D Mesh: {organ.meshName} • {glbSpec?.title || 'GLB Asset'}
+            </Text>
           </View>
 
           <TouchableOpacity
@@ -88,9 +93,32 @@ export const OrganDetailsScreen: React.FC = () => {
               });
             }}
           >
-            <MaterialCommunityIcons name="axis-arrow" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={styles.jumpTo3dText}>Isolate in 3D Explorer</Text>
+            <MaterialCommunityIcons
+              name="axis-arrow"
+              size={18}
+              color="#FFFFFF"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.jumpTo3dText}>Isolate 3D GLB Model</Text>
           </TouchableOpacity>
+
+          {glbSpec && (
+            <TouchableOpacity
+              style={styles.sketchfabRefBtn}
+              activeOpacity={0.85}
+              onPress={() => Linking.openURL(glbSpec.sketchfabReferenceUrl)}
+            >
+              <MaterialCommunityIcons
+                name="cube-outline"
+                size={16}
+                color={theme.colors.primary}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.sketchfabRefText}>
+                Open Sketchfab 3D Reference ({glbSpec.sourceCredit})
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Anatomical Location Card */}
@@ -230,6 +258,24 @@ const styles = StyleSheet.create({
     ...theme.typography.bodyMedium,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  sketchfabRefBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.cardBorder,
+  },
+  sketchfabRefText: {
+    ...theme.typography.small,
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   infoCard: {
     backgroundColor: theme.colors.surface,

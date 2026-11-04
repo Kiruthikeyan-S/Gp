@@ -15,6 +15,7 @@ import {
   buildAnatomySceneGraph,
   AnatomySceneGraph,
 } from '../models/anatomyModelBuilder';
+import { loadAllRealMedicalGlbModels } from '../models/realGlbLoader';
 import { BodySystemId } from '../types';
 import { CameraPreset } from '../state/useAnatomyStore';
 import { theme } from '../theme';
@@ -124,6 +125,10 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [glKey, setGlKey] = useState<number>(0);
+  const [glbScanStatus, setGlbScanStatus] = useState<{
+    loaded: number;
+    total: number;
+  }>({ loaded: 0, total: 10 });
   const layoutRef = useRef<{ width: number; height: number }>({
     width: 360,
     height: 520,
@@ -536,7 +541,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
         scene.add(pedestalGroup);
 
-        // Build Sculpted 3D Human Anatomy Scene Graph
+        // Build Sculpted 3D Human Anatomy Scene Graph & Stream Real Medical GLB Scans
         const graph = buildAnatomySceneGraph();
         sceneGraphRef.current = graph;
         scene.add(graph.rootGroup);
@@ -546,6 +551,17 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         if (isMountedRef.current) {
           setIsLoading(false);
         }
+
+        // Asynchronously stream & hot-swap real 3D .glb medical scans (Sketchfab / NIH 3D / Visible Human)
+        loadAllRealMedicalGlbModels(
+          graph,
+          (loadedCount, totalCount) => {
+            if (!isMountedRef.current) return;
+            setGlbScanStatus({ loaded: loadedCount, total: totalCount });
+            applySceneState();
+          },
+          () => !isMountedRef.current
+        );
 
         let clock = 0;
 
@@ -697,6 +713,15 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         onContextCreate={onContextCreate}
       />
 
+      {!isLoading && glbScanStatus.loaded < glbScanStatus.total && (
+        <View style={styles.glbStreamingPill} pointerEvents="none">
+          <ActivityIndicator size="small" color="#38BDF8" />
+          <Text style={styles.glbStreamingText}>
+            3D GLB Scans: {glbScanStatus.loaded}/{glbScanStatus.total}
+          </Text>
+        </View>
+      )}
+
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#38BDF8" />
@@ -717,6 +742,25 @@ const styles = StyleSheet.create({
   },
   glView: {
     flex: 1,
+  },
+  glbStreamingPill: {
+    position: 'absolute',
+    top: 56,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.35)',
+    gap: 6,
+  },
+  glbStreamingText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#BAE6FD',
   },
   loadingOverlay: {
     position: 'absolute',

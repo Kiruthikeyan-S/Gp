@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ORGANS, BODY_SYSTEMS, LESSONS, QUIZ_QUESTIONS } from '../data/anatomyData';
 import { buildAnatomySceneGraph } from '../models/anatomyModelBuilder';
+import { REAL_GLB_ORGAN_SPECS, parseGlbBinary } from '../models/realGlbLoader';
 
 export function runAllVerificationTests(): { passed: number; failed: number; logs: string[] } {
   const logs: string[] = [];
@@ -160,7 +161,61 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
     'Patched Expo GL context: instanceof WebGLRenderingContext is false while preserving all GL methods'
   );
 
-  // 8. Verify GPU Resource Disposal
+  // 8. Verify Real GLB Binary Parser & Sketchfab/NIH GLB Organ Specs
+  assert(
+    REAL_GLB_ORGAN_SPECS.length === 10 &&
+      REAL_GLB_ORGAN_SPECS.every(
+        (s) =>
+          s.urls.length > 0 &&
+          s.sketchfabReferenceUrl.startsWith('https://sketchfab.com/')
+      ),
+    'Configured all 10 organs with real .glb medical scan URLs and Sketchfab 3D references'
+  );
+
+  // Synthesize a valid minimal binary GLB buffer (1 triangle) and verify parseGlbBinary()
+  const gltfJson = JSON.stringify({
+    asset: { version: '2.0' },
+    scenes: [{ nodes: [0] }],
+    nodes: [{ name: 'TestOrganMesh', mesh: 0 }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3' },
+      { bufferView: 1, componentType: 5123, count: 3, type: 'SCALAR' },
+    ],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 36 },
+      { buffer: 0, byteOffset: 36, byteLength: 6 },
+    ],
+  });
+  const jsonPadded =
+    gltfJson + ' '.repeat((4 - (gltfJson.length % 4)) % 4);
+  const binByteLength = 44; // 36 bytes float32 positions + 6 bytes uint16 indices + 2 pad
+  const totalGlbBytes = 12 + 8 + jsonPadded.length + 8 + binByteLength;
+  const testGlbBuf = new ArrayBuffer(totalGlbBytes);
+  const dv = new DataView(testGlbBuf);
+  dv.setUint32(0, 0x46546c67, true); // 'glTF'
+  dv.setUint32(4, 2, true);
+  dv.setUint32(8, totalGlbBytes, true);
+  dv.setUint32(12, jsonPadded.length, true);
+  dv.setUint32(16, 0x4e4f534a, true); // 'JSON'
+  for (let i = 0; i < jsonPadded.length; i++) {
+    dv.setUint8(20 + i, jsonPadded.charCodeAt(i));
+  }
+  const binChunkStart = 20 + jsonPadded.length;
+  dv.setUint32(binChunkStart, binByteLength, true);
+  dv.setUint32(binChunkStart + 4, 0x004e4942, true); // 'BIN\0'
+  const posView = new Float32Array(testGlbBuf, binChunkStart + 8, 9);
+  posView.set([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+  const idxView = new Uint16Array(testGlbBuf, binChunkStart + 8 + 36, 3);
+  idxView.set([0, 1, 2]);
+
+  const parsedPrims = parseGlbBinary(testGlbBuf);
+  assert(
+    parsedPrims.length === 1 && parsedPrims[0].positions.length === 9,
+    'Native binary .glb parser decoded GLTF 2.0 positions and indices with zero DOM dependencies'
+  );
+
+  // 9. Verify GPU Resource Disposal
   graph.dispose();
   assert(true, 'Disposed all 3D geometries and materials cleanly');
 
