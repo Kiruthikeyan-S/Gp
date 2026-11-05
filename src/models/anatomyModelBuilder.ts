@@ -279,73 +279,114 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   rootGroup.add(bodyShellGroup);
 
   // =========================================================================
-  // 2. SKELETAL SYSTEM (Vertebral Column, Ribcage, Sternum, Pelvis, Clavicles)
+  // 2. SKELETAL SYSTEM (Complete Full Human Skeleton: Cranium to Toes)
   // =========================================================================
   const skeletalGroup = systemGroups.get('skeletal')!;
   const boneMat = new THREE.MeshStandardMaterial({
-    color: 0xe6dcc8,
-    roughness: 0.42,
-    metalness: 0.06,
+    color: 0xf1ebe1,
+    roughness: 0.38,
+    metalness: 0.08,
   });
   const cartilageMat = new THREE.MeshStandardMaterial({
     color: 0xcbd5e1,
-    roughness: 0.35,
+    roughness: 0.32,
     metalness: 0.05,
   });
 
-  // Cranium (Neurocranium & Facial Bones) for full skeletal display
-  const craniumGeo = new THREE.SphereGeometry(0.24, 20, 20);
-  craniumGeo.scale(0.85, 1.15, 0.98);
+  // 1. Skull & Facial Skeleton
+  // Neurocranium (Cranial Vault)
+  const craniumGeo = new THREE.SphereGeometry(0.23, 22, 22);
+  craniumGeo.scale(0.86, 1.12, 1.02);
   const craniumMesh = new THREE.Mesh(craniumGeo, boneMat);
-  craniumMesh.position.set(0, 1.84, 0.02);
-  craniumMesh.userData = { subPartId: 'cranium', name: 'Cranium & Facial Bones' };
+  craniumMesh.position.set(0, 1.84, 0.01);
+  craniumMesh.userData = { subPartId: 'cranium', name: 'Cranium (Neurocranium)' };
   skeletalGroup.add(craniumMesh);
 
-  // Mandible (Jawbone)
-  const mandibleGeo = new THREE.TorusGeometry(0.11, 0.022, 8, 16, Math.PI);
+  // Facial Skeleton: Orbital Eye Sockets (Bilateral)
+  [-1, 1].forEach((side) => {
+    const orbitGeo = new THREE.TorusGeometry(0.046, 0.013, 8, 16);
+    const orbitMesh = new THREE.Mesh(orbitGeo, boneMat);
+    orbitMesh.position.set(side * 0.084, 1.78, 0.18);
+    orbitMesh.userData = { subPartId: 'cranium', name: 'Orbital Cavity' };
+    skeletalGroup.add(orbitMesh);
+
+    // Zygomatic Arch (Cheekbone)
+    const zygoCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.18, 1.72, 0.04),
+      new THREE.Vector3(side * 0.19, 1.71, 0.12),
+      new THREE.Vector3(side * 0.12, 1.68, 0.17),
+    ]);
+    const zygoGeo = new THREE.TubeGeometry(zygoCurve, 10, 0.014, 8, false);
+    const zygoMesh = new THREE.Mesh(zygoGeo, boneMat);
+    zygoMesh.userData = { subPartId: 'cranium', name: 'Zygomatic Arch' };
+    skeletalGroup.add(zygoMesh);
+  });
+
+  // Nasal Aperture
+  const nasalGeo = new THREE.ConeGeometry(0.032, 0.075, 6);
+  nasalGeo.scale(0.7, 1, 0.5);
+  const nasalMesh = new THREE.Mesh(nasalGeo, boneMat);
+  nasalMesh.position.set(0, 1.72, 0.22);
+  nasalMesh.rotation.x = 0.2;
+  nasalMesh.userData = { subPartId: 'cranium', name: 'Nasal Bone' };
+  skeletalGroup.add(nasalMesh);
+
+  // Maxilla (Upper Jaw & Dental Arch)
+  const maxillaGeo = new THREE.CylinderGeometry(0.085, 0.075, 0.052, 12, 1, false, 0, Math.PI);
+  maxillaGeo.scale(1, 1, 0.65);
+  const maxillaMesh = new THREE.Mesh(maxillaGeo, boneMat);
+  maxillaMesh.position.set(0, 1.64, 0.14);
+  maxillaMesh.rotation.y = -Math.PI / 2;
+  maxillaMesh.userData = { subPartId: 'cranium', name: 'Maxilla' };
+  skeletalGroup.add(maxillaMesh);
+
+  // Mandible (Lower Jaw with Ramus & Chin)
+  const mandibleCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.13, 1.68, 0.05),
+    new THREE.Vector3(-0.11, 1.56, 0.13),
+    new THREE.Vector3(0.0, 1.54, 0.22),
+    new THREE.Vector3(0.11, 1.56, 0.13),
+    new THREE.Vector3(0.13, 1.68, 0.05),
+  ]);
+  const mandibleGeo = new THREE.TubeGeometry(mandibleCurve, 16, 0.019, 8, false);
   const mandibleMesh = new THREE.Mesh(mandibleGeo, boneMat);
-  mandibleMesh.position.set(0, 1.62, 0.12);
-  mandibleMesh.rotation.x = -Math.PI / 2;
-  mandibleMesh.userData = { subPartId: 'cranium', name: 'Mandible' };
+  mandibleMesh.userData = { subPartId: 'cranium', name: 'Mandible (Jaw)' };
   skeletalGroup.add(mandibleMesh);
 
-  // 22 Articulated Vertebrae (Cervical, Thoracic, Lumbar) + Intervertebral Discs + Spinous Processes
-  for (let i = 0; i < 22; i++) {
-    const t = i / 21;
-    const yPos = 1.56 - i * 0.088;
-    // physiological spinal S-curve (cervical lordosis, thoracic kyphosis, lumbar lordosis)
-    const zCurve = -0.14 + Math.sin(t * Math.PI * 2.2) * 0.035;
-    const radius = 0.048 + t * 0.028;
+  // 2. 24 Articulated Vertebrae (Cervical C1-C7, Thoracic T1-T12, Lumbar L1-L5)
+  for (let i = 0; i < 24; i++) {
+    const t = i / 23;
+    const yPos = 1.56 - i * 0.082;
+    const zCurve = -0.14 + Math.sin(t * Math.PI * 2.2) * 0.038;
+    const radius = 0.046 + t * 0.03;
 
-    const vBodyGeo = new THREE.CylinderGeometry(radius * 0.95, radius, 0.054, 14);
+    const vBodyGeo = new THREE.CylinderGeometry(radius * 0.95, radius, 0.052, 14);
     const vBody = new THREE.Mesh(vBodyGeo, boneMat);
     vBody.position.set(0, yPos, zCurve);
-    vBody.userData = { subPartId: 'vertebral_column', name: 'Vertebral Body' };
+    vBody.userData = { subPartId: 'vertebral_column', name: `Vertebra ${i + 1}` };
     skeletalGroup.add(vBody);
 
-    // Intervertebral fibrocartilage disc
     const discGeo = new THREE.CylinderGeometry(radius * 0.96, radius * 0.96, 0.022, 14);
     const disc = new THREE.Mesh(discGeo, cartilageMat);
-    disc.position.set(0, yPos - 0.038, zCurve);
+    disc.position.set(0, yPos - 0.036, zCurve);
     disc.userData = { subPartId: 'vertebral_column', name: 'Intervertebral Disc' };
     skeletalGroup.add(disc);
 
-    // Posterior Spinous Process & Transverse Processes
-    const spinousGeo = new THREE.BoxGeometry(0.022, 0.038, 0.075);
+    const spinousGeo = new THREE.BoxGeometry(0.02, 0.036, 0.075);
     const spinous = new THREE.Mesh(spinousGeo, boneMat);
     spinous.position.set(0, yPos - 0.01, zCurve - radius - 0.025);
     spinous.rotation.x = 0.35;
     spinous.userData = { subPartId: 'vertebral_column', name: 'Spinous Process' };
     skeletalGroup.add(spinous);
 
-    const transGeo = new THREE.BoxGeometry(radius * 2.7, 0.022, 0.024);
+    const transGeo = new THREE.BoxGeometry(radius * 2.8, 0.02, 0.024);
     const trans = new THREE.Mesh(transGeo, boneMat);
     trans.position.set(0, yPos, zCurve - radius * 0.55);
     trans.userData = { subPartId: 'vertebral_column', name: 'Transverse Process' };
     skeletalGroup.add(trans);
   }
 
-  // Sternum (Manubrium, Body, Xiphoid Process)
+  // 3. Sternum (Manubrium, Body, Xiphoid Process)
   const manubriumGeo = new THREE.CylinderGeometry(0.068, 0.048, 0.14, 6);
   manubriumGeo.scale(1, 1, 0.32);
   const manubrium = new THREE.Mesh(manubriumGeo, boneMat);
@@ -359,51 +400,108 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   sternumBody.userData = { subPartId: 'thoracic_cage', name: 'Sternal Body' };
   skeletalGroup.add(sternumBody);
 
-  // 10 Pairs of Anatomically Curved 3D Ribs wrapping the thorax
-  for (let r = 0; r < 10; r++) {
-    const yStart = 1.21 - r * 0.068;
-    const widthFactor = 0.29 + Math.sin((r / 9) * Math.PI * 0.85) * 0.14;
-    const depthFront = 0.24 - (r > 6 ? (r - 6) * 0.035 : 0);
+  const xiphoidGeo = new THREE.ConeGeometry(0.025, 0.065, 5);
+  const xiphoid = new THREE.Mesh(xiphoidGeo, cartilageMat);
+  xiphoid.position.set(0, 0.74, 0.23);
+  xiphoid.rotation.z = Math.PI;
+  xiphoid.userData = { subPartId: 'thoracic_cage', name: 'Xiphoid Process' };
+  skeletalGroup.add(xiphoid);
+
+  // 4. 12 Pairs of 3D Anatomical Ribs
+  for (let r = 0; r < 12; r++) {
+    const yStart = 1.22 - r * 0.058;
+    const widthFactor = 0.28 + Math.sin((r / 11) * Math.PI * 0.88) * 0.15;
+    const depthFront = 0.24 - (r > 7 ? (r - 7) * 0.038 : 0);
 
     [-1, 1].forEach((side) => {
       const ribCurve = new THREE.CatmullRomCurve3([
         new THREE.Vector3(side * 0.04, yStart, -0.14),
         new THREE.Vector3(side * (widthFactor * 0.78), yStart - 0.02, -0.11),
-        new THREE.Vector3(side * widthFactor, yStart - 0.055, 0.04),
-        new THREE.Vector3(side * (widthFactor * 0.65), yStart - 0.085, depthFront * 0.85),
-        new THREE.Vector3(side * (r < 7 ? 0.04 : widthFactor * 0.35), yStart - 0.09, depthFront),
+        new THREE.Vector3(side * widthFactor, yStart - 0.052, 0.04),
+        new THREE.Vector3(side * (widthFactor * 0.65), yStart - 0.082, depthFront * 0.85),
+        new THREE.Vector3(side * (r < 7 ? 0.04 : widthFactor * 0.35), yStart - 0.088, depthFront),
       ]);
-      const ribGeo = new THREE.TubeGeometry(ribCurve, 20, 0.014, 8, false);
+      const ribGeo = new THREE.TubeGeometry(ribCurve, 20, 0.013, 8, false);
       const ribMesh = new THREE.Mesh(ribGeo, boneMat);
       ribMesh.userData = { subPartId: 'thoracic_cage', name: `Rib Pair ${r + 1}` };
       skeletalGroup.add(ribMesh);
     });
   }
 
-  // S-Curved Clavicles (Collarbones)
+  // 5. Clavicles & Scapulae (Pectoral Girdle)
   [-1, 1].forEach((side) => {
+    // S-Curved Clavicle
     const clavCurve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(side * 0.05, 1.24, 0.22),
       new THREE.Vector3(side * 0.22, 1.27, 0.19),
       new THREE.Vector3(side * 0.44, 1.25, 0.06),
     ]);
-    const clavGeo = new THREE.TubeGeometry(clavCurve, 14, 0.017, 8, false);
+    const clavGeo = new THREE.TubeGeometry(clavCurve, 14, 0.016, 8, false);
     const clavMesh = new THREE.Mesh(clavGeo, boneMat);
     clavMesh.userData = { subPartId: 'clavicles_scapula', name: 'Clavicle' };
     skeletalGroup.add(clavMesh);
+
+    // Posterior Scapula (Shoulder Blade)
+    const scapCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.42, 1.24, 0.02),
+      new THREE.Vector3(side * 0.34, 1.15, -0.14),
+      new THREE.Vector3(side * 0.22, 0.98, -0.16),
+      new THREE.Vector3(side * 0.38, 1.05, -0.12),
+    ]);
+    const scapGeo = new THREE.TubeGeometry(scapCurve, 14, 0.022, 8, false);
+    const scapMesh = new THREE.Mesh(scapGeo, boneMat);
+    scapMesh.userData = { subPartId: 'clavicles_scapula', name: 'Scapula' };
+    skeletalGroup.add(scapMesh);
   });
 
-  // Humerus (Upper arm long bones)
+  // 6. Complete Upper Limbs (Humerus, Radius, Ulna, Carpals & Hands)
   [-1, 1].forEach((side) => {
-    const humGeo = new THREE.CylinderGeometry(0.025, 0.022, 0.42, 10);
+    // Humerus (Arm)
+    const humCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.46, 1.23, 0.04),
+      new THREE.Vector3(side * 0.50, 1.02, 0.03),
+      new THREE.Vector3(side * 0.52, 0.82, 0.02),
+    ]);
+    const humGeo = new THREE.TubeGeometry(humCurve, 12, 0.026, 8, false);
     const humMesh = new THREE.Mesh(humGeo, boneMat);
-    humMesh.position.set(side * 0.52, 0.98, 0.02);
-    humMesh.rotation.z = side * -0.15;
     humMesh.userData = { subPartId: 'clavicles_scapula', name: 'Humerus' };
     skeletalGroup.add(humMesh);
+
+    // Radius (Lateral Forearm)
+    const radCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.54, 0.80, 0.03),
+      new THREE.Vector3(side * 0.56, 0.62, 0.04),
+      new THREE.Vector3(side * 0.58, 0.44, 0.04),
+    ]);
+    const radGeo = new THREE.TubeGeometry(radCurve, 10, 0.016, 8, false);
+    const radMesh = new THREE.Mesh(radGeo, boneMat);
+    radMesh.userData = { subPartId: 'clavicles_scapula', name: 'Radius' };
+    skeletalGroup.add(radMesh);
+
+    // Ulna (Medial Forearm)
+    const ulnaCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.49, 0.81, 0.01),
+      new THREE.Vector3(side * 0.51, 0.62, 0.02),
+      new THREE.Vector3(side * 0.53, 0.44, 0.03),
+    ]);
+    const ulnaGeo = new THREE.TubeGeometry(ulnaCurve, 10, 0.015, 8, false);
+    const ulnaMesh = new THREE.Mesh(ulnaGeo, boneMat);
+    ulnaMesh.userData = { subPartId: 'clavicles_scapula', name: 'Ulna' };
+    skeletalGroup.add(ulnaMesh);
+
+    // Hand Skeletal Ray (Carpals, Metacarpals & Phalanges)
+    const handCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.55, 0.44, 0.04),
+      new THREE.Vector3(side * 0.56, 0.34, 0.05),
+      new THREE.Vector3(side * 0.56, 0.24, 0.06),
+    ]);
+    const handGeo = new THREE.TubeGeometry(handCurve, 8, 0.022, 6, false);
+    const handMesh = new THREE.Mesh(handGeo, boneMat);
+    handMesh.userData = { subPartId: 'clavicles_scapula', name: 'Hand & Phalanges' };
+    skeletalGroup.add(handMesh);
   });
 
-  // Sculpted Pelvic Girdle (Iliac Wings, Sacrum, Pubic Arch, Obturator Foramen)
+  // 7. Pelvic Girdle (Iliac Wings, Sacrum, Pubic Arch, Obturator Foramen)
   [-1, 1].forEach((side) => {
     // Flaring Iliac Wing
     const iliumCurve = new THREE.CatmullRomCurve3([
@@ -419,7 +517,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     iliumMesh.userData = { subPartId: 'pelvic_girdle', name: 'Ilium Wing' };
     skeletalGroup.add(iliumMesh);
 
-    // Ischial & Pubic Ramus loop (framing obturator foramen like Image 1)
+    // Ischial & Pubic Ramus
     const ischiumCurve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(side * 0.22, -0.42, 0.08),
       new THREE.Vector3(side * 0.19, -0.58, 0.04),
@@ -431,7 +529,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     skeletalGroup.add(ischiumMesh);
   });
 
-  // Sacrum & Coccyx wedge
+  // Sacrum & Coccyx
   const sacrumGeo = new THREE.ConeGeometry(0.11, 0.24, 12);
   sacrumGeo.scale(1.1, 1, 0.45);
   const sacrumMesh = new THREE.Mesh(sacrumGeo, boneMat);
@@ -440,14 +538,61 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   sacrumMesh.userData = { subPartId: 'pelvic_girdle', name: 'Sacrum' };
   skeletalGroup.add(sacrumMesh);
 
-  // Femur (Thigh long bones)
+  // 8. Complete Lower Limbs: Femur, Patella, Tibia, Fibula & Feet (Head to Toe!)
   [-1, 1].forEach((side) => {
-    const femGeo = new THREE.CylinderGeometry(0.038, 0.032, 0.62, 12);
+    // Femur (Thigh Bone with angled femoral neck)
+    const femCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.14, -0.42, 0.06),
+      new THREE.Vector3(side * 0.22, -0.46, 0.05),
+      new THREE.Vector3(side * 0.20, -0.72, 0.04),
+      new THREE.Vector3(side * 0.18, -0.96, 0.02),
+    ]);
+    const femGeo = new THREE.TubeGeometry(femCurve, 14, 0.034, 10, false);
     const femMesh = new THREE.Mesh(femGeo, boneMat);
-    femMesh.position.set(side * 0.18, -0.82, 0.04);
-    femMesh.rotation.z = side * 0.08;
     femMesh.userData = { subPartId: 'pelvic_girdle', name: 'Femur' };
     skeletalGroup.add(femMesh);
+
+    // Patella (Kneecap)
+    const patellaGeo = new THREE.SphereGeometry(0.032, 10, 10);
+    patellaGeo.scale(0.9, 1.1, 0.6);
+    const patellaMesh = new THREE.Mesh(patellaGeo, boneMat);
+    patellaMesh.position.set(side * 0.18, -0.96, 0.07);
+    patellaMesh.userData = { subPartId: 'pelvic_girdle', name: 'Patella' };
+    skeletalGroup.add(patellaMesh);
+
+    // Tibia (Large Shin Bone)
+    const tibCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.18, -0.98, 0.02),
+      new THREE.Vector3(side * 0.17, -1.22, 0.01),
+      new THREE.Vector3(side * 0.16, -1.48, 0.0),
+    ]);
+    const tibGeo = new THREE.TubeGeometry(tibCurve, 12, 0.028, 8, false);
+    const tibMesh = new THREE.Mesh(tibGeo, boneMat);
+    tibMesh.userData = { subPartId: 'pelvic_girdle', name: 'Tibia (Shin)' };
+    skeletalGroup.add(tibMesh);
+
+    // Fibula (Slender Lateral Leg Bone)
+    const fibCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.23, -1.02, -0.01),
+      new THREE.Vector3(side * 0.23, -1.24, -0.01),
+      new THREE.Vector3(side * 0.21, -1.47, -0.01),
+    ]);
+    const fibGeo = new THREE.TubeGeometry(fibCurve, 12, 0.014, 6, false);
+    const fibMesh = new THREE.Mesh(fibGeo, boneMat);
+    fibMesh.userData = { subPartId: 'pelvic_girdle', name: 'Fibula' };
+    skeletalGroup.add(fibMesh);
+
+    // Foot (Heel Calcaneus, Arched Tarsals, Metatarsals & Toes)
+    const footCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.16, -1.50, -0.09), // Heel (Calcaneus)
+      new THREE.Vector3(side * 0.16, -1.52, 0.04),  // Midfoot arch
+      new THREE.Vector3(side * 0.16, -1.55, 0.18),  // Metatarsals & Toes
+    ]);
+    const footGeo = new THREE.TubeGeometry(footCurve, 10, 0.028, 8, false);
+    footGeo.scale(1, 0.65, 1);
+    const footMesh = new THREE.Mesh(footGeo, boneMat);
+    footMesh.userData = { subPartId: 'pelvic_girdle', name: 'Foot & Toes' };
+    skeletalGroup.add(footMesh);
   });
 
   registerOrganGroup(
@@ -455,44 +600,94 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'Mesh_SkeletalFramework',
     'skeletal',
     skeletalGroup,
-    new THREE.Vector3(0, 0.72, 0.0),
-    1.75,
+    new THREE.Vector3(0, 0.15, 0.0),
+    2.85,
     organRecords
   );
 
   // =========================================================================
-  // 3. ANATOMICALLY SCULPTED MUSCULAR SYSTEM
+  // 3. ANATOMICALLY SCULPTED MUSCULAR SYSTEM (Full Human Écorché: Head to Toes)
   // =========================================================================
   const muscularGroup = systemGroups.get('muscular')!;
   const muscleMat = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.38,
+    roughness: 0.36,
     metalness: 0.1,
     transparent: true,
-    opacity: 0.72,
-    depthWrite: false,
+    opacity: 0.86,
+    depthWrite: true,
     side: THREE.DoubleSide,
   });
 
-  // 1. Pectoralis Major (Contoured fan-shaped chest muscle sheets hugging ribcage)
+  // 1. Cranial & Facial Musculature (Galea Aponeurotica, Temporalis, Masseter)
+  const galeaGeo = new THREE.SphereGeometry(0.24, 20, 20);
+  galeaGeo.scale(0.88, 1.12, 1.04);
+  applyOrganicVertexShading(galeaGeo, 0xa11d33, 0x4c0519);
+  const galeaMesh = new THREE.Mesh(galeaGeo, muscleMat.clone());
+  galeaMesh.position.set(0, 1.84, 0.01);
+  galeaMesh.userData = { subPartId: 'trapezius_scm', name: 'Epicranial Aponeurosis' };
+  muscularGroup.add(galeaMesh);
+
+  // Masseter (Jaw Muscle)
+  [-1, 1].forEach((side) => {
+    const masseterGeo = new THREE.BoxGeometry(0.045, 0.10, 0.065);
+    applyOrganicVertexShading(masseterGeo, 0x9f1239, 0x4c0519);
+    const masseterMesh = new THREE.Mesh(masseterGeo, muscleMat.clone());
+    masseterMesh.position.set(side * 0.14, 1.62, 0.10);
+    masseterMesh.rotation.z = side * -0.15;
+    masseterMesh.userData = { subPartId: 'trapezius_scm', name: 'Masseter' };
+    muscularGroup.add(masseterMesh);
+  });
+
+  // 2. Trapezius & Sternocleidomastoid (Neck stabilizers connecting skull to clavicle)
+  [-1, 1].forEach((side) => {
+    const scmCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.12, 1.64, -0.02),
+      new THREE.Vector3(side * 0.09, 1.44, 0.08),
+      new THREE.Vector3(side * 0.05, 1.28, 0.19),
+    ]);
+    const scmGeo = createVariableTubeGeometry(scmCurve, 14, 8, () => 0.022, 0x9f1239, 0x4c0519);
+    const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
+    scmMesh.userData = { subPartId: 'trapezius_scm', name: 'Sternocleidomastoid' };
+    muscularGroup.add(scmMesh);
+
+    const trapCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.04, 1.60, -0.10),
+      new THREE.Vector3(side * 0.22, 1.38, -0.06),
+      new THREE.Vector3(side * 0.44, 1.24, -0.02),
+    ]);
+    const trapGeo = createVariableTubeGeometry(
+      trapCurve,
+      14,
+      8,
+      (u) => 0.032 * (1 - u * 0.35),
+      0x881337,
+      0x4c0519
+    );
+    const trapMesh = new THREE.Mesh(trapGeo, muscleMat.clone());
+    trapMesh.userData = { subPartId: 'trapezius_scm', name: 'Trapezius' };
+    muscularGroup.add(trapMesh);
+  });
+
+  // 3. Pectoralis Major (Chest Musculature)
   [-1, 1].forEach((side) => {
     const pecGeo = new THREE.PlaneGeometry(0.38, 0.32, 18, 16);
     const pPos = pecGeo.attributes.position;
     for (let i = 0; i < pPos.count; i++) {
-      const u = pPos.getX(i); // -0.19 to 0.19
-      const v = pPos.getY(i); // -0.16 to 0.16
+      const u = pPos.getX(i);
+      const v = pPos.getY(i);
       const uNorm = (u + 0.19) / 0.38;
       const vNorm = (v + 0.16) / 0.32;
 
       const x = side * (0.05 + uNorm * 0.44);
       const y = 1.0 + vNorm * 0.28 - uNorm * 0.08;
       const zBarrel = Math.sqrt(Math.max(0, 0.42 * 0.42 - (x * 0.85) * (x * 0.85))) * 0.58;
-      const bellyThickness = Math.sin(uNorm * Math.PI) * Math.sin(vNorm * Math.PI) * 0.038;
-      const z = zBarrel + 0.03 + bellyThickness;
+      const bellyThickness = Math.sin(uNorm * Math.PI) * Math.sin(vNorm * Math.PI) * 0.042;
+      const z = zBarrel + 0.04 + bellyThickness;
       pPos.setXYZ(i, x, y, z);
     }
     pecGeo.computeVertexNormals();
-    applyOrganicVertexShading(pecGeo, 0x9f1239, 0x4c0519, (x, y) => {
+    applyOrganicVertexShading(pecGeo, 0xa11d33, 0x4c0519, (x, y) => {
       const striation = Math.sin(x * 35 + y * 28) * 0.003;
       return { offset: striation, colorMix: 0.55 + 0.35 * Math.sin(x * 25 + y * 20) };
     });
@@ -501,28 +696,25 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     muscularGroup.add(pecMesh);
   });
 
-  // 2. Rectus Abdominis (Continuous anatomical contoured abdominal wall with Linea Alba & Tendinous Inscriptions)
-  const absGeo = new THREE.PlaneGeometry(0.32, 0.82, 24, 36);
+  // 4. Rectus Abdominis (Abdominal 6-Pack with Linea Alba & Inscriptions)
+  const absGeo = new THREE.PlaneGeometry(0.34, 0.84, 24, 36);
   const aPos = absGeo.attributes.position;
   for (let i = 0; i < aPos.count; i++) {
-    const u = aPos.getX(i); // -0.16 to 0.16
-    const v = aPos.getY(i); // -0.41 to 0.41 (bottom to top)
-    const y = 0.24 + v * 0.95; // from ~ -0.15 to ~ 0.63
+    const u = aPos.getX(i);
+    const v = aPos.getY(i);
+    const y = 0.24 + v * 0.95;
 
-    const arch = Math.cos(v * 2.8) * 0.06;
-    const xArch = (1 - (u / 0.16) * (u / 0.16)) * 0.045;
+    const arch = Math.cos(v * 2.8) * 0.065;
+    const xArch = (1 - (u / 0.17) * (u / 0.17)) * 0.048;
 
-    // Tendinous intersections (horizontal anatomical grooves across rectus abdominis)
     const t1 = Math.exp(-Math.pow(y - 0.52, 2) * 550);
     const t2 = Math.exp(-Math.pow(y - 0.34, 2) * 550);
     const t3 = Math.exp(-Math.pow(y - 0.16, 2) * 550);
     const t4 = Math.exp(-Math.pow(y - -0.02, 2) * 550);
     const tendinousGroove = (t1 + t2 + t3 + t4) * 0.016;
-
-    // Linea alba (medial vertical cleft)
     const lineaAlba = Math.exp(-Math.pow(u * 38, 2)) * 0.022;
 
-    const z = 0.19 + arch + xArch - tendinousGroove - lineaAlba;
+    const z = 0.20 + arch + xArch - tendinousGroove - lineaAlba;
     aPos.setXYZ(i, u * 0.92, y, z);
   }
   absGeo.computeVertexNormals();
@@ -534,19 +726,19 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   absMesh.userData = { subPartId: 'rectus_abdominis', name: 'Rectus Abdominis' };
   muscularGroup.add(absMesh);
 
-  // 3. External Obliques (Flanking lateral abdominal walls)
+  // 5. External Obliques & Serratus Anterior
   [-1, 1].forEach((side) => {
-    const obGeo = new THREE.PlaneGeometry(0.24, 0.62, 16, 22);
+    const obGeo = new THREE.PlaneGeometry(0.26, 0.64, 16, 22);
     const oPos = obGeo.attributes.position;
     for (let i = 0; i < oPos.count; i++) {
-      const u = oPos.getX(i); // -0.12 to 0.12
-      const v = oPos.getY(i); // -0.31 to 0.31
-      const uNorm = (u + 0.12) / 0.24;
-      const vNorm = (v + 0.31) / 0.62;
+      const u = oPos.getX(i);
+      const v = oPos.getY(i);
+      const uNorm = (u + 0.13) / 0.26;
+      const vNorm = (v + 0.32) / 0.64;
 
-      const x = side * (0.14 + uNorm * 0.19);
+      const x = side * (0.13 + uNorm * 0.21);
       const y = 0.22 + vNorm * 0.55;
-      const z = (1 - uNorm) * 0.2 + uNorm * 0.02;
+      const z = (1 - uNorm) * 0.21 + uNorm * 0.02;
       oPos.setXYZ(i, x, y, z);
     }
     obGeo.computeVertexNormals();
@@ -557,11 +749,25 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const obMesh = new THREE.Mesh(obGeo, muscleMat.clone());
     obMesh.userData = { subPartId: 'external_obliques', name: 'External Oblique' };
     muscularGroup.add(obMesh);
+
+    // Serratus Anterior (Ribcage slips)
+    [0.82, 0.72, 0.62, 0.52].forEach((sy, sIdx) => {
+      const sCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.28, sy, 0.12 - sIdx * 0.02),
+        new THREE.Vector3(side * 0.36, sy - 0.04, 0.04 - sIdx * 0.02),
+        new THREE.Vector3(side * 0.40, sy - 0.08, -0.06),
+      ]);
+      const sGeo = createVariableTubeGeometry(sCurve, 8, 6, () => 0.016, 0x9f1239, 0x4c0519);
+      const sMesh = new THREE.Mesh(sGeo, muscleMat.clone());
+      sMesh.userData = { subPartId: 'external_obliques', name: 'Serratus Anterior' };
+      muscularGroup.add(sMesh);
+    });
   });
 
-  // 4. Deltoids (Shoulder caps wrapping acromion and upper humerus)
+  // 6. Complete Upper Limbs: Deltoids, Biceps, Triceps, Forearms & Hands
   [-1, 1].forEach((side) => {
-    const deltGeo = new THREE.SphereGeometry(0.14, 20, 20);
+    // Deltoids (Shoulder Cap)
+    const deltGeo = new THREE.SphereGeometry(0.15, 20, 20);
     deltGeo.scale(0.85, 1.45, 0.95);
     const dPos = deltGeo.attributes.position;
     for (let i = 0; i < dPos.count; i++) {
@@ -574,75 +780,206 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     deltGeo.computeVertexNormals();
     applyOrganicVertexShading(deltGeo, 0x9f1239, 0x4c0519);
     const deltMesh = new THREE.Mesh(deltGeo, muscleMat.clone());
-    deltMesh.position.set(side * 0.52, 1.15, 0.02);
+    deltMesh.position.set(side * 0.50, 1.18, 0.02);
     deltMesh.rotation.z = side * -0.18;
     deltMesh.userData = { subPartId: 'deltoids', name: 'Deltoid' };
     muscularGroup.add(deltMesh);
-  });
 
-  // 5. Trapezius & Sternocleidomastoid (Neck stabilizers connecting cervical spine to clavicle)
-  [-1, 1].forEach((side) => {
-    const scmCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.12, 1.58, -0.04),
-      new THREE.Vector3(side * 0.09, 1.42, 0.08),
-      new THREE.Vector3(side * 0.05, 1.28, 0.18),
+    // Biceps Brachii (Anterior Upper Arm)
+    const bicepCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.48, 1.18, 0.03),
+      new THREE.Vector3(side * 0.51, 1.02, 0.05),
+      new THREE.Vector3(side * 0.53, 0.84, 0.03),
     ]);
-    const scmGeo = createVariableTubeGeometry(scmCurve, 12, 8, () => 0.016, 0x9f1239, 0x4c0519);
-    const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
-    scmMesh.userData = { subPartId: 'trapezius_scm', name: 'Sternocleidomastoid' };
-    muscularGroup.add(scmMesh);
-
-    const trapCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.04, 1.55, -0.1),
-      new THREE.Vector3(side * 0.22, 1.38, -0.06),
-      new THREE.Vector3(side * 0.42, 1.25, -0.02),
-    ]);
-    const trapGeo = createVariableTubeGeometry(
-      trapCurve,
-      14,
+    const bicepGeo = createVariableTubeGeometry(
+      bicepCurve,
+      12,
       8,
-      (u) => 0.024 * (1 - u * 0.3),
+      (u) => 0.048 * (1 + Math.sin(u * Math.PI) * 0.35),
+      0xa11d33,
+      0x4c0519
+    );
+    const bicepMesh = new THREE.Mesh(bicepGeo, muscleMat.clone());
+    bicepMesh.userData = { subPartId: 'deltoids', name: 'Biceps Brachii' };
+    muscularGroup.add(bicepMesh);
+
+    // Triceps Brachii (Posterior Upper Arm)
+    const tricepCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.46, 1.16, -0.04),
+      new THREE.Vector3(side * 0.49, 1.00, -0.05),
+      new THREE.Vector3(side * 0.51, 0.82, -0.03),
+    ]);
+    const tricepGeo = createVariableTubeGeometry(
+      tricepCurve,
+      12,
+      8,
+      (u) => 0.044 * (1 + Math.sin(u * Math.PI) * 0.3),
       0x881337,
       0x4c0519
     );
-    const trapMesh = new THREE.Mesh(trapGeo, muscleMat.clone());
-    trapMesh.userData = { subPartId: 'trapezius_scm', name: 'Trapezius' };
-    muscularGroup.add(trapMesh);
+    const tricepMesh = new THREE.Mesh(tricepGeo, muscleMat.clone());
+    tricepMesh.userData = { subPartId: 'deltoids', name: 'Triceps Brachii' };
+    muscularGroup.add(tricepMesh);
+
+    // Forearm Musculature (Brachioradialis & Flexors)
+    const foreCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.53, 0.82, 0.02),
+      new THREE.Vector3(side * 0.55, 0.64, 0.03),
+      new THREE.Vector3(side * 0.56, 0.44, 0.04),
+    ]);
+    const foreGeo = createVariableTubeGeometry(
+      foreCurve,
+      12,
+      8,
+      (u) => 0.046 * (1 - u * 0.45),
+      0x9f1239,
+      0x4c0519
+    );
+    const foreMesh = new THREE.Mesh(foreGeo, muscleMat.clone());
+    foreMesh.userData = { subPartId: 'deltoids', name: 'Forearm Musculature' };
+    muscularGroup.add(foreMesh);
+
+    // Hand Musculature (Thenar / Hypothenar & Fingers)
+    const handMuscCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.56, 0.44, 0.04),
+      new THREE.Vector3(side * 0.57, 0.34, 0.05),
+      new THREE.Vector3(side * 0.57, 0.24, 0.06),
+    ]);
+    const handMuscGeo = createVariableTubeGeometry(
+      handMuscCurve,
+      8,
+      6,
+      (u) => 0.028 * (1 - u * 0.5),
+      0x9f1239,
+      0x4c0519
+    );
+    const handMuscMesh = new THREE.Mesh(handMuscGeo, muscleMat.clone());
+    handMuscMesh.userData = { subPartId: 'deltoids', name: 'Hand Muscles' };
+    muscularGroup.add(handMuscMesh);
   });
 
-  // 6. Serratus Anterior (Ribcage lateral muscular slips)
+  // 7. Complete Lower Limbs: Gluteus, Quadriceps, Hamstrings, Gastrocnemius Calves & Feet (Head to Toe!)
   [-1, 1].forEach((side) => {
-    [0.82, 0.72, 0.62, 0.52].forEach((sy, sIdx) => {
-      const sCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(side * 0.28, sy, 0.12 - sIdx * 0.02),
-        new THREE.Vector3(side * 0.36, sy - 0.04, 0.04 - sIdx * 0.02),
-        new THREE.Vector3(side * 0.39, sy - 0.08, -0.06),
-      ]);
-      const sGeo = createVariableTubeGeometry(sCurve, 8, 6, () => 0.012, 0x9f1239, 0x4c0519);
-      const sMesh = new THREE.Mesh(sGeo, muscleMat.clone());
-      sMesh.userData = { subPartId: 'external_obliques', name: 'Serratus Anterior' };
-      muscularGroup.add(sMesh);
-    });
-  });
+    // Gluteus Medius & Maximus (Hip Contour)
+    const glutGeo = new THREE.SphereGeometry(0.14, 16, 16);
+    glutGeo.scale(1.15, 1.25, 1.1);
+    applyOrganicVertexShading(glutGeo, 0x881337, 0x4c0519);
+    const glutMesh = new THREE.Mesh(glutGeo, muscleMat.clone());
+    glutMesh.position.set(side * 0.20, -0.36, -0.08);
+    glutMesh.userData = { subPartId: 'rectus_abdominis', name: 'Gluteus Maximus' };
+    muscularGroup.add(glutMesh);
 
-  // 7. Biceps Brachii (Arm Musculature)
-  [-1, 1].forEach((side) => {
-    const bicepGeo = new THREE.CapsuleGeometry(0.048, 0.18, 12, 12);
-    bicepGeo.scale(0.9, 1.2, 0.85);
-    const bicepMesh = new THREE.Mesh(bicepGeo, muscleMat.clone());
-    bicepMesh.position.set(side * 0.52, 0.86, 0.04);
-    bicepMesh.userData = { subPartId: 'deltoids', name: 'Biceps Brachii' };
-    muscularGroup.add(bicepMesh);
-  });
-
-  // 8. Quadriceps Femoris (Thigh Musculature)
-  [-1, 1].forEach((side) => {
-    const quadGeo = new THREE.CapsuleGeometry(0.075, 0.38, 12, 12);
-    quadGeo.scale(1.0, 1.25, 0.9);
+    // Quadriceps Femoris (Anterior Thigh - Rectus femoris & Vasti)
+    const quadCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.17, -0.40, 0.06),
+      new THREE.Vector3(side * 0.21, -0.66, 0.08),
+      new THREE.Vector3(side * 0.19, -0.94, 0.04),
+    ]);
+    const quadGeo = createVariableTubeGeometry(
+      quadCurve,
+      14,
+      10,
+      (u) => 0.082 * (1 + Math.sin(u * Math.PI) * 0.32),
+      0xa11d33,
+      0x4c0519
+    );
     const quadMesh = new THREE.Mesh(quadGeo, muscleMat.clone());
-    quadMesh.position.set(side * 0.18, -0.82, 0.06);
     quadMesh.userData = { subPartId: 'rectus_abdominis', name: 'Quadriceps Femoris' };
     muscularGroup.add(quadMesh);
+
+    // Hamstrings (Posterior Thigh)
+    const hamCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.19, -0.44, -0.06),
+      new THREE.Vector3(side * 0.21, -0.68, -0.07),
+      new THREE.Vector3(side * 0.18, -0.92, -0.04),
+    ]);
+    const hamGeo = createVariableTubeGeometry(
+      hamCurve,
+      12,
+      8,
+      (u) => 0.068 * (1 + Math.sin(u * Math.PI) * 0.25),
+      0x881337,
+      0x4c0519
+    );
+    const hamMesh = new THREE.Mesh(hamGeo, muscleMat.clone());
+    hamMesh.userData = { subPartId: 'rectus_abdominis', name: 'Hamstrings' };
+    muscularGroup.add(hamMesh);
+
+    // Patellar Tendon & Ligament
+    const patellarCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.19, -0.92, 0.05),
+      new THREE.Vector3(side * 0.18, -0.99, 0.05),
+    ]);
+    const patellarGeo = new THREE.TubeGeometry(patellarCurve, 4, 0.024, 6, false);
+    const patellarMesh = new THREE.Mesh(patellarGeo, cartilageMat);
+    patellarMesh.userData = { subPartId: 'rectus_abdominis', name: 'Patellar Tendon' };
+    muscularGroup.add(patellarMesh);
+
+    // Gastrocnemius & Soleus (Prominent Calf Muscles)
+    const calfCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.18, -0.98, -0.02),
+      new THREE.Vector3(side * 0.20, -1.15, -0.04), // Prominent calf belly
+      new THREE.Vector3(side * 0.18, -1.34, -0.02), // Tapering into Achilles
+    ]);
+    const calfGeo = createVariableTubeGeometry(
+      calfCurve,
+      12,
+      10,
+      (u) => 0.062 * (1 + Math.sin(u * Math.PI) * 0.42),
+      0xa11d33,
+      0x4c0519
+    );
+    const calfMesh = new THREE.Mesh(calfGeo, muscleMat.clone());
+    calfMesh.userData = { subPartId: 'rectus_abdominis', name: 'Gastrocnemius (Calf)' };
+    muscularGroup.add(calfMesh);
+
+    // Achilles Tendon (Thick fibrous heel cord)
+    const achillesCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.18, -1.34, -0.02),
+      new THREE.Vector3(side * 0.17, -1.48, -0.06),
+      new THREE.Vector3(side * 0.16, -1.52, -0.08), // Calcaneus insertion
+    ]);
+    const achillesGeo = new THREE.TubeGeometry(achillesCurve, 8, 0.018, 6, false);
+    const achillesMesh = new THREE.Mesh(achillesGeo, cartilageMat);
+    achillesMesh.userData = { subPartId: 'rectus_abdominis', name: 'Achilles Tendon' };
+    muscularGroup.add(achillesMesh);
+
+    // Tibialis Anterior (Anterior Shin Muscle)
+    const tibMuscCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.19, -1.02, 0.03),
+      new THREE.Vector3(side * 0.18, -1.24, 0.02),
+      new THREE.Vector3(side * 0.16, -1.46, 0.02),
+    ]);
+    const tibMuscGeo = createVariableTubeGeometry(
+      tibMuscCurve,
+      10,
+      6,
+      () => 0.024,
+      0x9f1239,
+      0x4c0519
+    );
+    const tibMuscMesh = new THREE.Mesh(tibMuscGeo, muscleMat.clone());
+    tibMuscMesh.userData = { subPartId: 'rectus_abdominis', name: 'Tibialis Anterior' };
+    muscularGroup.add(tibMuscMesh);
+
+    // Foot Musculature & Tendons (Extending to toes at y = -1.55)
+    const footMuscCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.16, -1.48, -0.06),
+      new THREE.Vector3(side * 0.16, -1.51, 0.06),
+      new THREE.Vector3(side * 0.16, -1.55, 0.18),
+    ]);
+    const footMuscGeo = createVariableTubeGeometry(
+      footMuscCurve,
+      10,
+      8,
+      (u) => 0.032 * (1 - u * 0.4),
+      0x9f1239,
+      0x4c0519
+    );
+    footMuscGeo.scale(1, 0.65, 1);
+    const footMuscMesh = new THREE.Mesh(footMuscGeo, muscleMat.clone());
+    footMuscMesh.userData = { subPartId: 'rectus_abdominis', name: 'Foot Musculature' };
+    muscularGroup.add(footMuscMesh);
   });
 
   registerOrganGroup(
@@ -650,8 +987,8 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'Mesh_MuscularFramework',
     'muscular',
     muscularGroup,
-    new THREE.Vector3(0, 0.68, 0.0),
-    1.8,
+    new THREE.Vector3(0, 0.15, 0.0),
+    2.85,
     organRecords
   );
 

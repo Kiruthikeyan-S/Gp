@@ -210,6 +210,15 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     if (mode === 'isolate' && selId && graph) {
       const rec = graph.organRecords.get(selId);
       if (rec) {
+        if (selId === 'skeletal' || selId === 'muscular') {
+          // Full head-to-toe body framing
+          targetOrbitRef.current.lookX = 0;
+          targetOrbitRef.current.lookY = -0.42;
+          targetOrbitRef.current.lookZ = 0;
+          targetOrbitRef.current.radius = 3.65 / scale;
+          return;
+        }
+
         // World offset includes rootGroup.position.y (-0.58), shifted slightly so organ sits above bottom card
         targetOrbitRef.current.lookX = rec.focusCenter.x;
         targetOrbitRef.current.lookY =
@@ -220,11 +229,11 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       }
     }
 
-    // Full Body Mode
+    // Full Body Mode (Entire Head to Feet)
     targetOrbitRef.current.lookX = 0;
-    targetOrbitRef.current.lookY = 0.08;
+    targetOrbitRef.current.lookY = -0.42;
     targetOrbitRef.current.lookZ = 0;
-    targetOrbitRef.current.radius = 2.75 / scale;
+    targetOrbitRef.current.radius = 3.65 / scale;
   }, []);
 
   const applySceneState = useCallback(() => {
@@ -641,10 +650,10 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           antialias: true,
         });
         renderer.setSize(width, height, false);
-        // Deep Medical Studio Dark Slate Backdrop (matching Reference Images 1, 3, 4)
-        renderer.setClearColor(0x0b0f19, 1);
+        // Clinical Medical Studio Light Backdrop (matching Reference Image 3)
+        renderer.setClearColor(0xf8fafc, 1);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.12;
+        renderer.toneMappingExposure = 1.08;
         rendererRef.current = renderer;
 
         const scene = new THREE.Scene();
@@ -657,55 +666,55 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         );
         cameraRef.current = camera;
 
-        // 4-Point Medical Studio Lighting Setup for Organic Depth & Rim Glow
-        const ambientLight = new THREE.AmbientLight(0xf8fafc, 0.65);
+        // 4-Point Medical Studio Lighting Setup for Clinical Clarity
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.92);
         scene.add(ambientLight);
 
-        const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x1e1b4b, 0.58);
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe2e8f0, 0.65);
         hemiLight.position.set(0, 6, 0);
         scene.add(hemiLight);
 
-        // Warm Surgical Key Light (Front-Right)
-        const keyLight = new THREE.DirectionalLight(0xfff7ed, 1.35);
+        // Surgical Key Light (Front-Right)
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
         keyLight.position.set(2.8, 4.2, 4.5);
         scene.add(keyLight);
 
         // Soft Fill Light (Front-Left)
-        const fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.65);
+        const fillLight = new THREE.DirectionalLight(0xf1f5f9, 0.75);
         fillLight.position.set(-3.2, 1.8, 3.0);
         scene.add(fillLight);
 
-        // Medical Rim / Backlight for X-Ray Silhouette Edge Definition
-        const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.95);
+        // Medical Rim Light
+        const rimLight = new THREE.DirectionalLight(0x0284c7, 0.35);
         rimLight.position.set(0, 3.5, -4.5);
         scene.add(rimLight);
 
-        // Subtle Holographic Medical Pedestal Rings at Feet (visible only in Full Body mode)
+        // Subtle Medical Pedestal Rings at Feet
         const pedestalGroup = new THREE.Group();
         pedestalGroupRef.current = pedestalGroup;
 
-        const outerRingGeo = new THREE.RingGeometry(0.68, 0.71, 48);
+        const outerRingGeo = new THREE.RingGeometry(0.72, 0.75, 48);
         const outerRingMat = new THREE.MeshBasicMaterial({
-          color: 0x0ea5e9,
+          color: 0x0284c7,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.28,
+          opacity: 0.35,
         });
         const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
         outerRing.rotation.x = Math.PI / 2;
-        outerRing.position.set(0, -1.32, 0);
+        outerRing.position.set(0, -1.58, 0);
         pedestalGroup.add(outerRing);
 
-        const innerRingGeo = new THREE.RingGeometry(0.42, 0.44, 48);
+        const innerRingGeo = new THREE.RingGeometry(0.48, 0.50, 48);
         const innerRingMat = new THREE.MeshBasicMaterial({
           color: 0x38bdf8,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.18,
+          opacity: 0.22,
         });
         const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
         innerRing.rotation.x = Math.PI / 2;
-        innerRing.position.set(0, -1.32, 0);
+        innerRing.position.set(0, -1.58, 0);
         pedestalGroup.add(innerRing);
 
         scene.add(pedestalGroup);
@@ -911,7 +920,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#F8FAFC',
     overflow: 'hidden',
   },
   glView: {
@@ -923,18 +932,23 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
+    borderColor: '#BAE6FD',
     gap: 6,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   glbStreamingText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#BAE6FD',
+    color: '#0284C7',
   },
   loadingOverlay: {
     position: 'absolute',
@@ -942,14 +956,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(11, 15, 25, 0.92)',
+    backgroundColor: 'rgba(248, 250, 252, 0.94)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.lg,
   },
   loadingText: {
     ...theme.typography.bodyMedium,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: theme.spacing.md,
   },
   errorContainer: {
@@ -957,17 +971,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.xl,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#F8FAFC',
   },
   errorTitle: {
     ...theme.typography.h3,
-    color: '#F8FAFC',
+    color: '#0F172A',
     marginTop: theme.spacing.sm,
     marginBottom: 4,
   },
   errorMessage: {
     ...theme.typography.caption,
-    color: '#94A3B8',
+    color: '#64748B',
     textAlign: 'center',
     marginBottom: theme.spacing.md,
   },

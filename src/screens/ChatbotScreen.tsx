@@ -172,7 +172,7 @@ export const ChatbotScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.botAvatarBadge}>
-            <MaterialCommunityIcons name="robot-confused-outline" size={20} color="#38BDF8" />
+            <MaterialCommunityIcons name="robot-confused-outline" size={20} color="#0284C7" />
           </View>
           <View>
             <Text style={styles.headerTitle}>Anatomy AI Assistant</Text>
@@ -188,7 +188,7 @@ export const ChatbotScreen: React.FC = () => {
           onPress={handleClearChat}
           activeOpacity={0.7}
         >
-          <MaterialCommunityIcons name="refresh" size={20} color="#94A3B8" />
+          <MaterialCommunityIcons name="refresh" size={20} color="#64748B" />
         </TouchableOpacity>
       </View>
 
@@ -367,7 +367,7 @@ export const ChatbotScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -376,8 +376,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    backgroundColor: '#0F172A',
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -388,16 +388,16 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: '#F0F9FF',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
+    borderColor: '#BAE6FD',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
     letterSpacing: -0.2,
   },
   statusRow: {
@@ -414,21 +414,23 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     fontWeight: '500',
   },
   headerActionBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickPromptsWrap: {
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    backgroundColor: '#0B0F19',
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 8,
   },
   quickPromptsScroll: {
@@ -436,9 +438,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   promptChip: {
-    backgroundColor: 'rgba(30, 41, 59, 0.85)',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: '#E2E8F0',
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -446,11 +448,11 @@ const styles = StyleSheet.create({
   promptChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#BAE6FD',
+    color: '#0284C7',
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#F8FAFC',
   },
   messagesContent: {
     padding: 16,
@@ -472,7 +474,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
@@ -488,10 +490,15 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   bubbleBot: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     borderBottomLeftRadius: 4,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   typingBubble: {
     flexDirection: 'row',
@@ -502,7 +509,7 @@ const styles = StyleSheet.create({
   },
   typingText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     fontStyle: 'italic',
   },
   messageText: {
@@ -514,16 +521,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   messageTextBot: {
-    color: '#F1F5F9',
+    color: '#0F172A',
   },
   organ3DLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     marginTop: 10,
-    backgroundColor: 'rgba(2, 132, 199, 0.15)',
+    backgroundColor: '#F0F9FF',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
+    borderColor: '#BAE6FD',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -531,7 +538,7 @@ const styles = StyleSheet.create({
   organ3DLinkText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#38BDF8',
+    color: '#0284C7',
   },
   starterQuestionsWrap: {
     marginTop: 12,
@@ -540,7 +547,7 @@ const styles = StyleSheet.create({
   starterHeading: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 2,
@@ -549,16 +556,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.2)',
+    borderColor: '#E2E8F0',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   starterBtnText: {
     fontSize: 12,
-    color: '#BAE6FD',
+    color: '#0284C7',
     fontWeight: '500',
     flex: 1,
   },
@@ -568,10 +575,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   timestampUser: {
-    color: 'rgba(255, 255, 255, 0.65)',
+    color: 'rgba(255, 255, 255, 0.75)',
   },
   timestampBot: {
-    color: '#64748B',
+    color: '#94A3B8',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -579,18 +586,18 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: '#E2E8F0',
   },
   inputWrapper: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F8FAFC',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
     minHeight: 44,
   },
   textInput: {
@@ -598,7 +605,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 14,
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   clearBtn: {
     padding: 6,
@@ -615,6 +622,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0284C7',
   },
   sendButtonDisabled: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#E2E8F0',
   },
 });
