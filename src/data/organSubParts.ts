@@ -575,4 +575,102 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
         'Vascular red pulp filters senescent erythrocytes while lymphoid white pulp mounts adaptive immune responses.',
     },
   ],
+
+  // 11. SKELETAL FRAMEWORK — Articulated Osseous Landmarks
+  skeletal: [
+    {
+      id: 'cranium',
+      name: 'Cranium & Facial Bones',
+      side: 'right',
+      localAnchor: [0.0, 1.15, 0.05],
+      color: '#E2E8F0',
+      description:
+        'Protective neurocranium enclosing the brain, paired with the viscerocranium forming facial scaffolding.',
+    },
+    {
+      id: 'vertebral_column',
+      name: 'Vertebral Column (Spine)',
+      side: 'left',
+      localAnchor: [0.0, 0.45, -0.12],
+      color: '#CBD5E1',
+      description:
+        'Segmented column of 33 vertebrae (cervical, thoracic, lumbar, sacral) supporting the torso and shielding the spinal cord.',
+    },
+    {
+      id: 'thoracic_cage',
+      name: 'Thoracic Cage & Sternum',
+      side: 'right',
+      localAnchor: [0.0, 0.28, 0.18],
+      color: '#94A3B8',
+      description:
+        '12 pairs of articulated ribs joined to the sternum, guarding cardiopulmonary viscera during respiratory expansion.',
+    },
+    {
+      id: 'clavicles_scapula',
+      name: 'Pectoral Girdle (Clavicles)',
+      side: 'left',
+      localAnchor: [-0.25, 0.52, 0.16],
+      color: '#E2E8F0',
+      description:
+        'Dual strut clavicles anchoring the upper limbs to the axial skeleton with maximum rotational range of motion.',
+    },
+    {
+      id: 'pelvic_girdle',
+      name: 'Pelvic Girdle & Sacrum',
+      side: 'right',
+      localAnchor: [0.18, -0.92, 0.06],
+      color: '#94A3B8',
+      description:
+        'Rigid bony basin comprising ilium, ischium, and pubis that transfers upper body load directly into lower extremities.',
+    },
+  ],
+
+  // 12. MUSCULAR FRAMEWORK — Major Somatic Muscle Groups
+  muscular: [
+    {
+      id: 'pectoralis',
+      name: 'Pectoralis Major',
+      side: 'right',
+      localAnchor: [0.18, 0.35, 0.22],
+      color: '#E11D48',
+      description:
+        'Broad fan-shaped superficial anterior chest muscle responsible for arm adduction, medial rotation, and flexion.',
+    },
+    {
+      id: 'rectus_abdominis',
+      name: 'Rectus Abdominis (Core)',
+      side: 'left',
+      localAnchor: [0.0, -0.22, 0.22],
+      color: '#BE185D',
+      description:
+        'Paired vertical muscle running down the midline with tendinous inscriptions creating the anatomical abdominal matrix.',
+    },
+    {
+      id: 'deltoids',
+      name: 'Deltoid Musculature',
+      side: 'right',
+      localAnchor: [0.48, 0.45, 0.04],
+      color: '#9F1239',
+      description:
+        'Triangular shoulder muscle caps driving major glenohumeral abduction, anterior flexion, and posterior extension.',
+    },
+    {
+      id: 'external_obliques',
+      name: 'External Obliques',
+      side: 'left',
+      localAnchor: [-0.28, -0.25, 0.14],
+      color: '#881337',
+      description:
+        'Lateral flank muscular sheets that facilitate trunk rotation, lateral spine flexion, and intra-abdominal compression.',
+    },
+    {
+      id: 'trapezius_scm',
+      name: 'Trapezius & SCM',
+      side: 'right',
+      localAnchor: [0.12, 0.72, -0.05],
+      color: '#E11D48',
+      description:
+        'Powerful cervical and upper back musculature stabilizing cranium orientation and scapular elevation.',
+    },
+  ],
 };

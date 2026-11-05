@@ -120,6 +120,34 @@ const CLINICAL_SPECS: Record<string, OrganClinicalSpecData> = {
     physiologySummary:
       'Glomerular Filtration: Filters ~180 L of blood plasma daily, reabsorbing 99% of water and solutes to regulate blood pressure, osmolarity, and pH balance.',
   },
+  skeletal: {
+    latinName: 'Skeleton (Systema Skeletale)',
+    taxonomy: 'Osteology & Arthrology Taxonomy',
+    system: 'Skeletal System',
+    systemSub: 'Axial & appendicular framework',
+    topography: 'Full Body Skeleton',
+    topographySub: '206 articulated osseous units',
+    mass: '~10 - 12 kg (Adult Framework)',
+    proportions: 'Full Anatomical Height',
+    vascularSupply: 'Nutrient & Periosteal Arteries',
+    vascularSupplySub: 'Extensive intraosseous channels',
+    physiologySummary:
+      'Structural Biomechanics & Mineral Homeostasis: Provides structural load-bearing rigidity, leverages muscle forces for locomotion, protects vital central viscera, and houses hematopoiesis within medullary bone marrow.',
+  },
+  muscular: {
+    latinName: 'Musculature (Systema Musculare)',
+    taxonomy: 'Myology & Biomechanics Taxonomy',
+    system: 'Muscular System',
+    systemSub: 'Skeletal & somatic muscle network',
+    topography: 'Full Somatic Musculature',
+    topographySub: 'Superficial & deep myofascial planes',
+    mass: '~28 - 32 kg (Adult Musculature)',
+    proportions: 'Covers ~40% of Total Body Mass',
+    vascularSupply: 'Intramuscular Capillary Bed',
+    vascularSupplySub: 'Rich perfusion matching metabolic demand',
+    physiologySummary:
+      'Contractile Dynamics & Thermogenesis: Generates tensile force through actin-myosin crossbridge sliding filaments to control voluntary locomotion, maintain posture, stabilize joint complexes, and produce 85% of basal body heat.',
+  },
 };
 
 export const OrganDetailsScreen: React.FC = () => {

@@ -293,6 +293,22 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     metalness: 0.05,
   });
 
+  // Cranium (Neurocranium & Facial Bones) for full skeletal display
+  const craniumGeo = new THREE.SphereGeometry(0.24, 20, 20);
+  craniumGeo.scale(0.85, 1.15, 0.98);
+  const craniumMesh = new THREE.Mesh(craniumGeo, boneMat);
+  craniumMesh.position.set(0, 1.84, 0.02);
+  craniumMesh.userData = { subPartId: 'cranium', name: 'Cranium & Facial Bones' };
+  skeletalGroup.add(craniumMesh);
+
+  // Mandible (Jawbone)
+  const mandibleGeo = new THREE.TorusGeometry(0.11, 0.022, 8, 16, Math.PI);
+  const mandibleMesh = new THREE.Mesh(mandibleGeo, boneMat);
+  mandibleMesh.position.set(0, 1.62, 0.12);
+  mandibleMesh.rotation.x = -Math.PI / 2;
+  mandibleMesh.userData = { subPartId: 'cranium', name: 'Mandible' };
+  skeletalGroup.add(mandibleMesh);
+
   // 22 Articulated Vertebrae (Cervical, Thoracic, Lumbar) + Intervertebral Discs + Spinous Processes
   for (let i = 0; i < 22; i++) {
     const t = i / 21;
@@ -304,12 +320,14 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const vBodyGeo = new THREE.CylinderGeometry(radius * 0.95, radius, 0.054, 14);
     const vBody = new THREE.Mesh(vBodyGeo, boneMat);
     vBody.position.set(0, yPos, zCurve);
+    vBody.userData = { subPartId: 'vertebral_column', name: 'Vertebral Body' };
     skeletalGroup.add(vBody);
 
     // Intervertebral fibrocartilage disc
     const discGeo = new THREE.CylinderGeometry(radius * 0.96, radius * 0.96, 0.022, 14);
     const disc = new THREE.Mesh(discGeo, cartilageMat);
     disc.position.set(0, yPos - 0.038, zCurve);
+    disc.userData = { subPartId: 'vertebral_column', name: 'Intervertebral Disc' };
     skeletalGroup.add(disc);
 
     // Posterior Spinous Process & Transverse Processes
@@ -317,11 +335,13 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const spinous = new THREE.Mesh(spinousGeo, boneMat);
     spinous.position.set(0, yPos - 0.01, zCurve - radius - 0.025);
     spinous.rotation.x = 0.35;
+    spinous.userData = { subPartId: 'vertebral_column', name: 'Spinous Process' };
     skeletalGroup.add(spinous);
 
     const transGeo = new THREE.BoxGeometry(radius * 2.7, 0.022, 0.024);
     const trans = new THREE.Mesh(transGeo, boneMat);
     trans.position.set(0, yPos, zCurve - radius * 0.55);
+    trans.userData = { subPartId: 'vertebral_column', name: 'Transverse Process' };
     skeletalGroup.add(trans);
   }
 
@@ -330,11 +350,13 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   manubriumGeo.scale(1, 1, 0.32);
   const manubrium = new THREE.Mesh(manubriumGeo, boneMat);
   manubrium.position.set(0, 1.18, 0.23);
+  manubrium.userData = { subPartId: 'thoracic_cage', name: 'Manubrium Sterni' };
   skeletalGroup.add(manubrium);
 
   const sternumBodyGeo = new THREE.BoxGeometry(0.065, 0.34, 0.024);
   const sternumBody = new THREE.Mesh(sternumBodyGeo, boneMat);
   sternumBody.position.set(0, 0.94, 0.245);
+  sternumBody.userData = { subPartId: 'thoracic_cage', name: 'Sternal Body' };
   skeletalGroup.add(sternumBody);
 
   // 10 Pairs of Anatomically Curved 3D Ribs wrapping the thorax
@@ -353,6 +375,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       ]);
       const ribGeo = new THREE.TubeGeometry(ribCurve, 20, 0.014, 8, false);
       const ribMesh = new THREE.Mesh(ribGeo, boneMat);
+      ribMesh.userData = { subPartId: 'thoracic_cage', name: `Rib Pair ${r + 1}` };
       skeletalGroup.add(ribMesh);
     });
   }
@@ -366,7 +389,18 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     ]);
     const clavGeo = new THREE.TubeGeometry(clavCurve, 14, 0.017, 8, false);
     const clavMesh = new THREE.Mesh(clavGeo, boneMat);
+    clavMesh.userData = { subPartId: 'clavicles_scapula', name: 'Clavicle' };
     skeletalGroup.add(clavMesh);
+  });
+
+  // Humerus (Upper arm long bones)
+  [-1, 1].forEach((side) => {
+    const humGeo = new THREE.CylinderGeometry(0.025, 0.022, 0.42, 10);
+    const humMesh = new THREE.Mesh(humGeo, boneMat);
+    humMesh.position.set(side * 0.52, 0.98, 0.02);
+    humMesh.rotation.z = side * -0.15;
+    humMesh.userData = { subPartId: 'clavicles_scapula', name: 'Humerus' };
+    skeletalGroup.add(humMesh);
   });
 
   // Sculpted Pelvic Girdle (Iliac Wings, Sacrum, Pubic Arch, Obturator Foramen)
@@ -382,6 +416,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const iliumGeo = new THREE.TubeGeometry(iliumCurve, 22, 0.046, 12, false);
     iliumGeo.scale(1, 1.25, 0.72);
     const iliumMesh = new THREE.Mesh(iliumGeo, boneMat);
+    iliumMesh.userData = { subPartId: 'pelvic_girdle', name: 'Ilium Wing' };
     skeletalGroup.add(iliumMesh);
 
     // Ischial & Pubic Ramus loop (framing obturator foramen like Image 1)
@@ -392,6 +427,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     ]);
     const ischiumGeo = new THREE.TubeGeometry(ischiumCurve, 14, 0.025, 10, false);
     const ischiumMesh = new THREE.Mesh(ischiumGeo, boneMat);
+    ischiumMesh.userData = { subPartId: 'pelvic_girdle', name: 'Ischium & Pubis' };
     skeletalGroup.add(ischiumMesh);
   });
 
@@ -401,7 +437,28 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const sacrumMesh = new THREE.Mesh(sacrumGeo, boneMat);
   sacrumMesh.position.set(0, -0.36, -0.15);
   sacrumMesh.rotation.x = Math.PI + 0.2;
+  sacrumMesh.userData = { subPartId: 'pelvic_girdle', name: 'Sacrum' };
   skeletalGroup.add(sacrumMesh);
+
+  // Femur (Thigh long bones)
+  [-1, 1].forEach((side) => {
+    const femGeo = new THREE.CylinderGeometry(0.038, 0.032, 0.62, 12);
+    const femMesh = new THREE.Mesh(femGeo, boneMat);
+    femMesh.position.set(side * 0.18, -0.82, 0.04);
+    femMesh.rotation.z = side * 0.08;
+    femMesh.userData = { subPartId: 'pelvic_girdle', name: 'Femur' };
+    skeletalGroup.add(femMesh);
+  });
+
+  registerOrganGroup(
+    'skeletal',
+    'Mesh_SkeletalFramework',
+    'skeletal',
+    skeletalGroup,
+    new THREE.Vector3(0, 0.72, 0.0),
+    1.75,
+    organRecords
+  );
 
   // =========================================================================
   // 3. ANATOMICALLY SCULPTED MUSCULAR SYSTEM
@@ -440,6 +497,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       return { offset: striation, colorMix: 0.55 + 0.35 * Math.sin(x * 25 + y * 20) };
     });
     const pecMesh = new THREE.Mesh(pecGeo, muscleMat.clone());
+    pecMesh.userData = { subPartId: 'pectoralis', name: 'Pectoralis Major' };
     muscularGroup.add(pecMesh);
   });
 
@@ -473,6 +531,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     return { offset: fiber, colorMix: 0.5 + 0.4 * Math.sin(y * 22) };
   });
   const absMesh = new THREE.Mesh(absGeo, muscleMat.clone());
+  absMesh.userData = { subPartId: 'rectus_abdominis', name: 'Rectus Abdominis' };
   muscularGroup.add(absMesh);
 
   // 3. External Obliques (Flanking lateral abdominal walls)
@@ -496,6 +555,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       return { offset: diagonalFiber, colorMix: 0.5 + 0.35 * Math.sin((x + y) * 20) };
     });
     const obMesh = new THREE.Mesh(obGeo, muscleMat.clone());
+    obMesh.userData = { subPartId: 'external_obliques', name: 'External Oblique' };
     muscularGroup.add(obMesh);
   });
 
@@ -516,6 +576,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const deltMesh = new THREE.Mesh(deltGeo, muscleMat.clone());
     deltMesh.position.set(side * 0.52, 1.15, 0.02);
     deltMesh.rotation.z = side * -0.18;
+    deltMesh.userData = { subPartId: 'deltoids', name: 'Deltoid' };
     muscularGroup.add(deltMesh);
   });
 
@@ -528,6 +589,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     ]);
     const scmGeo = createVariableTubeGeometry(scmCurve, 12, 8, () => 0.016, 0x9f1239, 0x4c0519);
     const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
+    scmMesh.userData = { subPartId: 'trapezius_scm', name: 'Sternocleidomastoid' };
     muscularGroup.add(scmMesh);
 
     const trapCurve = new THREE.CatmullRomCurve3([
@@ -544,6 +606,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       0x4c0519
     );
     const trapMesh = new THREE.Mesh(trapGeo, muscleMat.clone());
+    trapMesh.userData = { subPartId: 'trapezius_scm', name: 'Trapezius' };
     muscularGroup.add(trapMesh);
   });
 
@@ -557,9 +620,40 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       ]);
       const sGeo = createVariableTubeGeometry(sCurve, 8, 6, () => 0.012, 0x9f1239, 0x4c0519);
       const sMesh = new THREE.Mesh(sGeo, muscleMat.clone());
+      sMesh.userData = { subPartId: 'external_obliques', name: 'Serratus Anterior' };
       muscularGroup.add(sMesh);
     });
   });
+
+  // 7. Biceps Brachii (Arm Musculature)
+  [-1, 1].forEach((side) => {
+    const bicepGeo = new THREE.CapsuleGeometry(0.048, 0.18, 12, 12);
+    bicepGeo.scale(0.9, 1.2, 0.85);
+    const bicepMesh = new THREE.Mesh(bicepGeo, muscleMat.clone());
+    bicepMesh.position.set(side * 0.52, 0.86, 0.04);
+    bicepMesh.userData = { subPartId: 'deltoids', name: 'Biceps Brachii' };
+    muscularGroup.add(bicepMesh);
+  });
+
+  // 8. Quadriceps Femoris (Thigh Musculature)
+  [-1, 1].forEach((side) => {
+    const quadGeo = new THREE.CapsuleGeometry(0.075, 0.38, 12, 12);
+    quadGeo.scale(1.0, 1.25, 0.9);
+    const quadMesh = new THREE.Mesh(quadGeo, muscleMat.clone());
+    quadMesh.position.set(side * 0.18, -0.82, 0.06);
+    quadMesh.userData = { subPartId: 'rectus_abdominis', name: 'Quadriceps Femoris' };
+    muscularGroup.add(quadMesh);
+  });
+
+  registerOrganGroup(
+    'muscular',
+    'Mesh_MuscularFramework',
+    'muscular',
+    muscularGroup,
+    new THREE.Vector3(0, 0.68, 0.0),
+    1.8,
+    organRecords
+  );
 
   // =========================================================================
   // 4. VASCULAR NETWORK (Systemic Aorta, Vena Cava, Carotid/Iliac Vessels)

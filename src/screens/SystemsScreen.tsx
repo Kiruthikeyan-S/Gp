@@ -122,7 +122,7 @@ const CLINICAL_SYSTEMS: SystemClinicalSpec[] = [
     simulationText: 'Structural Biomechanics',
     icon: 'bone',
     color: '#4B5563',
-    representativeOrganId: 'heart',
+    representativeOrganId: 'skeletal',
     category: 'musculoskeletal',
   },
   {
@@ -137,7 +137,7 @@ const CLINICAL_SYSTEMS: SystemClinicalSpec[] = [
     simulationText: 'Contraction & Kinetic Chains',
     icon: 'arm-flex-outline',
     color: '#BE185D',
-    representativeOrganId: 'heart',
+    representativeOrganId: 'muscular',
     category: 'musculoskeletal',
   },
 ];

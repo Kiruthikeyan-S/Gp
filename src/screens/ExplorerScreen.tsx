@@ -61,17 +61,35 @@ export const ExplorerScreen: React.FC = () => {
 
   React.useEffect(() => {
     if (route.params?.targetOrganId) {
-      selectOrgan(route.params.targetOrganId);
+      const organId = route.params.targetOrganId;
+      selectOrgan(organId);
       setSelectedSubPartId(null);
       setViewMode('isolate');
       setZoomLevel(100);
       setIsCardMinimized(false);
+      if (organId === 'skeletal') {
+        setShowSkeletal(true);
+        setShowMuscular(false);
+        setShellMode('hidden');
+      } else if (organId === 'muscular') {
+        setShowMuscular(true);
+        setShowSkeletal(false);
+        setShellMode('hidden');
+      }
     }
     if (route.params?.targetSystemId) {
-      selectSystem(route.params.targetSystemId);
+      const sysId = route.params.targetSystemId;
+      selectSystem(sysId);
       setSelectedSubPartId(null);
       setViewMode('body');
       setZoomLevel(100);
+      if (sysId === 'skeletal') {
+        setShowSkeletal(true);
+        setShowMuscular(false);
+      } else if (sysId === 'muscular') {
+        setShowMuscular(true);
+        setShowSkeletal(false);
+      }
     }
   }, [route.params, selectOrgan, selectSystem]);
 

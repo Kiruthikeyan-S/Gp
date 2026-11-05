@@ -47,7 +47,7 @@ export const BODY_SYSTEMS: BodySystem[] = [
     description: 'Forms the 206-bone structural framework protecting internal organs.',
     color: '#4B5563',
     icon: 'bone',
-    organIds: [],
+    organIds: ['skeletal'],
   },
   {
     id: 'muscular',
@@ -55,7 +55,7 @@ export const BODY_SYSTEMS: BodySystem[] = [
     description: 'Enables voluntary posture, movement, and involuntary circulation contractions.',
     color: '#BE185D',
     icon: 'arm-flex-outline',
-    organIds: [],
+    organIds: ['muscular'],
   },
 ];
 
@@ -249,6 +249,44 @@ export const ORGANS: Organ[] = [
     meshName: 'Mesh_Spleen',
     accentColor: '#9333EA',
     icon: 'shield-outline',
+  },
+  {
+    id: 'skeletal',
+    name: 'Skeletal Framework',
+    systemId: 'skeletal',
+    systemName: 'Skeletal System',
+    location: 'Axial and appendicular skeleton across the entire body',
+    function: 'Provides structural support, protects internal visceral organs, anchors muscles, and houses hematopoiesis in bone marrow.',
+    howItWorks:
+      'Composed of 206 articulated bones consisting of compact cortical bone, trabecular cancellous bone, and periosteum. Joint articulations allow multi-axis biomechanical movement.',
+    facts: [
+      'Adult human skeleton consists of 206 bones, down from ~270 at birth due to bone fusion.',
+      'Femur is the longest, strongest bone, capable of supporting 30 times human body weight.',
+      'Red bone marrow produces roughly 2 million red blood cells every second.',
+    ],
+    relatedOrganIds: ['muscular'],
+    meshName: 'Mesh_SkeletalFramework',
+    accentColor: '#64748B',
+    icon: 'bone',
+  },
+  {
+    id: 'muscular',
+    name: 'Muscular Framework',
+    systemId: 'muscular',
+    systemName: 'Muscular System',
+    location: 'Superficial and deep somatic musculature throughout the head, trunk, and extremities',
+    function: 'Generates contractile force for locomotion, maintains upright posture, stabilizes joints, and produces body heat.',
+    howItWorks:
+      'Over 600 skeletal muscles composed of fascicles of striated myofibers. Actin and myosin cross-bridge sliding cycles powered by ATP and acetylcholine neurotransmission drive contraction.',
+    facts: [
+      'Muscles make up approximately 40% of total adult body mass.',
+      'The masseter (jaw muscle) can exert a bite force of over 200 pounds (90 kg).',
+      'Muscle contractions generate over 85% of basal body heat to maintain homeostasis.',
+    ],
+    relatedOrganIds: ['skeletal', 'heart'],
+    meshName: 'Mesh_MuscularFramework',
+    accentColor: '#BE185D',
+    icon: 'arm-flex-outline',
   },
 ];
 
