@@ -194,22 +194,22 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   bodyShellGroup.name = 'Layer_BodyShell';
 
   const shellMaterials: THREE.MeshStandardMaterial[] = [];
-  const createShellMat = (opacity = 0.28) => {
+  const createShellMat = (opacity = 0.22) => {
     const m = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      emissive: 0x0f172a,
-      emissiveIntensity: 0.35,
+      color: 0x94a3b8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.12,
       transparent: true,
       opacity,
-      roughness: 0.25,
-      metalness: 0.15,
+      roughness: 0.35,
+      metalness: 0.08,
       depthWrite: false,
       side: THREE.FrontSide,
     });
     shellMaterials.push(m);
     return m;
   };
-  const mainShellMat = createShellMat(0.28);
+  const mainShellMat = createShellMat(0.22);
 
   // Sculpted Torso Lathe / Profile (Smooth neck -> shoulders -> chest -> waist -> hips)
   const torsoProfile: THREE.Vector2[] = [
@@ -1332,15 +1332,15 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     bodyShellGroup.visible = true;
     shellMaterials.forEach((m) => {
       if (mode === 'xray') {
-        m.color.setHex(0x1e293b);
-        m.emissive.setHex(0x0f172a);
-        m.opacity = 0.28;
+        m.color.setHex(0x94a3b8);
+        m.emissive.setHex(0x0284c7);
+        m.opacity = 0.22;
         m.depthWrite = false;
       } else {
-        // Rich dark medical silhouette with subtle translucency so internal glow peeks through
-        m.color.setHex(0x334155);
-        m.emissive.setHex(0x1e293b);
-        m.opacity = 0.58;
+        // Clinical frosted glass silhouette
+        m.color.setHex(0x64748b);
+        m.emissive.setHex(0x0284c7);
+        m.opacity = 0.45;
         m.depthWrite = false;
       }
       m.needsUpdate = true;

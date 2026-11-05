@@ -635,8 +635,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           antialias: true,
         });
         renderer.setSize(width, height, false);
-        // Deep Medical Studio Dark Slate Backdrop (matching Reference Images 1, 3, 4)
-        renderer.setClearColor(0x0b0f19, 1);
+        // Clean Clinical Studio Light Slate Backdrop matching Home Theme
+        renderer.setClearColor(0xf8fafc, 1);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.12;
         rendererRef.current = renderer;
