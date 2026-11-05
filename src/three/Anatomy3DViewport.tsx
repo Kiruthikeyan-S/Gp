@@ -137,7 +137,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const [glbScanStatus, setGlbScanStatus] = useState<{
     loaded: number;
     total: number;
-  }>({ loaded: 0, total: 10 });
+  }>({ loaded: 0, total: 12 });
   const layoutRef = useRef<{ width: number; height: number }>({
     width: 360,
     height: 520,
@@ -361,14 +361,22 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     };
     applySceneState();
 
-    if (selectedOrganId && sceneGraphRef.current) {
+    const targetPriorityOrganId =
+      selectedOrganId ||
+      (selectedSystemId === 'muscular'
+        ? 'muscular'
+        : selectedSystemId === 'skeletal'
+        ? 'skeletal'
+        : null);
+
+    if (targetPriorityOrganId && sceneGraphRef.current) {
       const g = sceneGraphRef.current;
-      const rec = g.organRecords.get(selectedOrganId);
+      const rec = g.organRecords.get(targetPriorityOrganId);
       const isAlreadyGlb =
         rec && rec.meshes.length > 0 && rec.meshes[0].userData?.isRealGlbScan;
       if (!isAlreadyGlb) {
         ensurePriorityOrganGlbLoaded(
-          selectedOrganId,
+          targetPriorityOrganId,
           g,
           () => !isMountedRef.current
         ).then((ok) => {

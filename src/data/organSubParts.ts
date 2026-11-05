@@ -623,6 +623,15 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       description:
         'Rigid bony basin comprising ilium, ischium, and pubis that transfers upper body load directly into lower extremities.',
     },
+    {
+      id: 'lower_extremities',
+      name: 'Femur, Patella & Tibia',
+      side: 'left',
+      localAnchor: [-0.18, -1.2, 0.04],
+      color: '#CBD5E1',
+      description:
+        'Articulated weight-bearing bones including femurs, patellae, tibia, fibula, and tarsals of the feet.',
+    },
   ],
 
   // 12. MUSCULAR FRAMEWORK — Major Somatic Muscle Groups
@@ -671,6 +680,15 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       color: '#E11D48',
       description:
         'Powerful cervical and upper back musculature stabilizing cranium orientation and scapular elevation.',
+    },
+    {
+      id: 'lower_extremities',
+      name: 'Quadriceps & Calves',
+      side: 'left',
+      localAnchor: [-0.18, -1.2, 0.04],
+      color: '#BE185D',
+      description:
+        'Powerful leg musculature driving locomotion: quadriceps, hamstrings, gastrocnemius calves, and Achilles tendons.',
     },
   ],
 };
