@@ -31,7 +31,7 @@ interface SystemClinicalSpec {
   icon: string;
   color: string;
   representativeOrganId: string;
-  category: 'visceral' | 'neural' | 'musculoskeletal';
+  category: 'visceral' | 'neural';
 }
 
 const CLINICAL_SYSTEMS: SystemClinicalSpec[] = [
@@ -110,36 +110,6 @@ const CLINICAL_SYSTEMS: SystemClinicalSpec[] = [
     representativeOrganId: 'kidneys',
     category: 'visceral',
   },
-  {
-    systemNumber: 'SYSTEM 06',
-    tag: 'Osteology',
-    id: 'skeletal',
-    name: 'Skeletal System',
-    subTitle: 'Cranial, Axial & Appendicular Skeleton...',
-    badge1: '206 BONES GROUPED',
-    badge2: 'ARTICULATED JOINTS',
-    chips: ['Cranium', 'Vertebral Column', 'Thoracic Cage', 'Pelvic Girdle'],
-    simulationText: 'Structural Biomechanics',
-    icon: 'bone',
-    color: '#4B5563',
-    representativeOrganId: 'skeletal',
-    category: 'musculoskeletal',
-  },
-  {
-    systemNumber: 'SYSTEM 07',
-    tag: 'Myology',
-    id: 'muscular',
-    name: 'Muscular System',
-    subTitle: 'Skeletal, Cardiac & Smooth Musculature...',
-    badge1: '24 MUSCLE GROUPS',
-    badge2: 'KINETIC MAPPING',
-    chips: ['Pectoralis', 'Biceps Brachii', 'Quadriceps', 'Fascial Planes'],
-    simulationText: 'Contraction & Kinetic Chains',
-    icon: 'arm-flex-outline',
-    color: '#BE185D',
-    representativeOrganId: 'muscular',
-    category: 'musculoskeletal',
-  },
 ];
 
 export const SystemsScreen: React.FC = () => {
@@ -147,7 +117,7 @@ export const SystemsScreen: React.FC = () => {
   const { selectOrgan, selectSystem } = useAnatomyStore();
 
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeCategory, setActiveCategory] = useState<'all' | 'visceral' | 'neural' | 'musculoskeletal'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'visceral' | 'neural'>('all');
 
   const filteredSystems = CLINICAL_SYSTEMS.filter((sys) => {
     const matchesCategory =
@@ -194,7 +164,7 @@ export const SystemsScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Title Section matching Image 2 */}
+        {/* Title Section */}
         <View style={styles.titleSection}>
           <View style={styles.titleRow}>
             <Text style={styles.mainTitle}>Body Systems</Text>
@@ -203,7 +173,7 @@ export const SystemsScreen: React.FC = () => {
             </View>
           </View>
           <Text style={styles.subtitle}>
-            7 Fundamental Anatomical Frameworks
+            5 Primary Anatomical Systems
           </Text>
         </View>
 
@@ -249,7 +219,7 @@ export const SystemsScreen: React.FC = () => {
                 activeCategory === 'all' && styles.filterPillTextActive,
               ]}
             >
-              All Systems (7)
+              All Systems (5)
             </Text>
           </TouchableOpacity>
 
@@ -296,29 +266,6 @@ export const SystemsScreen: React.FC = () => {
               ]}
             >
               Neural
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filterPill,
-              activeCategory === 'musculoskeletal' && styles.filterPillActive,
-            ]}
-            onPress={() => setActiveCategory('musculoskeletal')}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons
-              name="arm-flex-outline"
-              size={14}
-              color={activeCategory === 'musculoskeletal' ? '#FFFFFF' : '#64748B'}
-            />
-            <Text
-              style={[
-                styles.filterPillText,
-                activeCategory === 'musculoskeletal' && styles.filterPillTextActive,
-              ]}
-            >
-              Musculoskeletal
             </Text>
           </TouchableOpacity>
         </ScrollView>

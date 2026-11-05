@@ -207,7 +207,7 @@ export const LearningScreen: React.FC = () => {
                       <MaterialCommunityIcons
                         name="cube-scan"
                         size={15}
-                        color="#FFFFFF"
+                        color="#0B0F19"
                       />
                       <Text style={styles.inspect3DBtnText}>
                         Inspect in 3D Atlas
@@ -229,12 +229,12 @@ export const LearningScreen: React.FC = () => {
                             : 'checkmark-outline'
                         }
                         size={15}
-                        color={isCompleted ? '#10B981' : '#64748B'}
+                        color={isCompleted ? '#10B981' : '#E2E8F0'}
                       />
                       <Text
                         style={[
                           styles.markCompleteBtnText,
-                          isCompleted && { color: '#059669' },
+                          isCompleted && { color: '#10B981' },
                         ]}
                       >
                         {isCompleted ? 'Completed' : 'Mark Done'}
@@ -254,15 +254,15 @@ export const LearningScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0B0F19',
   },
   header: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: '#1E293B',
+    backgroundColor: '#0F172A',
   },
   headerRow: {
     flexDirection: 'row',
@@ -270,27 +270,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F8FAFC',
     letterSpacing: -0.3,
   },
   completedBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   completedBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#059669',
+    color: '#10B981',
   },
   headerSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
+    fontSize: 12,
+    color: '#94A3B8',
     marginTop: 2,
     marginBottom: 12,
   },
@@ -298,49 +298,44 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#0B0F19',
     borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#1E293B',
   },
   filterChipActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7',
+    backgroundColor: '#38BDF8',
+    borderColor: '#38BDF8',
   },
   filterChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#94A3B8',
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: '#0B0F19',
     fontWeight: '700',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#0B0F19',
   },
   contentContainer: {
     padding: 16,
     gap: 12,
-    paddingBottom: 28,
+    paddingBottom: 24,
   },
   lessonCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0F172A',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#1E293B',
     overflow: 'hidden',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
   },
   lessonCardCompleted: {
-    borderColor: '#10B981',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   lessonCardHeader: {
     padding: 16,
@@ -376,27 +371,27 @@ const styles = StyleSheet.create({
   },
   readTimeText: {
     fontSize: 11,
-    color: '#64748B',
+    color: '#94A3B8',
   },
   checkAction: {
     padding: 2,
   },
   lessonTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#F8FAFC',
     marginBottom: 4,
   },
   lessonSummary: {
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: 18,
-    color: '#64748B',
+    color: '#94A3B8',
   },
   expandedContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: '#1E293B',
     paddingTop: 14,
     gap: 12,
   },
@@ -412,24 +407,24 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionNumberText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0284C7',
+    color: '#38BDF8',
   },
   sectionHeading: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#F1F5F9',
   },
   sectionBody: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: '#475569',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#94A3B8',
     paddingLeft: 28,
   },
   lessonActionsRow: {
@@ -437,9 +432,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginTop: 8,
-    paddingTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: '#1E293B',
   },
   inspect3DBtn: {
     flex: 1,
@@ -447,33 +442,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#0284C7',
+    backgroundColor: '#38BDF8',
     paddingVertical: 10,
     borderRadius: 10,
   },
   inspect3DBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0B0F19',
   },
   markCompleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#334155',
   },
   markCompleteBtnDone: {
-    borderColor: '#A7F3D0',
-    backgroundColor: '#ECFDF5',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
   markCompleteBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: '#E2E8F0',
   },
 });

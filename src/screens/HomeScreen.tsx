@@ -219,7 +219,9 @@ export const HomeScreen: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.systemsScroll}
         >
-          {BODY_SYSTEMS.map((system) => {
+          {BODY_SYSTEMS.filter(
+            (s) => s.id !== 'skeletal' && s.id !== 'muscular'
+          ).map((system) => {
             const count = ORGANS.filter((o) => o.systemId === system.id).length;
             return (
               <TouchableOpacity

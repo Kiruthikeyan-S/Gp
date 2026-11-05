@@ -6,8 +6,6 @@ export const ORGAN_IMAGES: Record<string, any> = {
   liver: require('../../assets/organs/liver.png'),
   stomach: require('../../assets/organs/stomach.png'),
   kidneys: require('../../assets/organs/kidneys.png'),
-  skeletal: require('../../assets/systems/skeleton.png'),
-  muscular: require('../../assets/systems/muscular.png'),
 };
 
 export const SYSTEM_IMAGES: Record<string, any> = {
@@ -16,6 +14,4 @@ export const SYSTEM_IMAGES: Record<string, any> = {
   nervous: require('../../assets/organs/brain.png'),
   digestive: require('../../assets/organs/stomach.png'),
   urinary: require('../../assets/organs/kidneys.png'),
-  skeletal: require('../../assets/systems/skeleton.png'),
-  muscular: require('../../assets/systems/muscular.png'),
 };

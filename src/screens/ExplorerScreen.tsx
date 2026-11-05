@@ -51,7 +51,7 @@ export const ExplorerScreen: React.FC = () => {
   );
   const [shellMode, setShellMode] = useState<ShellMode>('xray');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
-  const [showSkeletal, setShowSkeletal] = useState<boolean>(true);
+  const [showSkeletal, setShowSkeletal] = useState<boolean>(false);
   const [showMuscular, setShowMuscular] = useState<boolean>(false);
   const [showVascular, setShowVascular] = useState<boolean>(true);
   const [animatePhysiology, setAnimatePhysiology] = useState<boolean>(true);
@@ -61,47 +61,17 @@ export const ExplorerScreen: React.FC = () => {
 
   React.useEffect(() => {
     if (route.params?.targetOrganId) {
-      const organId = route.params.targetOrganId;
-      const organ = ORGANS.find((o) => o.id === organId);
-      selectOrgan(organId);
-      if (organ) selectSystem(organ.systemId);
+      selectOrgan(route.params.targetOrganId);
       setSelectedSubPartId(null);
       setViewMode('isolate');
       setZoomLevel(100);
       setIsCardMinimized(false);
-      if (organId === 'skeletal') {
-        setShowSkeletal(true);
-        setShowMuscular(false);
-        setShellMode('hidden');
-      } else if (organId === 'muscular') {
-        setShowMuscular(true);
-        setShowSkeletal(false);
-        setShellMode('hidden');
-      } else {
-        setShowMuscular(false);
-        setShowSkeletal(true);
-        setShellMode('xray');
-      }
     }
     if (route.params?.targetSystemId) {
-      const sysId = route.params.targetSystemId;
-      selectSystem(sysId);
+      selectSystem(route.params.targetSystemId);
       setSelectedSubPartId(null);
       setViewMode('body');
       setZoomLevel(100);
-      if (sysId === 'skeletal') {
-        setShowSkeletal(true);
-        setShowMuscular(false);
-        setShellMode('hidden');
-      } else if (sysId === 'muscular') {
-        setShowMuscular(true);
-        setShowSkeletal(false);
-        setShellMode('hidden');
-      } else {
-        setShowMuscular(false);
-        setShowSkeletal(true);
-        setShellMode('xray');
-      }
     }
   }, [route.params, selectOrgan, selectSystem]);
 
@@ -169,7 +139,7 @@ export const ExplorerScreen: React.FC = () => {
         {!hideInterface && (
           <View style={styles.topFloatingContainer}>
             <View style={styles.topBarRow}>
-              {/* Systems Drawer Toggle Button */}
+              {/* Systems Drawer Toggle Button (Like Image 3 "CONTENTS") */}
               <TouchableOpacity
                 style={[
                   styles.contentsBtn,
@@ -181,12 +151,12 @@ export const ExplorerScreen: React.FC = () => {
                 <MaterialCommunityIcons
                   name="layers-triple-outline"
                   size={17}
-                  color={showSystemsFilter ? '#0284C7' : '#0F172A'}
+                  color={showSystemsFilter ? '#38BDF8' : '#E2E8F0'}
                 />
                 <Text
                   style={[
                     styles.contentsBtnText,
-                    showSystemsFilter && { color: '#0284C7' },
+                    showSystemsFilter && { color: '#38BDF8' },
                   ]}
                 >
                   {selectedSystemId === 'all'
@@ -195,7 +165,7 @@ export const ExplorerScreen: React.FC = () => {
                 </Text>
               </TouchableOpacity>
 
-              {/* 2-Mode 3D Switcher: Full Body vs Solo 3D */}
+              {/* 2-Mode 3D Switcher: Full Body vs Isolate Organ */}
               <View style={styles.modeSegmentedControl}>
                 <TouchableOpacity
                   style={[
@@ -206,25 +176,12 @@ export const ExplorerScreen: React.FC = () => {
                     setSelectedSubPartId(null);
                     setViewMode('body');
                     setZoomLevel(100);
-                    if (activeOrgan.id === 'muscular') {
-                      setShowMuscular(true);
-                      setShowSkeletal(false);
-                      setShellMode('hidden');
-                    } else if (activeOrgan.id === 'skeletal') {
-                      setShowSkeletal(true);
-                      setShowMuscular(false);
-                      setShellMode('hidden');
-                    } else {
-                      setShowMuscular(false);
-                      setShowSkeletal(true);
-                      setShellMode('xray');
-                    }
                   }}
                 >
                   <MaterialCommunityIcons
                     name="human"
                     size={15}
-                    color={viewMode === 'body' ? '#FFFFFF' : '#64748B'}
+                    color={viewMode === 'body' ? '#0B0F19' : '#94A3B8'}
                   />
                   <Text
                     style={[
@@ -250,7 +207,7 @@ export const ExplorerScreen: React.FC = () => {
                   <MaterialCommunityIcons
                     name="cube-scan"
                     size={15}
-                    color={viewMode === 'isolate' ? '#FFFFFF' : '#64748B'}
+                    color={viewMode === 'isolate' ? '#0B0F19' : '#94A3B8'}
                   />
                   <Text
                     style={[
@@ -268,7 +225,7 @@ export const ExplorerScreen: React.FC = () => {
                 style={styles.iconGlassBtn}
                 onPress={() => setHideInterface(true)}
               >
-                <Ionicons name="eye-off-outline" size={18} color="#0F172A" />
+                <Ionicons name="eye-off-outline" size={18} color="#E2E8F0" />
               </TouchableOpacity>
             </View>
 
@@ -398,21 +355,6 @@ export const ExplorerScreen: React.FC = () => {
               </TouchableOpacity>
             )}
 
-            {/* Skeleton Layer Toggle */}
-            {viewMode === 'body' && (
-              <TouchableOpacity
-                style={[styles.dockBtn, showSkeletal && styles.dockBtnActive]}
-                onPress={() => setShowSkeletal((v) => !v)}
-              >
-                <MaterialCommunityIcons
-                  name="bone"
-                  size={18}
-                  color={showSkeletal ? '#FDE68A' : '#64748B'}
-                />
-                <Text style={styles.dockTinyLabel}>BONE</Text>
-              </TouchableOpacity>
-            )}
-
             {/* Vascular Layer Toggle */}
             {viewMode === 'body' && (
               <TouchableOpacity
@@ -425,21 +367,6 @@ export const ExplorerScreen: React.FC = () => {
                   color={showVascular ? '#F87171' : '#64748B'}
                 />
                 <Text style={styles.dockTinyLabel}>VESSEL</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Muscular Layer Toggle */}
-            {viewMode === 'body' && (
-              <TouchableOpacity
-                style={[styles.dockBtn, showMuscular && styles.dockBtnActive]}
-                onPress={() => setShowMuscular((v) => !v)}
-              >
-                <MaterialCommunityIcons
-                  name="arm-flex-outline"
-                  size={18}
-                  color={showMuscular ? '#F472B6' : '#64748B'}
-                />
-                <Text style={styles.dockTinyLabel}>MUSCLE</Text>
               </TouchableOpacity>
             )}
 
@@ -464,7 +391,7 @@ export const ExplorerScreen: React.FC = () => {
               style={styles.dockBtnSmall}
               onPress={() => setZoomLevel((z) => Math.min(z + 20, 200))}
             >
-              <Ionicons name="add" size={19} color="#0F172A" />
+              <Ionicons name="add" size={19} color="#E2E8F0" />
             </TouchableOpacity>
 
             {/* Zoom Out */}
@@ -472,7 +399,7 @@ export const ExplorerScreen: React.FC = () => {
               style={styles.dockBtnSmall}
               onPress={() => setZoomLevel((z) => Math.max(z - 20, 60))}
             >
-              <Ionicons name="remove" size={19} color="#0F172A" />
+              <Ionicons name="remove" size={19} color="#E2E8F0" />
             </TouchableOpacity>
 
             {/* Center / Reset Camera */}
@@ -486,7 +413,7 @@ export const ExplorerScreen: React.FC = () => {
               <MaterialCommunityIcons
                 name="crosshairs-gps"
                 size={17}
-                color="#0284C7"
+                color="#38BDF8"
               />
             </TouchableOpacity>
           </View>
@@ -514,23 +441,10 @@ export const ExplorerScreen: React.FC = () => {
                       ]}
                       onPress={() => {
                         selectOrgan(organ.id);
-                        selectSystem(organ.systemId);
                         setSelectedSubPartId(null);
+                        setViewMode('isolate');
                         setZoomLevel(100);
                         setIsCardMinimized(false);
-                        if (organ.id === 'skeletal') {
-                          setShowSkeletal(true);
-                          setShowMuscular(false);
-                          setShellMode('hidden');
-                        } else if (organ.id === 'muscular') {
-                          setShowMuscular(true);
-                          setShowSkeletal(false);
-                          setShellMode('hidden');
-                        } else {
-                          setShowMuscular(false);
-                          setShowSkeletal(true);
-                          setShellMode('xray');
-                        }
                       }}
                       activeOpacity={0.8}
                     >
@@ -711,12 +625,12 @@ export const ExplorerScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#0B0F19',
   },
   viewportContainer: {
     flex: 1,
     position: 'relative',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#0B0F19',
   },
   topFloatingContainer: {
     position: 'absolute',
@@ -734,40 +648,30 @@ const styles = StyleSheet.create({
   contentsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 11,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(148, 163, 184, 0.25)',
     gap: 6,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
   },
   contentsBtnActive: {
-    borderColor: '#0284C7',
-    backgroundColor: '#F0F9FF',
+    borderColor: '#38BDF8',
+    backgroundColor: 'rgba(2, 132, 199, 0.22)',
   },
   contentsBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#E2E8F0',
   },
   modeSegmentedControl: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
     borderRadius: 12,
     padding: 3,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    borderColor: 'rgba(148, 163, 184, 0.22)',
   },
   modeSegmentBtn: {
     flexDirection: 'row',
@@ -778,31 +682,26 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   modeSegmentBtnActive: {
-    backgroundColor: '#0284C7',
+    backgroundColor: '#38BDF8',
   },
   modeSegmentText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#94A3B8',
   },
   modeSegmentTextActive: {
-    color: '#FFFFFF',
+    color: '#0B0F19',
     fontWeight: '700',
   },
   iconGlassBtn: {
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(148, 163, 184, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
   },
   systemsRibbon: {
     paddingTop: 8,
@@ -813,24 +712,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(148, 163, 184, 0.28)',
     marginRight: 6,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
   },
   sysChipActive: {
     backgroundColor: '#0284C7',
-    borderColor: '#0284C7',
+    borderColor: '#38BDF8',
   },
   sysChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: '#CBD5E1',
   },
   sysChipTextActive: {
     color: '#FFFFFF',
@@ -843,41 +737,31 @@ const styles = StyleSheet.create({
     zIndex: 25,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#0284C7',
+    borderColor: '#38BDF8',
     gap: 6,
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 3,
   },
   restoreUiText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0284C7',
+    color: '#38BDF8',
   },
   leftFloatingDock: {
     position: 'absolute',
     left: 10,
     top: 64,
     zIndex: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: 'rgba(15, 23, 42, 0.78)',
     borderRadius: 14,
     padding: 5,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(148, 163, 184, 0.18)',
     alignItems: 'center',
     gap: 5,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
   },
   dockBtn: {
     width: 44,
@@ -885,19 +769,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    backgroundColor: 'rgba(30, 41, 59, 0.65)',
   },
   dockBtnActive: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: 'rgba(56, 189, 248, 0.16)',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: 'rgba(56, 189, 248, 0.4)',
   },
   dockTinyLabel: {
     fontSize: 8,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#94A3B8',
     marginTop: 2,
   },
   dockBtnSmall: {
@@ -906,9 +788,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    backgroundColor: 'rgba(30, 41, 59, 0.65)',
   },
   rightOrganRailWrapper: {
     position: 'absolute',
@@ -917,16 +797,11 @@ const styles = StyleSheet.create({
     bottom: 185,
     zIndex: 15,
     width: 54,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: 'rgba(15, 23, 42, 0.78)',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(148, 163, 184, 0.18)',
     paddingVertical: 6,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
   },
   rightOrganRailScroll: {
     alignItems: 'center',
@@ -939,15 +814,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(30, 41, 59, 0.65)',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'transparent',
     paddingHorizontal: 2,
   },
   railOrganLabel: {
     fontSize: 8,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#94A3B8',
     marginTop: 2,
   },
   floatingCardWrapper: {
@@ -961,17 +836,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    borderColor: 'rgba(148, 163, 184, 0.25)',
   },
   minimizedLeft: {
     flexDirection: 'row',
@@ -981,24 +851,19 @@ const styles = StyleSheet.create({
   minimizedOrganName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#F8FAFC',
   },
   minimizedSystemText: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#94A3B8',
   },
   floatingOrganCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 4,
+    borderColor: 'rgba(148, 163, 184, 0.25)',
   },
   cardTopMetaRow: {
     flexDirection: 'row',
@@ -1009,7 +874,7 @@ const styles = StyleSheet.create({
   systemPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(30, 41, 59, 0.9)',
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 999,
@@ -1036,18 +901,18 @@ const styles = StyleSheet.create({
   cardOrganTitle: {
     fontSize: 21,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#F8FAFC',
     marginBottom: 2,
   },
   cardLocationText: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#94A3B8',
     marginBottom: 6,
   },
   cardFunctionText: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#334155',
+    color: '#CBD5E1',
     marginBottom: 12,
   },
   cardActionRow: {
@@ -1059,9 +924,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0F9FF',
+    backgroundColor: 'rgba(56, 189, 248, 0.14)',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: 'rgba(56, 189, 248, 0.4)',
     paddingVertical: 10,
     borderRadius: 11,
     gap: 6,
@@ -1069,7 +934,7 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0284C7',
+    color: '#38BDF8',
   },
   primaryActionBtn: {
     flex: 1.35,
@@ -1089,24 +954,19 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#0284C7',
+    borderColor: '#38BDF8',
     marginTop: 8,
     gap: 8,
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
   },
   touchedPartLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#F8FAFC',
     letterSpacing: 0.4,
   },
 });

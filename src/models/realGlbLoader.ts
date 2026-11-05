@@ -203,42 +203,6 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     coordMode: 'vhm',
     customFocusRadius: 0.88,
   },
-  {
-    organId: 'skeletal',
-    title: 'Articulated Human Skeleton (242 Bones GLB Scan)',
-    sourceCredit: 'BodyParts3D / OrganUI Anatomical Reference (CC-BY-SA)',
-    sketchfabReferenceUrl:
-      'https://sketchfab.com/3d-models/full-human-skeleton-anatomy-8c9e42e5b87c4a16999a0a10850c9502',
-    urls: [
-      'https://cdn.jsdelivr.net/gh/organui/skeleton-3d@120fc17278559057b37aff516eee89d263b604c6/public/models/skeleton.glb',
-    ],
-    primaryColorHex: 0xf1ebe1,
-    secondaryColorHex: 0xc4b59d,
-    roughness: 0.38,
-    metalness: 0.08,
-    coordMode: 'fit',
-    targetBoxCenter: [0, 0.18, 0],
-    targetMaxDim: 3.52,
-    customFocusRadius: 2.85,
-  },
-  {
-    organId: 'muscular',
-    title: 'Whole-Body Human Muscular System (177 Muscles GLB Scan)',
-    sourceCredit: 'BodyParts3D / OrganUI Anatomical Reference (CC-BY-SA)',
-    sketchfabReferenceUrl:
-      'https://sketchfab.com/3d-models/human-muscular-system-anatomy-088f17eb57cf4c2ea2687c7031855212',
-    urls: [
-      'https://cdn.jsdelivr.net/gh/organui/muscles-3d@main/public/models/muscles.glb',
-    ],
-    primaryColorHex: 0xc43d54,
-    secondaryColorHex: 0x7a1827,
-    roughness: 0.35,
-    metalness: 0.08,
-    coordMode: 'fit',
-    targetBoxCenter: [0, 0.18, 0],
-    targetMaxDim: 3.52,
-    customFocusRadius: 2.85,
-  },
 ];
 
 const SKIN_GLB_URL =
@@ -815,109 +779,6 @@ function mapNodeNameToSubPart(
     return { subPartId: 'inferior_pole', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
   }
 
-  if (organId === 'skeletal') {
-    if (
-      /frontal|parietal|occipital|temporal|sphenoid|ethmoid|mandible|maxilla|zygomatic|nasal|lacrimal|vomer|palatine|hyoid|auditory|ear|turbinate/i.test(
-        n
-      )
-    ) {
-      return {
-        subPartId: 'cranium',
-        primaryHex: 0xf3ede3,
-        secondaryHex: 0xc4b59d,
-      };
-    }
-    if (
-      /vertebra|cervical|thoracic-vertebra|lumbar|sacrum|coccyx|atlas|axis/i.test(
-        n
-      )
-    ) {
-      return {
-        subPartId: 'vertebral_column',
-        primaryHex: 0xe8e2d5,
-        secondaryHex: 0xb5a790,
-      };
-    }
-    if (/rib|sternum|costal|manubrium|xiphoid/i.test(n)) {
-      return {
-        subPartId: 'thoracic_cage',
-        primaryHex: 0xf5f0e8,
-        secondaryHex: 0xcdbeaa,
-      };
-    }
-    if (/clavicle|scapula/i.test(n)) {
-      return {
-        subPartId: 'clavicles_scapula',
-        primaryHex: 0xf0ebe1,
-        secondaryHex: 0xc2b39c,
-      };
-    }
-    if (/pelvis|ilium|ischium|pubis|hip/i.test(n)) {
-      return {
-        subPartId: 'pelvic_girdle',
-        primaryHex: 0xe5dfd2,
-        secondaryHex: 0xad9f88,
-      };
-    }
-    return {
-      subPartId: 'lower_extremities',
-      primaryHex: 0xeee7db,
-      secondaryHex: 0xbdb09a,
-    };
-  }
-
-  if (organId === 'muscular') {
-    if (
-      /head|facial|oculi|frontalis|tempor|masseter|buccinator|orbicularis|zygomatic|occipit|aponeurosis|nasalis|mentalis|platysma/i.test(
-        n
-      ) ||
-      /trapezius|sternocleidomastoid|splenius|scalenus|levator/i.test(n)
-    ) {
-      return {
-        subPartId: 'trapezius_scm',
-        primaryHex: 0xd93856,
-        secondaryHex: 0x8a152d,
-      };
-    }
-    if (/pectoral|subclav|serratus|intercost/i.test(n)) {
-      return {
-        subPartId: 'pectoralis',
-        primaryHex: 0xc82645,
-        secondaryHex: 0x7a1125,
-      };
-    }
-    if (
-      /deltoid|bicep|tricep|brachi|forearm|pronator|supinator|flexor-carpi|extensor|palmar|hand|thenar|pollicis|coracobrachialis/i.test(
-        n
-      )
-    ) {
-      return {
-        subPartId: 'deltoids',
-        primaryHex: 0xb81c3c,
-        secondaryHex: 0x6e0d20,
-      };
-    }
-    if (/abdomin|linea|pyramidalis|transvers.*abdominis/i.test(n)) {
-      return {
-        subPartId: 'rectus_abdominis',
-        primaryHex: 0xbe185d,
-        secondaryHex: 0x700936,
-      };
-    }
-    if (/oblique|psoas|iliacus|quadratus.*lumborum/i.test(n)) {
-      return {
-        subPartId: 'external_obliques',
-        primaryHex: 0x9f1239,
-        secondaryHex: 0x5e0820,
-      };
-    }
-    return {
-      subPartId: 'lower_extremities',
-      primaryHex: 0xba1d48,
-      secondaryHex: 0x690e26,
-    };
-  }
-
   return { subPartId: null, primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
 }
 
@@ -1290,17 +1151,59 @@ function attachSkinGeometryToGraph(
 }
 
 /**
- * Real whole-body structural layers:
- * The 242-bone skeletal model and 177-muscle model already encompass all articulation
- * (including pelvic girdle and extremities), while the procedural body shell provides
- * the sleek, upright medical holographic silhouette without cadaver pose clashing.
+ * Loads the real Visible Human Male Pelvis (.glb) and Full-Body Skin Silhouette (.glb)
  */
 async function loadStructuralGlbLayers(
-  _graph: AnatomySceneGraph,
-  _isCancelled: () => boolean
+  graph: AnatomySceneGraph,
+  isCancelled: () => boolean
 ): Promise<void> {
-  // Skeleton and Muscular GLBs provide full high-resolution anatomical coverage
-  return;
+  try {
+    // 1. Real 3D Pelvis Bone Scan (.glb)
+    if (!cachedPelvisGeometry) {
+      const pelvisBuf = await fetchGlbBuffer(PELVIS_GLB_URL);
+      if (isCancelled()) return;
+      const pelvisPrims = parseGlbBinary(pelvisBuf);
+      if (pelvisPrims.length > 0) {
+        const pelvisGeo = buildMergedOrganGeometry(
+          pelvisPrims,
+          0xe8dfd1,
+          0xb8ab96,
+          false
+        );
+        pelvisGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
+        pelvisGeo.translate(0, VHM_Y_OFFSET, 0);
+        pelvisGeo.userData = { isCachedGlb: true };
+        cachedPelvisGeometry = pelvisGeo;
+      }
+    }
+    if (cachedPelvisGeometry && !isCancelled()) {
+      attachPelvisGeometryToGraph(cachedPelvisGeometry, graph);
+    }
+
+    // 2. Real 3D Full Human Body Skin Scan (.glb)
+    if (!cachedSkinGeometry) {
+      const skinBuf = await fetchGlbBuffer(SKIN_GLB_URL);
+      if (isCancelled()) return;
+      const skinPrims = parseGlbBinary(skinBuf);
+      if (skinPrims.length > 0) {
+        const skinGeo = buildMergedOrganGeometry(
+          skinPrims,
+          0x334155,
+          0x1e293b,
+          false
+        );
+        skinGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
+        skinGeo.translate(0, VHM_Y_OFFSET, 0);
+        skinGeo.userData = { isCachedGlb: true };
+        cachedSkinGeometry = skinGeo;
+      }
+    }
+    if (cachedSkinGeometry && !isCancelled()) {
+      attachSkinGeometryToGraph(cachedSkinGeometry, graph);
+    }
+  } catch {
+    // Keep procedural fallback if offline
+  }
 }
 
 /**
@@ -1337,49 +1240,53 @@ export async function loadAllRealMedicalGlbModels(
     onOrganLoaded(loaded, total, priorityOrganId || 'cached');
   }
 
-  // 1. Load priority organ immediately if not cached yet
-  if (priorityOrganId) {
-    const prioSpec = REAL_GLB_ORGAN_SPECS.find(
-      (s) => s.organId === priorityOrganId
-    );
-    if (prioSpec && !prebuiltOrganCache.has(prioSpec.organId)) {
-      try {
-        const ok = await loadSingleRealGlbOrgan(prioSpec, graph, isCancelled);
-        if (ok && !isCancelled()) {
-          loaded++;
-          onOrganLoaded(loaded, total, prioSpec.organId);
-        }
-      } catch {
-        // Keep procedural fallback
-      }
-    }
-  }
-
-  // 2. Idle delay before starting background streaming so initial user interactions and 3D gestures are 60fps silky smooth
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  if (isCancelled()) return;
-
-  // 3. Stream remaining uncached organs one-by-one with gentle pauses so CPU never locks up
+  // Order specs so priorityOrganId loads first, followed by uncached organs
   const remainingSpecs = REAL_GLB_ORGAN_SPECS.filter(
-    (s) => !prebuiltOrganCache.has(s.organId) && s.organId !== priorityOrganId
-  );
+    (s) => !prebuiltOrganCache.has(s.organId)
+  ).sort((a, b) => {
+    if (a.organId === priorityOrganId) return -1;
+    if (b.organId === priorityOrganId) return 1;
+    return 0;
+  });
 
-  for (const spec of remainingSpecs) {
-    if (isCancelled()) return;
+  // Load priority organ immediately if not cached yet
+  if (
+    remainingSpecs.length > 0 &&
+    remainingSpecs[0].organId === priorityOrganId
+  ) {
+    const firstSpec = remainingSpecs.shift()!;
     try {
-      const ok = await loadSingleRealGlbOrgan(spec, graph, isCancelled);
+      const ok = await loadSingleRealGlbOrgan(firstSpec, graph, isCancelled);
       if (ok && !isCancelled()) {
         loaded++;
-        onOrganLoaded(loaded, total, spec.organId);
+        onOrganLoaded(loaded, total, firstSpec.organId);
       }
     } catch {
-      // Keep procedural fallback for this organ if network fails
+      // Keep fallback if offline
     }
-    // Yield execution to the Hermes JS event loop for 500ms between models
-    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  // 4. Load structural Pelvis & Full-Body Skin .glb scans
+  // Stage 1: Load remaining organs in parallel batches of 4
+  const batchSize = 4;
+  for (let i = 0; i < remainingSpecs.length; i += batchSize) {
+    if (isCancelled()) return;
+    const batch = remainingSpecs.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(async (spec) => {
+        try {
+          const ok = await loadSingleRealGlbOrgan(spec, graph, isCancelled);
+          if (ok && !isCancelled()) {
+            loaded++;
+            onOrganLoaded(loaded, total, spec.organId);
+          }
+        } catch {
+          // Keep procedural fallback for this organ if network fails
+        }
+      })
+    );
+  }
+
+  // Stage 2: Load structural Pelvis & Full-Body Skin .glb scans
   if (!isCancelled()) {
     await loadStructuralGlbLayers(graph, isCancelled);
     if (!isCancelled()) {
