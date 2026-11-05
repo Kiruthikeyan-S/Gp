@@ -230,6 +230,24 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     }
 
     // Full Body Mode (Entire Head to Feet)
+    targetOrbitRef.current.theta = 0;
+    targetOrbitRef.current.phi = Math.PI / 2.02;
+
+    if (selId && selId !== 'muscular' && selId !== 'skeletal' && graph) {
+      const rec = graph.organRecords.get(selId);
+      if (rec) {
+        // Anatomical torso & body framing centered gracefully on the active internal organ
+        targetOrbitRef.current.lookX = 0;
+        targetOrbitRef.current.lookY = Math.max(
+          -0.45,
+          Math.min(0.65, (rec.focusCenter.y - 0.58) * 0.7 - 0.1)
+        );
+        targetOrbitRef.current.lookZ = 0;
+        targetOrbitRef.current.radius = 2.75 / scale;
+        return;
+      }
+    }
+
     targetOrbitRef.current.lookX = 0;
     targetOrbitRef.current.lookY = -0.42;
     targetOrbitRef.current.lookZ = 0;
@@ -298,7 +316,19 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         pedestalGroupRef.current.visible = true;
       }
 
-      graph.setShellMode(activeShellMode);
+      // Automatically hide the outer skin silhouette when inspecting Muscular or Skeletal frameworks to avoid visual clipping
+      const isWholeBodyFramework =
+        activeOrganId === 'muscular' ||
+        activeOrganId === 'skeletal' ||
+        activeSystemId === 'muscular' ||
+        activeSystemId === 'skeletal';
+
+      if (isWholeBodyFramework) {
+        graph.bodyShellGroup.visible = false;
+      } else {
+        graph.setShellMode(activeShellMode);
+      }
+
       graph.vascularGroup.visible =
         vascularVisible &&
         (activeSystemId === 'all' || activeSystemId === 'circulatory');
@@ -306,20 +336,48 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       graph.systemGroups.forEach((group, sysId) => {
         if (sysId === 'skeletal') {
           group.visible =
+            activeOrganId === 'skeletal' ||
             activeSystemId === 'skeletal' ||
-            (activeSystemId === 'all' && skeletalVisible);
+            skeletalVisible;
         } else if (sysId === 'muscular') {
-          group.visible =
-            activeSystemId === 'muscular' ||
-            (activeSystemId === 'all' && muscularVisible);
+          group.visible = Boolean(
+            activeOrganId === 'muscular' ||
+            (activeSystemId === 'muscular' && !activeOrganId) ||
+            muscularVisible
+          );
         } else {
           group.visible =
-            activeSystemId === 'all' || activeSystemId === sysId;
+            activeSystemId === 'all' ||
+            activeSystemId === sysId ||
+            Boolean(
+              activeOrganId &&
+                graph.organRecords.get(activeOrganId)?.systemId === sysId
+            );
         }
       });
 
+      const isInternalOrgan =
+        activeOrganId !== 'muscular' && activeOrganId !== 'skeletal';
+
       graph.organRecords.forEach((record) => {
-        record.group.visible = true;
+        if (record.organId === 'muscular') {
+          record.group.visible = Boolean(
+            activeOrganId === 'muscular' ||
+            (activeSystemId === 'muscular' && !activeOrganId) ||
+            muscularVisible
+          );
+        } else if (record.organId === 'skeletal') {
+          record.group.visible =
+            activeOrganId === 'skeletal' ||
+            activeSystemId === 'skeletal' ||
+            skeletalVisible;
+        } else {
+          record.group.visible =
+            activeSystemId === 'all' ||
+            activeSystemId === record.systemId ||
+            activeOrganId === record.organId;
+        }
+
         const isSelected = record.organId === activeOrganId;
         record.meshes.forEach((mesh) => {
           const origMat = record.originalMaterials.get(mesh);
@@ -327,13 +385,41 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           if (!origMat || !currentMat) return;
 
           currentMat.color.copy(origMat.color);
-          currentMat.opacity = origMat.opacity;
-          currentMat.transparent = origMat.transparent;
 
-          if (isSelected) {
-            currentMat.emissive.setHex(0x38bdf8);
-            currentMat.emissiveIntensity = 0.38;
+          if (record.organId === 'skeletal') {
+            if (activeOrganId === 'skeletal' || activeSystemId === 'skeletal') {
+              // Full solid bone inspection
+              currentMat.opacity = 1.0;
+              currentMat.transparent = false;
+              currentMat.depthWrite = true;
+              currentMat.emissive.setHex(0x000000);
+              currentMat.emissiveIntensity = 0;
+            } else {
+              // Translucent medical framing so internal organs shine clearly through the ribs!
+              currentMat.transparent = true;
+              currentMat.opacity = 0.35;
+              currentMat.depthWrite = false;
+              currentMat.emissive.setHex(0x000000);
+              currentMat.emissiveIntensity = 0;
+            }
+          } else if (isSelected) {
+            // Selected active organ: fully opaque with radiant highlight
+            currentMat.opacity = 1.0;
+            currentMat.transparent = false;
+            currentMat.depthWrite = true;
+            currentMat.emissive.setHex(0x0284c7);
+            currentMat.emissiveIntensity = 0.42;
           } else {
+            // Other organs
+            if (isInternalOrgan) {
+              // Subtle semi-transparency so active organ pops out
+              currentMat.transparent = true;
+              currentMat.opacity = 0.38;
+              currentMat.depthWrite = false;
+            } else {
+              currentMat.opacity = origMat.opacity;
+              currentMat.transparent = origMat.transparent;
+            }
             currentMat.emissive.setHex(0x000000);
             currentMat.emissiveIntensity = 0;
           }

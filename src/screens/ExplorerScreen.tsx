@@ -62,7 +62,9 @@ export const ExplorerScreen: React.FC = () => {
   React.useEffect(() => {
     if (route.params?.targetOrganId) {
       const organId = route.params.targetOrganId;
+      const organ = ORGANS.find((o) => o.id === organId);
       selectOrgan(organId);
+      if (organ) selectSystem(organ.systemId);
       setSelectedSubPartId(null);
       setViewMode('isolate');
       setZoomLevel(100);
@@ -75,6 +77,10 @@ export const ExplorerScreen: React.FC = () => {
         setShowMuscular(true);
         setShowSkeletal(false);
         setShellMode('hidden');
+      } else {
+        setShowMuscular(false);
+        setShowSkeletal(true);
+        setShellMode('xray');
       }
     }
     if (route.params?.targetSystemId) {
@@ -86,9 +92,15 @@ export const ExplorerScreen: React.FC = () => {
       if (sysId === 'skeletal') {
         setShowSkeletal(true);
         setShowMuscular(false);
+        setShellMode('hidden');
       } else if (sysId === 'muscular') {
         setShowMuscular(true);
         setShowSkeletal(false);
+        setShellMode('hidden');
+      } else {
+        setShowMuscular(false);
+        setShowSkeletal(true);
+        setShellMode('xray');
       }
     }
   }, [route.params, selectOrgan, selectSystem]);
@@ -194,6 +206,19 @@ export const ExplorerScreen: React.FC = () => {
                     setSelectedSubPartId(null);
                     setViewMode('body');
                     setZoomLevel(100);
+                    if (activeOrgan.id === 'muscular') {
+                      setShowMuscular(true);
+                      setShowSkeletal(false);
+                      setShellMode('hidden');
+                    } else if (activeOrgan.id === 'skeletal') {
+                      setShowSkeletal(true);
+                      setShowMuscular(false);
+                      setShellMode('hidden');
+                    } else {
+                      setShowMuscular(false);
+                      setShowSkeletal(true);
+                      setShellMode('xray');
+                    }
                   }}
                 >
                   <MaterialCommunityIcons
@@ -489,10 +514,23 @@ export const ExplorerScreen: React.FC = () => {
                       ]}
                       onPress={() => {
                         selectOrgan(organ.id);
+                        selectSystem(organ.systemId);
                         setSelectedSubPartId(null);
-                        setViewMode('isolate');
                         setZoomLevel(100);
                         setIsCardMinimized(false);
+                        if (organ.id === 'skeletal') {
+                          setShowSkeletal(true);
+                          setShowMuscular(false);
+                          setShellMode('hidden');
+                        } else if (organ.id === 'muscular') {
+                          setShowMuscular(true);
+                          setShowSkeletal(false);
+                          setShellMode('hidden');
+                        } else {
+                          setShowMuscular(false);
+                          setShowSkeletal(true);
+                          setShellMode('xray');
+                        }
                       }}
                       activeOpacity={0.8}
                     >

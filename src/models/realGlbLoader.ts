@@ -1290,59 +1290,17 @@ function attachSkinGeometryToGraph(
 }
 
 /**
- * Loads the real Visible Human Male Pelvis (.glb) and Full-Body Skin Silhouette (.glb)
+ * Real whole-body structural layers:
+ * The 242-bone skeletal model and 177-muscle model already encompass all articulation
+ * (including pelvic girdle and extremities), while the procedural body shell provides
+ * the sleek, upright medical holographic silhouette without cadaver pose clashing.
  */
 async function loadStructuralGlbLayers(
-  graph: AnatomySceneGraph,
-  isCancelled: () => boolean
+  _graph: AnatomySceneGraph,
+  _isCancelled: () => boolean
 ): Promise<void> {
-  try {
-    // 1. Real 3D Pelvis Bone Scan (.glb)
-    if (!cachedPelvisGeometry) {
-      const pelvisBuf = await fetchGlbBuffer(PELVIS_GLB_URL);
-      if (isCancelled()) return;
-      const pelvisPrims = parseGlbBinary(pelvisBuf);
-      if (pelvisPrims.length > 0) {
-        const pelvisGeo = buildMergedOrganGeometry(
-          pelvisPrims,
-          0xe8dfd1,
-          0xb8ab96,
-          false
-        );
-        pelvisGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
-        pelvisGeo.translate(0, VHM_Y_OFFSET, 0);
-        pelvisGeo.userData = { isCachedGlb: true };
-        cachedPelvisGeometry = pelvisGeo;
-      }
-    }
-    if (cachedPelvisGeometry && !isCancelled()) {
-      attachPelvisGeometryToGraph(cachedPelvisGeometry, graph);
-    }
-
-    // 2. Real 3D Full Human Body Skin Scan (.glb)
-    if (!cachedSkinGeometry) {
-      const skinBuf = await fetchGlbBuffer(SKIN_GLB_URL);
-      if (isCancelled()) return;
-      const skinPrims = parseGlbBinary(skinBuf);
-      if (skinPrims.length > 0) {
-        const skinGeo = buildMergedOrganGeometry(
-          skinPrims,
-          0x334155,
-          0x1e293b,
-          false
-        );
-        skinGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
-        skinGeo.translate(0, VHM_Y_OFFSET, 0);
-        skinGeo.userData = { isCachedGlb: true };
-        cachedSkinGeometry = skinGeo;
-      }
-    }
-    if (cachedSkinGeometry && !isCancelled()) {
-      attachSkinGeometryToGraph(cachedSkinGeometry, graph);
-    }
-  } catch {
-    // Keep procedural fallback if offline
-  }
+  // Skeleton and Muscular GLBs provide full high-resolution anatomical coverage
+  return;
 }
 
 /**
