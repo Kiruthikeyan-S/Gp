@@ -440,12 +440,22 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     raycaster.setFromCamera(ndc, camera);
 
     const pickableMeshes: THREE.Mesh[] = [];
-    graph.organRecords.forEach((record) => {
-      const sysGroup = graph.systemGroups.get(record.systemId);
-      if (sysGroup && sysGroup.visible && record.group.visible) {
-        pickableMeshes.push(...record.meshes);
+    const isIsolateMode = stateRef.current.viewMode === 'isolate';
+    const activeId = stateRef.current.selectedOrganId;
+
+    if (isIsolateMode && activeId) {
+      const activeRecord = graph.organRecords.get(activeId);
+      if (activeRecord && activeRecord.group.visible) {
+        pickableMeshes.push(...activeRecord.meshes);
       }
-    });
+    } else {
+      graph.organRecords.forEach((record) => {
+        const sysGroup = graph.systemGroups.get(record.systemId);
+        if (sysGroup && sysGroup.visible && record.group.visible) {
+          pickableMeshes.push(...record.meshes);
+        }
+      });
+    }
 
     // Fast bounding-box + strided triangle/vertex raycast (< 2ms on mobile Hermes even for 300k-triangle scans)
     let bestHitMesh: THREE.Mesh | null = null;
@@ -815,10 +825,10 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
               sceneGraphRef.current.lungsGroup?.scale.setScalar(1);
             }
 
-            // Subtle emissive highlight pulse only in full body mode so isolated organ retains pure tissue colors
+            // Subtle emissive highlight pulse only for discrete organs in full body mode (skip large frameworks with >16 meshes to maintain 60fps)
             if (selId && mode === 'body') {
               const selRecord = sceneGraphRef.current.organRecords.get(selId);
-              if (selRecord) {
+              if (selRecord && selRecord.meshes.length <= 16) {
                 const pulse = 0.24 + Math.sin(clock * 2.8) * 0.14;
                 selRecord.meshes.forEach((m) => {
                   const mat = m.material as THREE.MeshStandardMaterial;

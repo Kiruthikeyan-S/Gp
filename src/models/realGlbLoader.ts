@@ -1379,53 +1379,49 @@ export async function loadAllRealMedicalGlbModels(
     onOrganLoaded(loaded, total, priorityOrganId || 'cached');
   }
 
-  // Order specs so priorityOrganId loads first, followed by uncached organs
-  const remainingSpecs = REAL_GLB_ORGAN_SPECS.filter(
-    (s) => !prebuiltOrganCache.has(s.organId)
-  ).sort((a, b) => {
-    if (a.organId === priorityOrganId) return -1;
-    if (b.organId === priorityOrganId) return 1;
-    return 0;
-  });
-
-  // Load priority organ immediately if not cached yet
-  if (
-    remainingSpecs.length > 0 &&
-    remainingSpecs[0].organId === priorityOrganId
-  ) {
-    const firstSpec = remainingSpecs.shift()!;
-    try {
-      const ok = await loadSingleRealGlbOrgan(firstSpec, graph, isCancelled);
-      if (ok && !isCancelled()) {
-        loaded++;
-        onOrganLoaded(loaded, total, firstSpec.organId);
+  // 1. Load priority organ immediately if not cached yet
+  if (priorityOrganId) {
+    const prioSpec = REAL_GLB_ORGAN_SPECS.find(
+      (s) => s.organId === priorityOrganId
+    );
+    if (prioSpec && !prebuiltOrganCache.has(prioSpec.organId)) {
+      try {
+        const ok = await loadSingleRealGlbOrgan(prioSpec, graph, isCancelled);
+        if (ok && !isCancelled()) {
+          loaded++;
+          onOrganLoaded(loaded, total, prioSpec.organId);
+        }
+      } catch {
+        // Keep procedural fallback
       }
-    } catch {
-      // Keep fallback if offline
     }
   }
 
-  // Stage 1: Load remaining organs in parallel batches of 4
-  const batchSize = 4;
-  for (let i = 0; i < remainingSpecs.length; i += batchSize) {
+  // 2. Idle delay before starting background streaming so initial user interactions and 3D gestures are 60fps silky smooth
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  if (isCancelled()) return;
+
+  // 3. Stream remaining uncached organs one-by-one with gentle pauses so CPU never locks up
+  const remainingSpecs = REAL_GLB_ORGAN_SPECS.filter(
+    (s) => !prebuiltOrganCache.has(s.organId) && s.organId !== priorityOrganId
+  );
+
+  for (const spec of remainingSpecs) {
     if (isCancelled()) return;
-    const batch = remainingSpecs.slice(i, i + batchSize);
-    await Promise.all(
-      batch.map(async (spec) => {
-        try {
-          const ok = await loadSingleRealGlbOrgan(spec, graph, isCancelled);
-          if (ok && !isCancelled()) {
-            loaded++;
-            onOrganLoaded(loaded, total, spec.organId);
-          }
-        } catch {
-          // Keep procedural fallback for this organ if network fails
-        }
-      })
-    );
+    try {
+      const ok = await loadSingleRealGlbOrgan(spec, graph, isCancelled);
+      if (ok && !isCancelled()) {
+        loaded++;
+        onOrganLoaded(loaded, total, spec.organId);
+      }
+    } catch {
+      // Keep procedural fallback for this organ if network fails
+    }
+    // Yield execution to the Hermes JS event loop for 500ms between models
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  // Stage 2: Load structural Pelvis & Full-Body Skin .glb scans
+  // 4. Load structural Pelvis & Full-Body Skin .glb scans
   if (!isCancelled()) {
     await loadStructuralGlbLayers(graph, isCancelled);
     if (!isCancelled()) {
