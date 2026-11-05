@@ -17,6 +17,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { theme } from '../theme';
 import { useAnatomyStore } from '../state/useAnatomyStore';
 import { TabParamList } from '../types';
+import { queryDoctorChatbot } from '../services/medicalAiService';
 
 interface ChatMessage {
   id: string;
@@ -31,91 +32,29 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: 'welcome_1',
     sender: 'bot',
-    text: "Hello! I am your 3D Anatomy AI Assistant. Ask me anything about human anatomy, physiological systems, organ functions, or blood circulation.\n\nType your question below or tap a quick topic to begin!",
+    text: "Hello! I am Dr. Alex, your Clinical Medical & Human Anatomy AI Assistant.\n\nI am exclusively designed for doctor-level clinical consultations, health checkups, laboratory test results, medical documents, and comprehensive human organ anatomy (Heart, Brain, Lungs, Liver, Kidneys, Stomach, etc.).\n\nHow may I assist your medical examination today?",
     timestamp: 'Just now',
     suggestedTopics: [
-      'How does the heart pump blood?',
-      'Explain gas exchange in the lungs',
-      'What are the 4 lobes of the brain?',
-      'How do kidneys filter blood?',
+      'Interpret a health checkup report (BP, Blood work, ECG)',
+      'Explain cardiac cycle and coronary perfusion',
+      'What do elevated liver enzymes (ALT/AST) signify?',
+      'How do kidneys regulate filtration & creatinine?',
     ],
   },
 ];
 
 const QUICK_PROMPTS = [
-  { label: '❤️ Cardiac Cycle', query: 'How does the heart pump blood through the 4 chambers?' },
-  { label: '🫁 Lung Alveoli', query: 'How does gas exchange work in the lung alveoli?' },
-  { label: '🧠 Brain Lobes', query: 'What are the main functions of the cerebral cortex lobes?' },
-  { label: '🫘 Nephron Filtration', query: 'How do kidneys filter blood plasma into urine?' },
-  { label: '🧪 Stomach Acid', query: 'Why does the stomach produce hydrochloric acid?' },
-  { label: '💪 Muscle Contraction', query: 'How do skeletal muscles and myofibers contract?' },
+  { label: '🩺 Health Checkup Lab', query: 'What are the essential parameters in a comprehensive annual health checkup?' },
+  { label: '❤️ Cardiac & BP Review', query: 'My blood pressure report is 140/90 mmHg. What does this mean clinically?' },
+  { label: '🫁 Pulmonary Function', query: 'How does gas exchange and alveolar ventilation work in the lungs?' },
+  { label: '🧠 Neurological Diagnostics', query: 'What are the clinical functions of the cranial nerves and cerebral cortex?' },
+  { label: '🫘 Kidney & Renal Panel', query: 'What does serum creatinine and eGFR indicate in a renal checkup?' },
+  { label: '🧪 Liver Enzyme Profile', query: 'What is the clinical role of the liver in metabolism and lipid digestion?' },
 ];
-
-function generateMedicalAnswer(query: string): { text: string; organId?: string } {
-  const q = query.toLowerCase();
-
-  if (q.includes('heart') || q.includes('cardiac') || q.includes('chamber') || q.includes('pump') || q.includes('valve')) {
-    return {
-      organId: 'heart',
-      text: "The human heart operates as a synchronized dual-pump system:\n\n• Right Atrium & Ventricle: Receive deoxygenated blood from the vena cavae and pump it to the pulmonary artery for oxygenation in the lungs.\n• Left Atrium & Ventricle: Receive oxygen-rich blood from pulmonary veins and pump it out through the aorta at systemic arterial pressure (~120/80 mmHg).\n• Valves: Mitral, tricuspid, aortic, and pulmonary valves prevent backflow, producing the characteristic 'lub-dub' heart sounds.",
-    };
-  }
-
-  if (q.includes('lung') || q.includes('breath') || q.includes('respirat') || q.includes('alveol') || q.includes('trachea')) {
-    return {
-      organId: 'lungs',
-      text: "Gas exchange occurs across the thin respiratory membrane of over 300 million alveoli:\n\n• Inhalation: The diaphragm contracts downward, expanding thoracic volume and pulling atmospheric oxygen through the trachea and bronchi into alveolar sacs.\n• Diffusion: Oxygen diffuses across the 0.5-micron alveolar-capillary barrier into red blood cell hemoglobin, while metabolic carbon dioxide (CO2) diffuses out to be exhaled.\n• Capacity: Adults breathe ~12–16 times per minute, exchanging roughly 500 mL of air per tidal breath.",
-    };
-  }
-
-  if (q.includes('brain') || q.includes('cortex') || q.includes('neuron') || q.includes('nerve') || q.includes('cerebell')) {
-    return {
-      organId: 'brain',
-      text: "The human brain contains ~86 billion neurons organized into specialized structural regions:\n\n• Frontal Lobe: Executive planning, motor control, reasoning, and speech production (Broca's area).\n• Parietal Lobe: Somatosensory perception (touch, pressure, pain) and 3D spatial mapping.\n• Temporal Lobe: Auditory processing, language comprehension (Wernicke's area), and memory encoding (hippocampus).\n• Occipital Lobe: Primary visual cortex for image, color, and motion processing.\n• Cerebellum: Fine motor coordination, balance, and muscular reflexes.",
-    };
-  }
-
-  if (q.includes('kidney') || q.includes('nephron') || q.includes('urine') || q.includes('ureter') || q.includes('renal')) {
-    return {
-      organId: 'kidneys',
-      text: "Each kidney contains approximately 1 million microscopic filtering units called nephrons:\n\n• Glomerular Filtration: Blood enters under high arterial pressure; plasma water, glucose, electrolytes, and urea pass into Bowman's capsule.\n• Tubular Reabsorption: Proximal and distal convoluted tubules actively reclaim ~99% of filtered water and essential salts back into peritubular capillaries.\n• Secretion & Excretion: Metabolic wastes, drugs, and surplus hydrogen ions are secreted into the collecting duct, forming urine delivered via ureters to the urinary bladder.",
-    };
-  }
-
-  if (q.includes('stomach') || q.includes('gastric') || q.includes('digest') || q.includes('acid') || q.includes('pylor')) {
-    return {
-      organId: 'stomach',
-      text: "The stomach performs both mechanical churning and enzymatic chemical digestion:\n\n• Gastric Acid (HCl): Parietal cells secrete hydrochloric acid (pH 1.5–2.5), denaturing dietary proteins and sterilizing ingested microorganisms.\n• Pepsin Enzyme: Chief cells secrete inactive pepsinogen, cleaved by acid into active pepsin to break protein peptide chains.\n• Protective Mucus: Surface goblet cells secrete thick bicarbonate-rich mucus that shields the stomach lining from self-digestion.\n• Chyme: Peristaltic waves meter acidified chyme through the pyloric sphincter into the duodenum.",
-    };
-  }
-
-  if (q.includes('liver') || q.includes('hepatic') || q.includes('bile') || q.includes('gallbladder')) {
-    return {
-      organId: 'liver',
-      text: "The liver is the body's largest internal metabolic processing hub (>500 distinct vital functions):\n\n• Detoxification: Hepatocytes process metabolic byproducts, drugs, alcohol, and ammonia (converted to urea).\n• Bile Synthesis: Continuously secretes bile containing bile salts, stored in the gallbladder, to emulsify dietary lipids.\n• Energy Storage: Stores surplus glucose as glycogen and releases it under glucagon stimulation to maintain blood sugar balance.\n• Protein Synthesis: Manufactures essential plasma proteins including albumin and blood clotting factors.",
-    };
-  }
-
-  if (q.includes('muscle') || q.includes('muscular') || q.includes('contraction') || q.includes('myosin') || q.includes('actin')) {
-    return {
-      text: "Muscular contraction operates via the sliding filament mechanism:\n\n• Neuromuscular Junction: Motor neurons release acetylcholine (ACh), generating an action potential across the muscle fiber membrane (sarcolemma).\n• Calcium Release: Sarcoplasmic reticulum floods calcium ions (Ca²⁺) into sarcomeres, binding troponin and freeing actin binding sites.\n• Power Stroke: Myosin head cross-bridges hydrolyze ATP and pull actin filaments inward, shortening each sarcomere and generating mechanical tension.\n• Antagonistic Pairs: Muscles work in opposing groups (e.g. biceps flexors vs triceps extensors) anchored to bones via collagenous tendons.",
-    };
-  }
-
-  if (q.includes('bone') || q.includes('skelet') || q.includes('joint') || q.includes('calcium') || q.includes('rib')) {
-    return {
-      text: "The human skeletal system comprises 206 bones divided into two major components:\n\n• Axial Skeleton (80 bones): Skull, vertebral column (24 vertebrae + sacrum/coccyx), and thoracic ribcage (12 pairs of ribs + sternum), protecting vital brain, spinal cord, and cardiopulmonary organs.\n• Appendicular Skeleton (126 bones): Shoulder girdles, pelvic girdle, upper limbs, and lower limbs facilitating locomotion and manipulation.\n• Hematopoiesis: Red bone marrow in spongy bone generates erythrocytes (RBCs), leukocytes (WBCs), and platelets.",
-    };
-  }
-
-  return {
-    text: `Great question regarding: "${query}".\n\nIn human physiology, all 11 organ systems operate as an integrated homeostatic network. For example, neural and endocrine regulators continuously adjust heart rate, blood pressure, respiratory ventilation, and electrolyte balances in response to metabolic demands.\n\n💡 Tip: You can inspect this anatomical structure in real 3D using the 3D Atlas tab!`,
-  };
-}
 
 export const ChatbotScreen: React.FC = () => {
   const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
-  const { selectOrgan, selectSystem } = useAnatomyStore();
+  const { selectOrgan } = useAnatomyStore();
 
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState<string>('');
@@ -126,7 +65,7 @@ export const ChatbotScreen: React.FC = () => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages, isTyping]);
 
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const rawText = textToSend || inputText;
     const trimmed = rawText.trim();
     if (!trimmed || isTyping) return;
@@ -138,23 +77,44 @@ export const ChatbotScreen: React.FC = () => {
       timestamp: 'Just now',
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInputText('');
     setIsTyping(true);
 
-    // Simulated medical reasoning delay
-    setTimeout(() => {
-      const generated = generateMedicalAnswer(trimmed);
+    try {
+      // Map conversation history for context continuity
+      const historyPayload = updatedMessages
+        .filter((m) => m.id !== 'welcome_1')
+        .map((m) => ({
+          role: (m.sender === 'user' ? 'user' : 'assistant') as
+            | 'user'
+            | 'assistant',
+          content: m.text,
+        }));
+
+      const res = await queryDoctorChatbot(historyPayload, trimmed);
+
       const botMsg: ChatMessage = {
         id: `bot_${Date.now()}`,
         sender: 'bot',
-        text: generated.text,
+        text: res.text,
         timestamp: 'Just now',
-        linkedOrganId: generated.organId,
+        linkedOrganId: res.organId,
       };
       setMessages((prev) => [...prev, botMsg]);
+    } catch (err) {
+      console.error('Doctor AI consultation error:', err);
+      const errorMsg: ChatMessage = {
+        id: `bot_err_${Date.now()}`,
+        sender: 'bot',
+        text: 'The clinical consultation link experienced a temporary network disruption. Please verify your internet connection and submit your medical query again.',
+        timestamp: 'Just now',
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
       setIsTyping(false);
-    }, 750);
+    }
   };
 
   const handleClearChat = () => {
