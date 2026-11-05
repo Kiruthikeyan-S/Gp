@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -27,6 +28,92 @@ interface ChatMessage {
   linkedOrganId?: string;
   suggestedTopics?: string[];
 }
+
+const renderBoldInline = (str: string, textColor: string) => {
+  const parts = str.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <Text key={i} style={[styles.boldInlineText, { color: textColor }]}>
+          {part.slice(2, -2)}
+        </Text>
+      );
+    }
+    return (
+      <Text key={i} style={{ color: textColor }}>
+        {part}
+      </Text>
+    );
+  });
+};
+
+const FormattedMessage: React.FC<{ text: string; isUser: boolean }> = ({
+  text,
+  isUser,
+}) => {
+  if (isUser) {
+    return <Text style={styles.messageTextUser}>{text}</Text>;
+  }
+
+  const lines = text.split('\n');
+
+  return (
+    <View style={styles.formattedContainer}>
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <View key={idx} style={{ height: 4 }} />;
+        }
+
+        // Horizontal divider
+        if (trimmed === '---' || trimmed === '___') {
+          return <View key={idx} style={styles.divider} />;
+        }
+
+        // Headings or prominent titles
+        if (
+          trimmed.startsWith('#') ||
+          (trimmed.startsWith('**') &&
+            trimmed.endsWith('**') &&
+            !trimmed.slice(2, -2).includes('**'))
+        ) {
+          const headingText = trimmed
+            .replace(/^#+\s*/, '')
+            .replace(/^\*\*|\*\*$/g, '');
+          return (
+            <Text key={idx} style={styles.messageHeading}>
+              {headingText}
+            </Text>
+          );
+        }
+
+        // Bullet point
+        if (
+          trimmed.startsWith('•') ||
+          trimmed.startsWith('- ') ||
+          trimmed.startsWith('* ')
+        ) {
+          const bulletText = trimmed.replace(/^[•\-\*]\s*/, '');
+          return (
+            <View key={idx} style={styles.bulletRow}>
+              <View style={styles.bulletDot} />
+              <Text style={styles.bulletContent}>
+                {renderBoldInline(bulletText, '#1E293B')}
+              </Text>
+            </View>
+          );
+        }
+
+        // Normal paragraph
+        return (
+          <Text key={idx} style={styles.paragraph}>
+            {renderBoldInline(trimmed, '#1E293B')}
+          </Text>
+        );
+      })}
+    </View>
+  );
+};
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
@@ -64,6 +151,20 @@ export const ChatbotScreen: React.FC = () => {
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages, isTyping]);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const sub = Keyboard.addListener(showEvent, () => {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+    });
+    return () => sub.remove();
+  }, []);
 
   const handleSendMessage = async (textToSend?: string) => {
     const rawText = textToSend || inputText;
@@ -172,124 +273,127 @@ export const ChatbotScreen: React.FC = () => {
         </ScrollView>
       </View>
 
-      {/* Messages Scroll Area */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {messages.map((item) => {
-          const isUser = item.sender === 'user';
-          return (
-            <View
-              key={item.id}
-              style={[
-                styles.messageRow,
-                isUser ? styles.messageRowUser : styles.messageRowBot,
-              ]}
-            >
-              {!isUser && (
-                <View style={styles.botMiniAvatar}>
-                  <MaterialCommunityIcons name="medical-bag" size={14} color="#0284C7" />
-                </View>
-              )}
-
-              <View
-                style={[
-                  styles.messageBubble,
-                  isUser ? styles.bubbleUser : styles.bubbleBot,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.messageText,
-                    isUser ? styles.messageTextUser : styles.messageTextBot,
-                  ]}
-                >
-                  {item.text}
-                </Text>
-
-                {/* Optional 3D Viewport Deep-link Pill */}
-                {item.linkedOrganId && (
-                  <TouchableOpacity
-                    style={styles.organ3DLinkBtn}
-                    onPress={() => handleOpen3DOrgan(item.linkedOrganId!)}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialCommunityIcons name="cube-scan" size={15} color="#0284C7" />
-                    <Text style={styles.organ3DLinkText}>
-                      Inspect {item.linkedOrganId.toUpperCase()} in 3D Atlas →
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Optional Suggested Prompt buttons */}
-                {item.suggestedTopics && item.suggestedTopics.length > 0 && (
-                  <View style={styles.starterQuestionsWrap}>
-                    <Text style={styles.starterHeading}>Suggested Inquiries:</Text>
-                    {item.suggestedTopics.map((st, sIdx) => (
-                      <TouchableOpacity
-                        key={sIdx}
-                        style={styles.starterBtn}
-                        onPress={() => handleSendMessage(st)}
-                      >
-                        <MaterialCommunityIcons name="chat-question-outline" size={14} color="#0284C7" />
-                        <Text style={styles.starterBtnText}>{st}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                <Text
-                  style={[
-                    styles.timestampText,
-                    isUser ? styles.timestampUser : styles.timestampBot,
-                  ]}
-                >
-                  {item.timestamp}
-                </Text>
-              </View>
-            </View>
-          );
-        })}
-
-        {/* Typing indicator */}
-        {isTyping && (
-          <View style={[styles.messageRow, styles.messageRowBot]}>
-            <View style={styles.botMiniAvatar}>
-              <MaterialCommunityIcons name="medical-bag" size={14} color="#0284C7" />
-            </View>
-            <View style={[styles.messageBubble, styles.bubbleBot, styles.typingBubble]}>
-              <ActivityIndicator size="small" color="#0284C7" />
-              <Text style={styles.typingText}>Consulting Medical Index...</Text>
-            </View>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Input Bar */}
+      {/* Keyboard-aware Chat Container */}
       <KeyboardAvoidingView
+        style={styles.keyboardAvoidingWrap}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        {/* Messages Scroll Area */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }}
+        >
+          {messages.map((item) => {
+            const isUser = item.sender === 'user';
+            return (
+              <View
+                key={item.id}
+                style={[
+                  styles.messageRow,
+                  isUser ? styles.messageRowUser : styles.messageRowBot,
+                ]}
+              >
+                {!isUser && (
+                  <View style={styles.botMiniAvatar}>
+                    <MaterialCommunityIcons name="medical-bag" size={14} color="#0284C7" />
+                  </View>
+                )}
+
+                <View
+                  style={[
+                    styles.messageBubble,
+                    isUser ? styles.bubbleUser : styles.bubbleBot,
+                  ]}
+                >
+                  <FormattedMessage text={item.text} isUser={isUser} />
+
+                  {/* Optional 3D Viewport Deep-link Pill */}
+                  {item.linkedOrganId && (
+                    <TouchableOpacity
+                      style={styles.organ3DLinkBtn}
+                      onPress={() => handleOpen3DOrgan(item.linkedOrganId!)}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons name="cube-scan" size={15} color="#0284C7" />
+                      <Text style={styles.organ3DLinkText}>
+                        Inspect {item.linkedOrganId.toUpperCase()} in 3D Atlas →
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Optional Suggested Prompt buttons */}
+                  {item.suggestedTopics && item.suggestedTopics.length > 0 && (
+                    <View style={styles.starterQuestionsWrap}>
+                      <Text style={styles.starterHeading}>Suggested Inquiries:</Text>
+                      {item.suggestedTopics.map((st, sIdx) => (
+                        <TouchableOpacity
+                          key={sIdx}
+                          style={styles.starterBtn}
+                          onPress={() => handleSendMessage(st)}
+                        >
+                          <MaterialCommunityIcons name="chat-question-outline" size={14} color="#0284C7" />
+                          <Text style={styles.starterBtnText}>{st}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  <Text
+                    style={[
+                      styles.timestampText,
+                      isUser ? styles.timestampUser : styles.timestampBot,
+                    ]}
+                  >
+                    {item.timestamp}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+
+          {/* Typing indicator */}
+          {isTyping && (
+            <View style={[styles.messageRow, styles.messageRowBot]}>
+              <View style={styles.botMiniAvatar}>
+                <MaterialCommunityIcons name="medical-bag" size={14} color="#0284C7" />
+              </View>
+              <View style={[styles.messageBubble, styles.bubbleBot, styles.typingBubble]}>
+                <ActivityIndicator size="small" color="#0284C7" />
+                <Text style={styles.typingText}>Dr. Alex is reviewing...</Text>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Input Bar */}
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <MaterialCommunityIcons
               name="chat-processing-outline"
               size={20}
-              color="#94A3B8"
+              color="#0284C7"
               style={{ marginLeft: 12 }}
             />
             <TextInput
               style={styles.textInput}
-              placeholder="Ask any anatomy or organ question..."
+              placeholder="Ask Dr. Alex a clinical question..."
               placeholderTextColor="#94A3B8"
               value={inputText}
               onChangeText={setInputText}
               onSubmitEditing={() => handleSendMessage()}
               returnKeyType="send"
               multiline={false}
+              onFocus={() => {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 150);
+              }}
             />
             {inputText.length > 0 && (
               <TouchableOpacity
@@ -410,6 +514,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0284C7',
   },
+  keyboardAvoidingWrap: {
+    flex: 1,
+  },
   messagesContainer: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -472,6 +579,51 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontStyle: 'italic',
   },
+  formattedContainer: {
+    gap: 3,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 6,
+  },
+  messageHeading: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 4,
+    marginBottom: 2,
+    letterSpacing: -0.2,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginVertical: 2,
+  },
+  bulletDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#0284C7',
+    marginTop: 7,
+  },
+  bulletContent: {
+    flex: 1,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: '#1E293B',
+  },
+  paragraph: {
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: '#1E293B',
+    marginVertical: 1,
+  },
+  boldInlineText: {
+    fontWeight: '700',
+    color: '#0F172A',
+  },
   messageText: {
     fontSize: 14,
     lineHeight: 20,
@@ -479,6 +631,8 @@ const styles = StyleSheet.create({
   messageTextUser: {
     color: '#FFFFFF',
     fontWeight: '500',
+    fontSize: 14,
+    lineHeight: 20,
   },
   messageTextBot: {
     color: '#0F172A',

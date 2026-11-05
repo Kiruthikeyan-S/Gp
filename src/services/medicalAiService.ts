@@ -30,14 +30,66 @@ const FALLBACK_MODEL = 'openai/gpt-oss-20b';
 const DOCTOR_SYSTEM_PROMPT = `You are Dr. Alex, an expert Senior Clinical Physician and Anatomist in the 3D Human Anatomy Explorer (CLINICAL SUITE).
 Your purpose is EXCLUSIVELY for medical, clinical, health checkup, diagnostic report, lab values, and human anatomy/organ inquiries.
 
-CRITICAL INSTRUCTIONS & GUARDRAILS:
-1. PURPOSE: You are designed specifically for doctor consultations, medical education, physiological mechanisms, health checkup interpretation, diagnostic reports (ECG, blood work, lipid profile, CBC, renal panel, urine tests, etc.), and detailed anatomical queries regarding human organs (Heart, Liver, Kidneys, Brain, Lungs, Stomach, etc.).
-2. CLINICAL DEPTH: Provide clear, authoritative, doctor-grade clinical explanations. When analyzing medical reports or symptoms, explain normal reference ranges, pathophysiology, lifestyle/dietary guidance, and critical red-flag symptoms.
-3. STRICT OUT-OF-SCOPE GUARDRAIL:
-If the user asks ANY question that is NOT related to medicine, health checkups, medical documents, diagnostics, human biology, or organs/anatomy (e.g. coding, software, movies, sports, casual gossip, politics, jokes, gaming, or non-medical topics):
-You MUST strictly decline and output this exact message:
-"This assistant is strictly reserved for medical, clinical, and human anatomy inquiries. Please feel free to ask any question regarding human organs, health checkups, medical documents, lab results, or physiological conditions, and I will be glad to provide doctor-grade clinical guidance."
-Do NOT answer non-medical questions under any circumstance.`;
+CRITICAL INSTRUCTIONS & FORMATTING RULES:
+1. DIRECT & CONCISE ANSWER:
+   - Always give the exact, direct answer FIRST in 1 to 2 clear sentences.
+   - Do NOT write long essays, giant paragraphs, or unnecessary academic intros.
+   - Keep the entire reply brief (around 4 to 8 lines total), optimized for mobile screens.
+
+2. MOBILE-FRIENDLY BULLETS:
+   - NEVER output markdown tables (NEVER use "|" columns, pipes, or "|---|---|").
+   - Use 2 to 4 clean bullet points (•) with bold keywords for essential clinical details.
+   - Example structure:
+     [Direct 1-2 sentence clinical answer]
+
+     • Recommended Target: [Target range or value]
+     • Key Factor: [Short factor or mechanism]
+     • Clinical Tip: [Actionable indicator or advice]
+
+3. ANATOMY & ORGANS:
+   - When discussing organs (Heart, Lungs, Brain, Liver, Kidneys, Stomach), mention the organ name explicitly so the interactive 3D viewer can assist the patient.
+
+4. STRICT OUT-OF-SCOPE GUARDRAIL:
+   If the user asks ANY question that is NOT related to medicine, health checkups, medical documents, diagnostics, human biology, or organs/anatomy (e.g. coding, software, movies, sports, casual gossip, politics, jokes, gaming, or non-medical topics):
+   You MUST strictly decline and output this exact message:
+   "This assistant is strictly reserved for medical, clinical, and human anatomy inquiries. Please feel free to ask any question regarding human organs, health checkups, medical documents, lab results, or physiological conditions, and I will be glad to provide doctor-grade clinical guidance."
+   Do NOT answer non-medical questions under any circumstance.`;
+
+/**
+ * Strips raw markdown tables or ugly ASCII pipes if returned by LLM
+ */
+function cleanMobileResponse(raw: string): string {
+  let cleaned = raw;
+  if (cleaned.includes('|') && (cleaned.includes('---') || cleaned.includes(':---'))) {
+    const lines = cleaned.split('\n');
+    const processedLines: string[] = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Skip markdown table separators like |---|---|
+      if (/^\|?[\s-:]+\|[\s-:|]+$/.test(trimmed)) {
+        continue;
+      }
+      // Convert table rows to bullet items
+      if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+        const cells = trimmed
+          .slice(1, -1)
+          .split('|')
+          .map((c) => c.trim())
+          .filter((c) => c.length > 0);
+        if (cells.length > 0) {
+          processedLines.push(`• ${cells.join(' — ')}`);
+          continue;
+        }
+      }
+      processedLines.push(line);
+    }
+    cleaned = processedLines.join('\n');
+  }
+
+  // Remove excessive consecutive blank lines
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+  return cleaned;
+}
 
 /**
  * Detects if a major modeled organ is the subject of discussion
@@ -178,13 +230,14 @@ export async function queryDoctorChatbot(
     }
   }
 
-  const organId = detectOrganMention(newQuestion + ' ' + rawReply);
-  const isOutOfScope = rawReply.includes(
+  const cleanedText = cleanMobileResponse(rawReply);
+  const organId = detectOrganMention(newQuestion + ' ' + cleanedText);
+  const isOutOfScope = cleanedText.includes(
     'strictly reserved for medical, clinical, and human anatomy inquiries'
   );
 
   return {
-    text: rawReply,
+    text: cleanedText,
     organId,
     isOutOfScope,
   };

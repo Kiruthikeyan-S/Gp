@@ -24,6 +24,7 @@ function BottomTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: '#0284C7',
         tabBarInactiveTintColor: '#64748B',
         tabBarStyle: {
