@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { useAnatomyStore } from '../state/useAnatomyStore';
+import { SYSTEM_IMAGES } from '../constants/anatomyImages';
 
 type SystemsNavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -337,17 +339,20 @@ export const SystemsScreen: React.FC = () => {
 
               {/* Main Body Row: Thumbnail + Info */}
               <View style={styles.cardMainRow}>
-                <View
-                  style={[
-                    styles.thumbnailWrap,
-                    { backgroundColor: `${system.color}14` },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name={system.icon as any}
-                    size={36}
-                    color={system.color}
-                  />
+                <View style={styles.thumbnailWrap}>
+                  {SYSTEM_IMAGES[system.id] ? (
+                    <Image
+                      source={SYSTEM_IMAGES[system.id]}
+                      style={styles.thumbnailImage}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <MaterialCommunityIcons
+                      name={system.icon as any}
+                      size={36}
+                      color={system.color}
+                    />
+                  )}
                 </View>
 
                 <View style={{ flex: 1 }}>
@@ -601,11 +606,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   thumbnailWrap: {
-    width: 60,
-    height: 60,
+    width: 64,
+    height: 64,
     borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    padding: 3,
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
   },
   cardSystemTitle: {
     fontSize: 15,

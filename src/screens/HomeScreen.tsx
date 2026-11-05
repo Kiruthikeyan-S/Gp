@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BODY_SYSTEMS, ORGANS } from '../data/anatomyData';
+import { ORGAN_IMAGES } from '../constants/anatomyImages';
 import { useAnatomyStore } from '../state/useAnatomyStore';
 import { RootStackParamList, TabParamList } from '../types';
 
@@ -286,18 +288,21 @@ export const HomeScreen: React.FC = () => {
                 <Text style={styles.organTagText}>{organ.systemTag}</Text>
               </View>
 
-              {/* Organ Icon / 3D Render Preview */}
-              <View
-                style={[
-                  styles.organPreviewBox,
-                  { backgroundColor: `${organ.accentColor}12` },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name={organ.icon as any}
-                  size={42}
-                  color={organ.accentColor}
-                />
+              {/* Organ 3D Picture Preview matching Image 1 */}
+              <View style={styles.organPreviewBox}>
+                {ORGAN_IMAGES[organ.id] ? (
+                  <Image
+                    source={ORGAN_IMAGES[organ.id]}
+                    style={styles.organImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <MaterialCommunityIcons
+                    name={organ.icon as any}
+                    size={42}
+                    color={organ.accentColor}
+                  />
+                )}
               </View>
 
               <Text style={styles.organCardName}>{organ.name}</Text>
@@ -628,11 +633,20 @@ const styles = StyleSheet.create({
   },
   organPreviewBox: {
     width: '100%',
-    height: 78,
-    borderRadius: 10,
+    height: 96,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
+    overflow: 'hidden',
+    padding: 4,
+  },
+  organImage: {
+    width: '100%',
+    height: '100%',
   },
   organCardName: {
     fontSize: 14,

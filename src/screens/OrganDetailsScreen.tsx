@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Share,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ORGANS } from '../data/anatomyData';
 import { ORGAN_SUB_PARTS } from '../data/organSubParts';
+import { ORGAN_IMAGES } from '../constants/anatomyImages';
 import { useAnatomyStore } from '../state/useAnatomyStore';
 import { RootStackParamList } from '../types';
 
@@ -242,19 +244,27 @@ export const OrganDetailsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* 3D Visual Box with Anatomical Callout Pins */}
+          {/* 3D Visual Box with Anatomical Callout Pins matching Image 3 */}
           <TouchableOpacity
             style={styles.renderCanvasBox}
             activeOpacity={0.92}
             onPress={handleStart3DDissection}
           >
-            <View style={styles.organAvatarBig}>
-              <MaterialCommunityIcons
-                name={organ.icon as any}
-                size={78}
-                color={organ.accentColor}
+            {ORGAN_IMAGES[organ.id] ? (
+              <Image
+                source={ORGAN_IMAGES[organ.id]}
+                style={styles.organRenderImage}
+                resizeMode="contain"
               />
-            </View>
+            ) : (
+              <View style={styles.organAvatarBig}>
+                <MaterialCommunityIcons
+                  name={organ.icon as any}
+                  size={78}
+                  color={organ.accentColor}
+                />
+              </View>
+            )}
 
             {/* Simulated Callout Pins matching Image 3 */}
             {organSubParts.slice(0, 5).map((part, pIdx) => {
@@ -623,6 +633,10 @@ const styles = StyleSheet.create({
   organAvatarBig: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  organRenderImage: {
+    width: '68%',
+    height: '82%',
   },
   calloutPin: {
     position: 'absolute',
