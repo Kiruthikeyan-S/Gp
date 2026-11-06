@@ -146,6 +146,7 @@ export const ChatbotScreen: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [keyboardOffset, setKeyboardOffset] = useState<number>(0);
   const scrollViewRef = useRef<any>(null);
 
   useEffect(() => {
@@ -155,15 +156,31 @@ export const ChatbotScreen: React.FC = () => {
   useEffect(() => {
     const showEvent =
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const sub = Keyboard.addListener(showEvent, () => {
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      if (Platform.OS === 'android') {
+        setKeyboardOffset(e.endCoordinates.height);
+      }
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      }, 50);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 300);
+      }, 250);
     });
-    return () => sub.remove();
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      if (Platform.OS === 'android') {
+        setKeyboardOffset(0);
+      }
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -275,7 +292,10 @@ export const ChatbotScreen: React.FC = () => {
 
       {/* Keyboard-aware Chat Container */}
       <KeyboardAvoidingView
-        style={styles.keyboardAvoidingWrap}
+        style={[
+          styles.keyboardAvoidingWrap,
+          Platform.OS === 'android' && { paddingBottom: keyboardOffset },
+        ]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
@@ -285,6 +305,7 @@ export const ChatbotScreen: React.FC = () => {
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           onContentSizeChange={() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
           }}
