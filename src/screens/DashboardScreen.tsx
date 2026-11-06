@@ -28,6 +28,7 @@ export const DashboardScreen: React.FC = () => {
     reviewFlashcardIds,
     streakDays,
     quizStats,
+    topicStats,
     resetProgress,
   } = useAnatomyStore();
 
@@ -38,6 +39,34 @@ export const DashboardScreen: React.FC = () => {
   const totalFlashcards = FLASHCARDS.length;
   const flashcardsKnownCount = knownFlashcardIds.length;
   const flashcardProgressPercent = totalFlashcards > 0 ? Math.round((flashcardsKnownCount / totalFlashcards) * 100) : 0;
+
+  const avgQuizScore = quizStats.totalAnswered > 0
+    ? Math.round((quizStats.correctCount / quizStats.totalAnswered) * 100)
+    : 0;
+
+  // Identify weak topics (systems with errors, low accuracy, or cards marked for review)
+  const weakTopics = BODY_SYSTEMS.filter((sys) => {
+    const stats = topicStats[sys.id];
+    const reviewCardsInSys = FLASHCARDS.filter(
+      (c) => c.systemId === sys.id && reviewFlashcardIds.includes(c.id)
+    ).length;
+    if (reviewCardsInSys > 0) return true;
+    if (stats && stats.incorrect > 0) {
+      const accuracy = Math.round((stats.correct / (stats.correct + stats.incorrect)) * 100);
+      return accuracy < 70;
+    }
+    return false;
+  });
+
+  // Identify strong / mastered topics (accuracy >= 75% with at least 3 questions answered or 100% cards known)
+  const masteredTopics = BODY_SYSTEMS.filter((sys) => {
+    const stats = topicStats[sys.id];
+    if (stats && stats.correct + stats.incorrect >= 3) {
+      const accuracy = Math.round((stats.correct / (stats.correct + stats.incorrect)) * 100);
+      return accuracy >= 75;
+    }
+    return false;
+  });
 
   const handleReset = () => {
     Alert.alert(
@@ -125,7 +154,7 @@ export const DashboardScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Card 2: Quiz Best Score */}
+          {/* Card 2: Quiz Score Stats */}
           <View style={styles.metricCard}>
             <View style={[styles.metricIconWrap, { backgroundColor: '#FEF3C7' }]}>
               <Ionicons name="trophy" size={18} color="#D97706" />
@@ -135,7 +164,7 @@ export const DashboardScreen: React.FC = () => {
             </Text>
             <Text style={styles.metricLabel}>Best Quiz Score</Text>
             <Text style={styles.metricSubInfo}>
-              {quizStats.attempts} total {quizStats.attempts === 1 ? 'attempt' : 'attempts'}
+              Avg: {avgQuizScore}% • {quizStats.attempts} {quizStats.attempts === 1 ? 'attempt' : 'attempts'}
             </Text>
           </View>
 
@@ -197,6 +226,56 @@ export const DashboardScreen: React.FC = () => {
             <Text style={styles.actionBtnSub}>Spaced Repetition Review</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Weak-Topic Tracking */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeading}>Focus Areas (Weak Topics)</Text>
+          <Text style={[styles.sectionBadgeText, { color: '#EF4444' }]}>
+            {weakTopics.length > 0 ? `${weakTopics.length} Need Review` : 'All On Track'}
+          </Text>
+        </View>
+
+        {weakTopics.length > 0 ? (
+          <View style={styles.weakTopicsCard}>
+            {weakTopics.map((sys) => {
+              const stats = topicStats[sys.id];
+              const reviewCardsInSys = FLASHCARDS.filter(
+                (c) => c.systemId === sys.id && reviewFlashcardIds.includes(c.id)
+              ).length;
+              return (
+                <View key={sys.id} style={styles.weakTopicRow}>
+                  <View style={styles.weakTopicLeft}>
+                    <View style={[styles.weakIconCircle, { backgroundColor: `${sys.color}20` }]}>
+                      <MaterialCommunityIcons name={sys.icon as any} size={18} color={sys.color} />
+                    </View>
+                    <View>
+                      <Text style={styles.weakTopicName}>{sys.name}</Text>
+                      <Text style={styles.weakTopicDetail}>
+                        {reviewCardsInSys > 0 ? `${reviewCardsInSys} flagged cards` : ''}
+                        {reviewCardsInSys > 0 && stats ? ' • ' : ''}
+                        {stats ? `${stats.incorrect} quiz errors` : ''}
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.reviewTopicBtn}
+                    onPress={() => navigation.navigate('Quiz', { systemId: sys.id })}
+                  >
+                    <Text style={styles.reviewTopicBtnText}>Practice</Text>
+                    <Ionicons name="arrow-forward" size={12} color="#0284C7" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.emptyWeakTopicsCard}>
+            <Ionicons name="checkmark-circle-outline" size={24} color="#16A34A" />
+            <Text style={styles.emptyWeakText}>
+              All topics in strong standing. As you take quizzes and flag flashcards, areas needing revision will appear here.
+            </Text>
+          </View>
+        )}
 
         {/* 10 Body Systems Progress Overview */}
         <View style={styles.sectionHeaderRow}>
@@ -510,5 +589,76 @@ const styles = StyleSheet.create({
   systemFill: {
     height: '100%',
     borderRadius: 2,
+  },
+  weakTopicsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginBottom: 20,
+    gap: 10,
+  },
+  weakTopicRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  weakTopicLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  weakIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weakTopicName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  weakTopicDetail: {
+    fontSize: 11,
+    color: '#DC2626',
+    marginTop: 1,
+  },
+  reviewTopicBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  reviewTopicBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  emptyWeakTopicsCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyWeakText: {
+    fontSize: 12,
+    color: '#15803D',
+    flex: 1,
+    lineHeight: 17,
   },
 });

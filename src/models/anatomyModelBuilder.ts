@@ -270,24 +270,40 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
 
   // Anatomical Arms & Legs Silhouette
   [-1, 1].forEach((side) => {
+    // Upper & Lower Arm Shell down to hand
     const armCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.52, 1.18, -0.02),
-      new THREE.Vector3(side * 0.64, 0.76, -0.03),
-      new THREE.Vector3(side * 0.72, 0.34, 0.02),
-      new THREE.Vector3(side * 0.81, -0.12, 0.07),
+      new THREE.Vector3(side * 0.52, 1.18, 0.02),
+      new THREE.Vector3(side * 0.57, 0.94, 0.01), // Biceps bulge
+      new THREE.Vector3(side * 0.60, 0.72, -0.01), // Elbow joint
+      new THREE.Vector3(side * 0.66, 0.50, 0.03), // Forearm
+      new THREE.Vector3(side * 0.71, 0.30, 0.05), // Wrist
+      new THREE.Vector3(side * 0.73, 0.16, 0.06), // Hand & fingers
     ]);
-    const armGeo = new THREE.TubeGeometry(armCurve, 20, 0.115, 16, false);
+    const armGeo = new THREE.TubeGeometry(armCurve, 24, 0.105, 16, false);
     const armMesh = new THREE.Mesh(armGeo, mainShellMat);
     bodyShellGroup.add(armMesh);
 
+    // Thigh, Knee, Calf & Foot Shell down to toes
     const legCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.23, -0.52, 0),
-      new THREE.Vector3(side * 0.24, -1.05, 0.01),
-      new THREE.Vector3(side * 0.23, -1.55, -0.01),
+      new THREE.Vector3(side * 0.21, -0.48, 0.01), // Hip joint
+      new THREE.Vector3(side * 0.22, -0.74, 0.02), // Thigh bulk
+      new THREE.Vector3(side * 0.21, -1.02, 0.02), // Knee joint
+      new THREE.Vector3(side * 0.21, -1.26, -0.01), // Calf bulge
+      new THREE.Vector3(side * 0.20, -1.54, -0.01), // Ankle joint
     ]);
-    const legGeo = new THREE.TubeGeometry(legCurve, 16, 0.165, 16, false);
+    const legGeo = new THREE.TubeGeometry(legCurve, 22, 0.145, 16, false);
     const legMesh = new THREE.Mesh(legGeo, mainShellMat);
     bodyShellGroup.add(legMesh);
+
+    // Anatomical Foot Shell forward
+    const footCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.20, -1.56, -0.04), // Calcaneus heel
+      new THREE.Vector3(side * 0.20, -1.59, 0.08),  // Midfoot arch
+      new THREE.Vector3(side * 0.20, -1.61, 0.18),  // Toes
+    ]);
+    const footGeo = new THREE.TubeGeometry(footCurve, 12, 0.065, 14, false);
+    const footMesh = new THREE.Mesh(footGeo, mainShellMat);
+    bodyShellGroup.add(footMesh);
   });
 
   rootGroup.add(bodyShellGroup);
@@ -511,6 +527,140 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   sacrumMesh.userData = { subPartId: 'pelvis_girdle', organId: 'skeleton' };
   skeletalGroup.add(sacrumMesh);
 
+  // 5. APPENDICULAR SKELETON: UPPER LIMBS (Scapulae, Humerus, Elbows, Radius & Ulna, Carpals & Hands)
+  [-1, 1].forEach((side) => {
+    // Scapula (Shoulder Blade with spine and acromion process)
+    const scapulaGeo = new THREE.BoxGeometry(0.14, 0.22, 0.024);
+    scapulaGeo.scale(1, 1, 0.6);
+    const scapulaMesh = new THREE.Mesh(scapulaGeo, boneMat);
+    scapulaMesh.position.set(side * 0.28, 1.12, -0.16);
+    scapulaMesh.rotation.y = side * 0.35;
+    scapulaMesh.rotation.z = side * -0.15;
+    scapulaMesh.userData = { subPartId: 'upper_limbs', organId: 'skeleton' };
+    skeletalGroup.add(scapulaMesh);
+
+    // Humerus (Upper arm long bone from glenohumeral joint to elbow)
+    const humerusCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.48, 1.18, 0.02),
+      new THREE.Vector3(side * 0.54, 0.95, 0.0),
+      new THREE.Vector3(side * 0.58, 0.72, -0.02),
+    ]);
+    const humerusGeo = new THREE.TubeGeometry(humerusCurve, 14, 0.026, 10, false);
+    const humerusMesh = new THREE.Mesh(humerusGeo, boneMat);
+    humerusMesh.userData = { subPartId: 'upper_limbs', organId: 'skeleton' };
+    skeletalGroup.add(humerusMesh);
+
+    // Elbow Condyle Joint
+    const elbowGeo = new THREE.SphereGeometry(0.032, 12, 10);
+    const elbowMesh = new THREE.Mesh(elbowGeo, boneMat);
+    elbowMesh.position.set(side * 0.58, 0.72, -0.02);
+    elbowMesh.userData = { subPartId: 'upper_limbs', organId: 'skeleton' };
+    skeletalGroup.add(elbowMesh);
+
+    // Radius (Lateral) & Ulna (Medial) Forearm Bones
+    const radiusCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.59, 0.70, -0.01),
+      new THREE.Vector3(side * 0.64, 0.52, 0.03),
+      new THREE.Vector3(side * 0.69, 0.32, 0.06),
+    ]);
+    const radiusGeo = new THREE.TubeGeometry(radiusCurve, 12, 0.015, 8, false);
+    const radiusMesh = new THREE.Mesh(radiusGeo, boneMat);
+    radiusMesh.userData = { subPartId: 'upper_limbs', organId: 'skeleton' };
+    skeletalGroup.add(radiusMesh);
+
+    const ulnaCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.56, 0.70, -0.03),
+      new THREE.Vector3(side * 0.61, 0.51, 0.01),
+      new THREE.Vector3(side * 0.66, 0.31, 0.04),
+    ]);
+    const ulnaGeo = new THREE.TubeGeometry(ulnaCurve, 12, 0.016, 8, false);
+    const ulnaMesh = new THREE.Mesh(ulnaGeo, boneMat);
+    ulnaMesh.userData = { subPartId: 'upper_limbs', organId: 'skeleton' };
+    skeletalGroup.add(ulnaMesh);
+
+    // Carpals & Metacarpals (Wrist & Palm)
+    const handBaseGeo = new THREE.BoxGeometry(0.052, 0.082, 0.022);
+    const handBaseMesh = new THREE.Mesh(handBaseGeo, boneMat);
+    handBaseMesh.position.set(side * 0.70, 0.24, 0.06);
+    handBaseMesh.rotation.z = side * -0.22;
+    handBaseMesh.userData = { subPartId: 'upper_limbs', organId: 'skeleton' };
+    skeletalGroup.add(handBaseMesh);
+
+    // Phalanges (Fingers)
+    [-0.018, -0.006, 0.006, 0.018].forEach((fOffset) => {
+      const fingerCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * (0.70 + fOffset * 0.7), 0.20, 0.06),
+        new THREE.Vector3(side * (0.72 + fOffset * 0.8), 0.12, 0.07),
+      ]);
+      const fingerGeo = new THREE.TubeGeometry(fingerCurve, 6, 0.007, 6, false);
+      const fingerMesh = new THREE.Mesh(fingerGeo, boneMat);
+      fingerMesh.userData = { subPartId: 'upper_limbs', organId: 'skeleton' };
+      skeletalGroup.add(fingerMesh);
+    });
+  });
+
+  // 6. APPENDICULAR SKELETON: LOWER LIMBS (Femurs, Patellae, Tibia, Fibula, Tarsals & Feet)
+  [-1, 1].forEach((side) => {
+    // Femur (Strongest weight-bearing long bone)
+    const femurCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.18, -0.42, 0.04),
+      new THREE.Vector3(side * 0.22, -0.72, 0.03),
+      new THREE.Vector3(side * 0.21, -1.02, 0.01),
+    ]);
+    const femurGeo = new THREE.TubeGeometry(femurCurve, 16, 0.034, 10, false);
+    const femurMesh = new THREE.Mesh(femurGeo, boneMat);
+    femurMesh.userData = { subPartId: 'lower_limbs', organId: 'skeleton' };
+    skeletalGroup.add(femurMesh);
+
+    // Patella (Kneecap anterior sesamoid bone)
+    const patellaGeo = new THREE.SphereGeometry(0.028, 12, 10);
+    patellaGeo.scale(1, 1.25, 0.55);
+    const patellaMesh = new THREE.Mesh(patellaGeo, boneMat);
+    patellaMesh.position.set(side * 0.21, -1.02, 0.055);
+    patellaMesh.userData = { subPartId: 'lower_limbs', organId: 'skeleton' };
+    skeletalGroup.add(patellaMesh);
+
+    // Tibia (Primary lower leg shin bone)
+    const tibiaCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.21, -1.06, 0.01),
+      new THREE.Vector3(side * 0.20, -1.32, 0.0),
+      new THREE.Vector3(side * 0.19, -1.55, -0.01),
+    ]);
+    const tibiaGeo = new THREE.TubeGeometry(tibiaCurve, 14, 0.026, 10, false);
+    const tibiaMesh = new THREE.Mesh(tibiaGeo, boneMat);
+    tibiaMesh.userData = { subPartId: 'lower_limbs', organId: 'skeleton' };
+    skeletalGroup.add(tibiaMesh);
+
+    // Fibula (Slender lateral stabilizer bone)
+    const fibulaCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.25, -1.08, 0.0),
+      new THREE.Vector3(side * 0.24, -1.32, -0.01),
+      new THREE.Vector3(side * 0.23, -1.55, -0.01),
+    ]);
+    const fibulaGeo = new THREE.TubeGeometry(fibulaCurve, 14, 0.014, 8, false);
+    const fibulaMesh = new THREE.Mesh(fibulaGeo, boneMat);
+    fibulaMesh.userData = { subPartId: 'lower_limbs', organId: 'skeleton' };
+    skeletalGroup.add(fibulaMesh);
+
+    // Tarsals & Calcaneus (Heel & Ankle)
+    const heelGeo = new THREE.BoxGeometry(0.054, 0.045, 0.092);
+    const heelMesh = new THREE.Mesh(heelGeo, boneMat);
+    heelMesh.position.set(side * 0.20, -1.58, -0.04);
+    heelMesh.userData = { subPartId: 'lower_limbs', organId: 'skeleton' };
+    skeletalGroup.add(heelMesh);
+
+    // Metatarsals & Toe Phalanges (Arched foot forward)
+    const footCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.20, -1.59, 0.0),
+      new THREE.Vector3(side * 0.20, -1.61, 0.09),
+      new THREE.Vector3(side * 0.20, -1.62, 0.16),
+    ]);
+    const footGeo = new THREE.TubeGeometry(footCurve, 10, 0.022, 8, false);
+    const footMesh = new THREE.Mesh(footGeo, boneMat);
+    footMesh.userData = { subPartId: 'lower_limbs', organId: 'skeleton' };
+    skeletalGroup.add(footMesh);
+  });
+
   registerOrganGroup(
     'skeleton',
     'Mesh_Skeleton',
@@ -664,6 +814,129 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     scmMesh.rotation.x = -0.18;
     scmMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
     muscularGroup.add(scmMesh);
+  });
+
+  // 5. UPPER LIMB MUSCULATURE: BICEPS BRACHII, TRICEPS & FOREARMS
+  [-1, 1].forEach((side) => {
+    // Biceps Brachii (Anterior arm fusiform flexor)
+    const bicepsGeo = new THREE.SphereGeometry(0.082, 18, 16);
+    bicepsGeo.scale(0.85, 2.2, 0.85);
+    applyOrganicVertexShading(bicepsGeo, 0x991b1b, 0x58081f);
+    bicepsGeo.computeBoundingBox();
+    bicepsGeo.computeBoundingSphere();
+
+    const bicepsMesh = new THREE.Mesh(bicepsGeo, muscleMat.clone());
+    bicepsMesh.position.set(side * 0.54, 0.96, 0.04);
+    bicepsMesh.rotation.z = side * -0.12;
+    bicepsMesh.userData = { subPartId: 'biceps_brachii', organId: 'muscles' };
+    muscularGroup.add(bicepsMesh);
+
+    // Triceps Brachii (Posterior arm extensor)
+    const tricepsGeo = new THREE.SphereGeometry(0.086, 18, 16);
+    tricepsGeo.scale(0.92, 2.3, 0.82);
+    applyOrganicVertexShading(tricepsGeo, 0x881337, 0x4c0519);
+    tricepsGeo.computeBoundingBox();
+    tricepsGeo.computeBoundingSphere();
+
+    const tricepsMesh = new THREE.Mesh(tricepsGeo, muscleMat.clone());
+    tricepsMesh.position.set(side * 0.53, 0.94, -0.04);
+    tricepsMesh.rotation.z = side * -0.12;
+    tricepsMesh.userData = { subPartId: 'biceps_brachii', organId: 'muscles' };
+    muscularGroup.add(tricepsMesh);
+
+    // Forearm Muscular Compartments (Brachioradialis, Flexors & Extensors)
+    const forearmGeo = new THREE.CylinderGeometry(0.042, 0.068, 0.38, 16);
+    forearmGeo.scale(1.1, 1, 0.85);
+    applyOrganicVertexShading(forearmGeo, 0x991b1b, 0x5c0911);
+    forearmGeo.computeBoundingBox();
+    forearmGeo.computeBoundingSphere();
+
+    const forearmMesh = new THREE.Mesh(forearmGeo, muscleMat.clone());
+    forearmMesh.position.set(side * 0.64, 0.52, 0.02);
+    forearmMesh.rotation.z = side * -0.25;
+    forearmMesh.userData = { subPartId: 'biceps_brachii', organId: 'muscles' };
+    muscularGroup.add(forearmMesh);
+  });
+
+  // 6. LATISSIMUS DORSI (Broad back muscle plates)
+  [-1, 1].forEach((side) => {
+    const latGeo = new THREE.CylinderGeometry(0.12, 0.22, 0.52, 16);
+    latGeo.scale(1.1, 1, 0.45);
+    applyOrganicVertexShading(latGeo, 0x881337, 0x4c0519);
+    latGeo.computeBoundingBox();
+    latGeo.computeBoundingSphere();
+
+    const latMesh = new THREE.Mesh(latGeo, muscleMat.clone());
+    latMesh.position.set(side * 0.24, 0.78, -0.14);
+    latMesh.rotation.y = side * 0.32;
+    latMesh.rotation.z = side * -0.18;
+    latMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
+    muscularGroup.add(latMesh);
+  });
+
+  // 7. LOWER LIMB MUSCULATURE: GLUTEALS, QUADRICEPS, HAMSTRINGS & CALVES
+  [-1, 1].forEach((side) => {
+    // Gluteus Maximus & Medius (Powerful posterior hip extensor)
+    const gluteGeo = new THREE.SphereGeometry(0.14, 20, 18);
+    gluteGeo.scale(1.0, 1.15, 0.95);
+    applyOrganicVertexShading(gluteGeo, 0x991b1b, 0x58081f);
+    gluteGeo.computeBoundingBox();
+    gluteGeo.computeBoundingSphere();
+
+    const gluteMesh = new THREE.Mesh(gluteGeo, muscleMat.clone());
+    gluteMesh.position.set(side * 0.21, -0.46, -0.10);
+    gluteMesh.rotation.y = side * -0.18;
+    gluteMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
+    muscularGroup.add(gluteMesh);
+
+    // Quadriceps Femoris (Massive 4-headed anterior thigh extensor)
+    const quadGeo = new THREE.CylinderGeometry(0.115, 0.088, 0.56, 18, 16);
+    quadGeo.scale(1.05, 1, 0.92);
+    applyOrganicVertexShading(quadGeo, 0x991b1b, 0x5c0911);
+    quadGeo.computeBoundingBox();
+    quadGeo.computeBoundingSphere();
+
+    const quadMesh = new THREE.Mesh(quadGeo, muscleMat.clone());
+    quadMesh.position.set(side * 0.21, -0.76, 0.04);
+    quadMesh.rotation.z = side * 0.05;
+    quadMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
+    muscularGroup.add(quadMesh);
+
+    // Hamstrings (Posterior thigh flexor group)
+    const hamGeo = new THREE.CylinderGeometry(0.095, 0.078, 0.54, 16);
+    hamGeo.scale(0.95, 1, 0.85);
+    applyOrganicVertexShading(hamGeo, 0x881337, 0x4c0519);
+    hamGeo.computeBoundingBox();
+    hamGeo.computeBoundingSphere();
+
+    const hamMesh = new THREE.Mesh(hamGeo, muscleMat.clone());
+    hamMesh.position.set(side * 0.21, -0.76, -0.04);
+    hamMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
+    muscularGroup.add(hamMesh);
+
+    // Gastrocnemius & Soleus (Prominent two-headed calf muscles)
+    const calfGeo = new THREE.SphereGeometry(0.092, 18, 16);
+    calfGeo.scale(0.95, 2.1, 0.92);
+    applyOrganicVertexShading(calfGeo, 0x991b1b, 0x58081f);
+    calfGeo.computeBoundingBox();
+    calfGeo.computeBoundingSphere();
+
+    const calfMesh = new THREE.Mesh(calfGeo, muscleMat.clone());
+    calfMesh.position.set(side * 0.21, -1.26, -0.04);
+    calfMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
+    muscularGroup.add(calfMesh);
+
+    // Tibialis Anterior (Anterolateral lower leg dorsiflexor)
+    const tibGeo = new THREE.CylinderGeometry(0.045, 0.032, 0.46, 14);
+    tibGeo.scale(0.85, 1, 0.85);
+    applyOrganicVertexShading(tibGeo, 0x881337, 0x4c0519);
+    tibGeo.computeBoundingBox();
+    tibGeo.computeBoundingSphere();
+
+    const tibMesh = new THREE.Mesh(tibGeo, muscleMat.clone());
+    tibMesh.position.set(side * 0.21, -1.28, 0.03);
+    tibMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
+    muscularGroup.add(tibMesh);
   });
 
   registerOrganGroup(

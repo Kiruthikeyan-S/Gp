@@ -317,35 +317,37 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       }
 
       graph.setShellMode(activeShellMode);
-      graph.vascularGroup.visible =
-        vascularVisible &&
-        (activeSystemId === 'all' || activeSystemId === 'circulatory');
+      graph.vascularGroup.visible = vascularVisible;
+
+      const nervousVisible = stateRef.current.showNervous ?? true;
+      const internalOrgansVisible = stateRef.current.showInternalOrgans ?? true;
 
       graph.systemGroups.forEach((group, sysId) => {
         if (sysId === 'skeletal') {
-          group.visible = skeletalVisible && (activeSystemId === 'all' || activeSystemId === 'skeletal');
+          group.visible = skeletalVisible;
         } else if (sysId === 'muscular') {
-          group.visible = muscularVisible && (activeSystemId === 'all' || activeSystemId === 'muscular');
+          group.visible = muscularVisible;
         } else if (sysId === 'nervous') {
-          const nervousVisible = stateRef.current.showNervous ?? true;
-          group.visible = nervousVisible && (activeSystemId === 'all' || activeSystemId === 'nervous');
+          group.visible = nervousVisible;
         } else {
-          const organsVisible = stateRef.current.showInternalOrgans ?? true;
-          group.visible = organsVisible && (activeSystemId === 'all' || activeSystemId === sysId);
+          group.visible = internalOrgansVisible;
         }
       });
 
-      const internalOrgansVisible = stateRef.current.showInternalOrgans ?? true;
       graph.organRecords.forEach((record) => {
-        // Skeletal bones and muscles have their own system groups; visceral organs follow internalOrgansVisible
         if (record.systemId === 'skeletal') {
           record.group.visible = skeletalVisible;
         } else if (record.systemId === 'muscular') {
           record.group.visible = muscularVisible;
         } else if (record.systemId === 'nervous') {
-          record.group.visible = stateRef.current.showNervous ?? true;
+          record.group.visible = nervousVisible;
         } else {
-          record.group.visible = internalOrgansVisible;
+          const matchesSystem =
+            activeSystemId === 'all' ||
+            activeSystemId === record.systemId ||
+            activeSystemId === 'skeletal' ||
+            activeSystemId === 'muscular';
+          record.group.visible = internalOrgansVisible && matchesSystem;
         }
         const isSelected = record.organId === activeOrganId;
         record.meshes.forEach((mesh) => {

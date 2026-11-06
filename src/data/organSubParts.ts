@@ -79,12 +79,16 @@ export const SUB_PART_COLORS: Record<string, string> = {
   vertebral_column: '#EAB308',
   ribcage: '#10B981',
   pelvis_girdle: '#EC4899',
+  upper_limbs: '#38BDF8',
+  lower_limbs: '#A855F7',
 
   // Muscles
   pectoralis: '#EF4444',
   rectus_abdominis: '#F59E0B',
   deltoids: '#8B5CF6',
   trapezius: '#10B981',
+  biceps_brachii: '#EC4899',
+  quadriceps: '#06B6D4',
 
   // Thyroid
   right_thyroid_lobe: '#9333EA',
@@ -719,6 +723,22 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       color: '#EC4899',
       description: 'Basin-shaped ring connecting the axial spine to the lower appendicular skeleton.',
     },
+    {
+      id: 'upper_limbs',
+      name: 'Upper Limbs (Arms, Forearms & Hands)',
+      side: 'left',
+      localAnchor: [0.55, 0.75, 0.02],
+      color: '#38BDF8',
+      description: 'Humerus, radius, ulna, carpals, metacarpals, and phalanges providing manipulation and reach.',
+    },
+    {
+      id: 'lower_limbs',
+      name: 'Lower Limbs (Femurs, Knees & Feet)',
+      side: 'right',
+      localAnchor: [0.22, -1.05, 0.02],
+      color: '#A855F7',
+      description: 'Femur, patella, tibia, fibula, tarsals, and phalanges bearing body weight and locomotion.',
+    },
   ],
 
   // 12. MUSCULAR SYSTEM
@@ -733,7 +753,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
     },
     {
       id: 'rectus_abdominis',
-      name: 'Rectus Abdominis',
+      name: 'Rectus Abdominis & Obliques',
       side: 'left',
       localAnchor: [0, 0.52, 0.16],
       color: '#F59E0B',
@@ -749,11 +769,27 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
     },
     {
       id: 'trapezius',
-      name: 'Trapezius',
+      name: 'Trapezius & Neck Musculature',
       side: 'right',
       localAnchor: [0.22, 1.35, -0.08],
       color: '#10B981',
       description: 'Superficial back and neck muscle elevating, rotating, and retracting the scapula.',
+    },
+    {
+      id: 'biceps_brachii',
+      name: 'Arm & Forearm Musculature',
+      side: 'left',
+      localAnchor: [0.58, 0.72, 0.03],
+      color: '#EC4899',
+      description: 'Biceps brachii, triceps brachii, brachialis, and forearm flexors controlling elbow and wrist motion.',
+    },
+    {
+      id: 'quadriceps',
+      name: 'Lower Limb Musculature',
+      side: 'right',
+      localAnchor: [0.24, -1.02, 0.06],
+      color: '#06B6D4',
+      description: 'Gluteus maximus, quadriceps femoris, hamstrings, and gastrocnemius calves generating locomotive power.',
     },
   ],
 

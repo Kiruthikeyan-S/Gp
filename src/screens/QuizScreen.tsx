@@ -33,7 +33,7 @@ export const QuizScreen: React.FC = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'Quiz'>>();
   const initialSystemId = route.params?.systemId || 'all';
 
-  const { quizStats, recordQuizScore, recordDailyActivity } = useAnatomyStore();
+  const { quizStats, recordQuizScore, recordDailyActivity, recordTopicResult } = useAnatomyStore();
 
   const [activeSystemId, setActiveSystemId] = useState<BodySystemId | 'all'>(initialSystemId);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -57,6 +57,9 @@ export const QuizScreen: React.FC = () => {
     setIsAnswered(true);
 
     const isCorrect = index === currentQ.correctIndex;
+    if (currentQ.systemId) {
+      recordTopicResult(currentQ.systemId, isCorrect);
+    }
     if (isCorrect) {
       setSessionCorrectCount((c) => c + 1);
     }

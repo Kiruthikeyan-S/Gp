@@ -217,6 +217,57 @@ export const HomeScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
 
+        {/* Quick Tools & Study Navigation */}
+        <View style={styles.quickToolsGrid}>
+          <TouchableOpacity
+            style={styles.quickToolCard}
+            onPress={() => navigation.navigate('ExplorerTab')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.quickToolIcon, { backgroundColor: '#E0F2FE' }]}>
+              <MaterialCommunityIcons name="human" size={20} color="#0284C7" />
+            </View>
+            <Text style={styles.quickToolTitle}>3D Body Layers</Text>
+            <Text style={styles.quickToolSub}>Skeleton, Muscles & Organs</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickToolCard}
+            onPress={() => navigation.navigate('Flashcards')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.quickToolIcon, { backgroundColor: '#DCFCE7' }]}>
+              <MaterialCommunityIcons name="cards-outline" size={20} color="#16A34A" />
+            </View>
+            <Text style={styles.quickToolTitle}>Flashcards</Text>
+            <Text style={styles.quickToolSub}>Active Recall Cards</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickToolCard}
+            onPress={() => navigation.navigate('Quiz')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.quickToolIcon, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="school-outline" size={20} color="#D97706" />
+            </View>
+            <Text style={styles.quickToolTitle}>Practice Quiz</Text>
+            <Text style={styles.quickToolSub}>Test System Knowledge</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickToolCard}
+            onPress={() => navigation.navigate('Dashboard')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.quickToolIcon, { backgroundColor: '#F3E8FF' }]}>
+              <Ionicons name="stats-chart-outline" size={20} color="#9333EA" />
+            </View>
+            <Text style={styles.quickToolTitle}>Progress & Stats</Text>
+            <Text style={styles.quickToolSub}>Streak & Focus Topics</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Body Systems Horizontal Scroll matching Image 1 */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeading}>Body Systems</Text>
@@ -719,5 +770,38 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
     marginTop: 1,
+  },
+  quickToolsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  quickToolCard: {
+    flex: 1,
+    minWidth: '47%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  quickToolIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  quickToolTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  quickToolSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
   },
 });

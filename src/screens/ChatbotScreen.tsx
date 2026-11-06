@@ -433,6 +433,14 @@ export const ChatbotScreen: React.FC = () => {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Educational Disclaimer Strip */}
+        <View style={styles.disclaimerStrip}>
+          <Ionicons name="shield-checkmark-outline" size={12} color="#64748B" />
+          <Text style={styles.disclaimerStripText}>
+            Educational anatomy assistant for study only. Not for clinical diagnosis or treatment.
+          </Text>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -747,5 +755,19 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: '#E2E8F0',
+  },
+  disclaimerStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    backgroundColor: '#F8FAFC',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  disclaimerStripText: {
+    fontSize: 10,
+    color: '#64748B',
   },
 });

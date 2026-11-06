@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   KNOWN_FLASHCARDS: '@anatomy_known_flashcards',
   REVIEW_FLASHCARDS: '@anatomy_review_flashcards',
   STREAK: '@anatomy_streak',
+  TOPIC_STATS: '@anatomy_topic_stats',
 };
 
 export type CameraPreset = 'front' | 'back' | 'side' | 'isometric';
@@ -29,6 +30,7 @@ interface AnatomyState {
     bestScorePercent: number;
     attempts: number;
   };
+  topicStats: Record<string, { correct: number; incorrect: number }>;
   isLoadingStorage: boolean;
 
   // Actions
@@ -42,6 +44,7 @@ interface AnatomyState {
   markFlashcardKnown: (id: string) => Promise<void>;
   markFlashcardReview: (id: string) => Promise<void>;
   recordQuizScore: (correct: number, total: number) => Promise<void>;
+  recordTopicResult: (systemId: string, isCorrect: boolean) => Promise<void>;
   recordDailyActivity: () => Promise<void>;
   resetProgress: () => Promise<void>;
   loadPersistedData: () => Promise<void>;
@@ -63,6 +66,7 @@ export const useAnatomyStore = create<AnatomyState>((set, get) => ({
     bestScorePercent: 0,
     attempts: 0,
   },
+  topicStats: {},
   isLoadingStorage: true,
 
   selectOrgan: (organId) => set({ selectedOrganId: organId }),
@@ -171,6 +175,24 @@ export const useAnatomyStore = create<AnatomyState>((set, get) => ({
     }
   },
 
+  recordTopicResult: async (systemId, isCorrect) => {
+    const current = get().topicStats;
+    const stats = current[systemId] || { correct: 0, incorrect: 0 };
+    const updated = {
+      ...current,
+      [systemId]: {
+        correct: isCorrect ? stats.correct + 1 : stats.correct,
+        incorrect: !isCorrect ? stats.incorrect + 1 : stats.incorrect,
+      },
+    };
+    set({ topicStats: updated });
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.TOPIC_STATS, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Failed to save topic stats:', e);
+    }
+  },
+
   resetProgress: async () => {
     set({
       bookmarkedOrganIds: [],
@@ -179,6 +201,7 @@ export const useAnatomyStore = create<AnatomyState>((set, get) => ({
       reviewFlashcardIds: [],
       streakDays: 1,
       quizStats: { totalAnswered: 0, correctCount: 0, bestScorePercent: 0, attempts: 0 },
+      topicStats: {},
     });
     try {
       await AsyncStorage.multiRemove([
@@ -188,6 +211,7 @@ export const useAnatomyStore = create<AnatomyState>((set, get) => ({
         STORAGE_KEYS.KNOWN_FLASHCARDS,
         STORAGE_KEYS.REVIEW_FLASHCARDS,
         STORAGE_KEYS.STREAK,
+        STORAGE_KEYS.TOPIC_STATS,
       ]);
     } catch (e) {
       console.warn('Failed to reset storage:', e);
@@ -196,7 +220,7 @@ export const useAnatomyStore = create<AnatomyState>((set, get) => ({
 
   loadPersistedData: async () => {
     try {
-      const [bookmarks, lessons, quiz, knownFc, reviewFc, streakData] =
+      const [bookmarks, lessons, quiz, knownFc, reviewFc, streakData, topicData] =
         await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.BOOKMARKS),
           AsyncStorage.getItem(STORAGE_KEYS.COMPLETED_LESSONS),
@@ -204,6 +228,7 @@ export const useAnatomyStore = create<AnatomyState>((set, get) => ({
           AsyncStorage.getItem(STORAGE_KEYS.KNOWN_FLASHCARDS),
           AsyncStorage.getItem(STORAGE_KEYS.REVIEW_FLASHCARDS),
           AsyncStorage.getItem(STORAGE_KEYS.STREAK),
+          AsyncStorage.getItem(STORAGE_KEYS.TOPIC_STATS),
         ]);
 
       const parsedStreak = streakData ? JSON.parse(streakData) : null;
@@ -218,6 +243,7 @@ export const useAnatomyStore = create<AnatomyState>((set, get) => ({
         quizStats: quiz
           ? JSON.parse(quiz)
           : { totalAnswered: 0, correctCount: 0, bestScorePercent: 0, attempts: 0 },
+        topicStats: topicData ? JSON.parse(topicData) : {},
         isLoadingStorage: false,
       });
     } catch (e) {
