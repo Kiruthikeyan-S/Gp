@@ -73,6 +73,34 @@ export const SUB_PART_COLORS: Record<string, string> = {
   sigmoid_colon: '#8B5CF6',      // Purple
   cecum: '#F97316',              // Orange
   rectum: '#0284C7',             // Blue
+
+  // Skeleton
+  cranium: '#0284C7',
+  vertebral_column: '#EAB308',
+  ribcage: '#10B981',
+  pelvis_girdle: '#EC4899',
+
+  // Muscles
+  pectoralis: '#EF4444',
+  rectus_abdominis: '#F59E0B',
+  deltoids: '#8B5CF6',
+  trapezius: '#10B981',
+
+  // Thyroid
+  right_thyroid_lobe: '#9333EA',
+  left_thyroid_lobe: '#A855F7',
+  thyroid_isthmus: '#EC4899',
+
+  // Lymph
+  cervical_nodes: '#10B981',
+  axillary_nodes: '#059669',
+  inguinal_nodes: '#34D399',
+  thoracic_duct: '#0D9488',
+
+  // Reproductive
+  gonads: '#DB2777',
+  genital_tract: '#F472B6',
+  duct_network: '#E11D48',
 };
 
 export function getSubPartColor(subPartId: string): string {
@@ -654,6 +682,170 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       color: '#862E73',
       description:
         'Vascular red pulp filters senescent erythrocytes while lymphoid white pulp mounts adaptive immune responses.',
+    },
+  ],
+
+  // 11. SKELETAL SYSTEM
+  skeleton: [
+    {
+      id: 'cranium',
+      name: 'Cranium & Facial Bones',
+      side: 'left',
+      localAnchor: [0, 1.95, 0.05],
+      color: '#0284C7',
+      description: 'Protective bony neurocranium housing the brain and special sensory organs.',
+    },
+    {
+      id: 'vertebral_column',
+      name: 'Vertebral Column',
+      side: 'left',
+      localAnchor: [0, 0.85, -0.12],
+      color: '#EAB308',
+      description: 'Segmented axial support column with 33 vertebrae cushioning the spinal cord.',
+    },
+    {
+      id: 'ribcage',
+      name: 'Thoracic Ribcage & Sternum',
+      side: 'right',
+      localAnchor: [0.18, 0.95, 0.14],
+      color: '#10B981',
+      description: '12 pairs of costal ribs and sternum protecting thoracic viscera and expanding during ventilation.',
+    },
+    {
+      id: 'pelvis_girdle',
+      name: 'Pelvic Girdle & Sacrum',
+      side: 'right',
+      localAnchor: [0.14, -0.38, 0.05],
+      color: '#EC4899',
+      description: 'Basin-shaped ring connecting the axial spine to the lower appendicular skeleton.',
+    },
+  ],
+
+  // 12. MUSCULAR SYSTEM
+  muscles: [
+    {
+      id: 'pectoralis',
+      name: 'Pectoralis Major',
+      side: 'left',
+      localAnchor: [0.14, 1.05, 0.18],
+      color: '#EF4444',
+      description: 'Thick, fan-shaped chest muscle adducting and medially rotating the humerus.',
+    },
+    {
+      id: 'rectus_abdominis',
+      name: 'Rectus Abdominis',
+      side: 'left',
+      localAnchor: [0, 0.52, 0.16],
+      color: '#F59E0B',
+      description: 'Paired vertical abdominal muscle flexing the vertebral column and compressing viscera.',
+    },
+    {
+      id: 'deltoids',
+      name: 'Deltoid Musculature',
+      side: 'right',
+      localAnchor: [0.38, 1.25, 0.02],
+      color: '#8B5CF6',
+      description: 'Triangular shoulder muscle acting as the principal abductor of the arm.',
+    },
+    {
+      id: 'trapezius',
+      name: 'Trapezius',
+      side: 'right',
+      localAnchor: [0.22, 1.35, -0.08],
+      color: '#10B981',
+      description: 'Superficial back and neck muscle elevating, rotating, and retracting the scapula.',
+    },
+  ],
+
+  // 13. ENDOCRINE: THYROID GLAND
+  thyroid: [
+    {
+      id: 'right_thyroid_lobe',
+      name: 'Right Thyroid Lobe',
+      side: 'left',
+      localAnchor: [-0.038, 1.46, 0.165],
+      color: '#9333EA',
+      description: 'Right lateral cone-shaped lobe extending from the thyroid cartilage down to the 5th tracheal ring.',
+    },
+    {
+      id: 'left_thyroid_lobe',
+      name: 'Left Thyroid Lobe',
+      side: 'right',
+      localAnchor: [0.038, 1.46, 0.165],
+      color: '#A855F7',
+      description: 'Left lateral cone-shaped endocrine lobe regulating metabolic homeostasis.',
+    },
+    {
+      id: 'thyroid_isthmus',
+      name: 'Thyroid Isthmus',
+      side: 'left',
+      localAnchor: [0, 1.43, 0.178],
+      color: '#EC4899',
+      description: 'Transverse tissue band crossing the 2nd and 3rd tracheal cartilages connecting both lobes.',
+    },
+  ],
+
+  // 14. LYMPHATIC SYSTEM
+  lymph_nodes: [
+    {
+      id: 'cervical_nodes',
+      name: 'Cervical Lymph Nodes',
+      side: 'left',
+      localAnchor: [-0.09, 1.48, 0.08],
+      color: '#10B981',
+      description: 'Deep and superficial neck lymph nodes filtering drainage from the head and pharynx.',
+    },
+    {
+      id: 'axillary_nodes',
+      name: 'Axillary Lymph Nodes',
+      side: 'right',
+      localAnchor: [0.28, 1.08, 0.02],
+      color: '#059669',
+      description: 'Armpit nodal chain filtering lymph from upper limbs and pectoral girdle.',
+    },
+    {
+      id: 'inguinal_nodes',
+      name: 'Inguinal Lymph Nodes',
+      side: 'left',
+      localAnchor: [-0.16, -0.48, 0.14],
+      color: '#34D399',
+      description: 'Groin nodal cluster filtering drainage from the lower limbs and external genitalia.',
+    },
+    {
+      id: 'thoracic_duct',
+      name: 'Thoracic Lymph Duct',
+      side: 'right',
+      localAnchor: [0.012, 0.45, -0.03],
+      color: '#0D9488',
+      description: 'Primary lymphatic vessel draining 75% of lymph into the left subclavian vein.',
+    },
+  ],
+
+  // 15. REPRODUCTIVE SYSTEM
+  reproductive: [
+    {
+      id: 'gonads',
+      name: 'Gonadal Parenchyma',
+      side: 'left',
+      localAnchor: [-0.12, -0.42, 0.04],
+      color: '#DB2777',
+      description: 'Primary sex organs (testes/ovaries) producing gametes and reproductive sex hormones.',
+    },
+    {
+      id: 'genital_tract',
+      name: 'Central Genital Tract',
+      side: 'right',
+      localAnchor: [0, -0.46, 0.05],
+      color: '#F472B6',
+      description: 'Central pelvic reproductive organ structure sustaining gamete transport and gestation.',
+    },
+    {
+      id: 'duct_network',
+      name: 'Reproductive Duct Network',
+      side: 'right',
+      localAnchor: [0.07, -0.38, 0.06],
+      color: '#E11D48',
+      description: 'Bilateral tubular conduits conducting gametes through the pelvic basin.',
     },
   ],
 };

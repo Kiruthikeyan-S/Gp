@@ -178,6 +178,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'urinary',
     'skeletal',
     'muscular',
+    'endocrine',
+    'lymphatic',
+    'reproductive',
   ];
 
   systems.forEach((sysId) => {
@@ -293,6 +296,14 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     metalness: 0.05,
   });
 
+  // Anatomical Cranium & Mandible (Skull)
+  const skullGeo = new THREE.SphereGeometry(0.18, 28, 24);
+  skullGeo.scale(0.82, 0.95, 1.08);
+  const skullMesh = new THREE.Mesh(skullGeo, boneMat);
+  skullMesh.position.set(0, 1.95, 0.02);
+  skullMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
+  skeletalGroup.add(skullMesh);
+
   // 22 Articulated Vertebrae (Cervical, Thoracic, Lumbar) + Intervertebral Discs + Spinous Processes
   for (let i = 0; i < 22; i++) {
     const t = i / 21;
@@ -304,12 +315,14 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const vBodyGeo = new THREE.CylinderGeometry(radius * 0.95, radius, 0.054, 14);
     const vBody = new THREE.Mesh(vBodyGeo, boneMat);
     vBody.position.set(0, yPos, zCurve);
+    vBody.userData = { subPartId: 'vertebral_column', organId: 'skeleton' };
     skeletalGroup.add(vBody);
 
     // Intervertebral fibrocartilage disc
     const discGeo = new THREE.CylinderGeometry(radius * 0.96, radius * 0.96, 0.022, 14);
     const disc = new THREE.Mesh(discGeo, cartilageMat);
     disc.position.set(0, yPos - 0.038, zCurve);
+    disc.userData = { subPartId: 'vertebral_column', organId: 'skeleton' };
     skeletalGroup.add(disc);
 
     // Posterior Spinous Process & Transverse Processes
@@ -317,11 +330,13 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const spinous = new THREE.Mesh(spinousGeo, boneMat);
     spinous.position.set(0, yPos - 0.01, zCurve - radius - 0.025);
     spinous.rotation.x = 0.35;
+    spinous.userData = { subPartId: 'vertebral_column', organId: 'skeleton' };
     skeletalGroup.add(spinous);
 
     const transGeo = new THREE.BoxGeometry(radius * 2.7, 0.022, 0.024);
     const trans = new THREE.Mesh(transGeo, boneMat);
     trans.position.set(0, yPos, zCurve - radius * 0.55);
+    trans.userData = { subPartId: 'vertebral_column', organId: 'skeleton' };
     skeletalGroup.add(trans);
   }
 
@@ -330,11 +345,13 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   manubriumGeo.scale(1, 1, 0.32);
   const manubrium = new THREE.Mesh(manubriumGeo, boneMat);
   manubrium.position.set(0, 1.18, 0.23);
+  manubrium.userData = { subPartId: 'ribcage', organId: 'skeleton' };
   skeletalGroup.add(manubrium);
 
   const sternumBodyGeo = new THREE.BoxGeometry(0.065, 0.34, 0.024);
   const sternumBody = new THREE.Mesh(sternumBodyGeo, boneMat);
   sternumBody.position.set(0, 0.94, 0.245);
+  sternumBody.userData = { subPartId: 'ribcage', organId: 'skeleton' };
   skeletalGroup.add(sternumBody);
 
   // 10 Pairs of Anatomically Curved 3D Ribs wrapping the thorax
@@ -353,6 +370,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       ]);
       const ribGeo = new THREE.TubeGeometry(ribCurve, 20, 0.014, 8, false);
       const ribMesh = new THREE.Mesh(ribGeo, boneMat);
+      ribMesh.userData = { subPartId: 'ribcage', organId: 'skeleton' };
       skeletalGroup.add(ribMesh);
     });
   }
@@ -366,6 +384,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     ]);
     const clavGeo = new THREE.TubeGeometry(clavCurve, 14, 0.017, 8, false);
     const clavMesh = new THREE.Mesh(clavGeo, boneMat);
+    clavMesh.userData = { subPartId: 'ribcage', organId: 'skeleton' };
     skeletalGroup.add(clavMesh);
   });
 
@@ -382,6 +401,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const iliumGeo = new THREE.TubeGeometry(iliumCurve, 22, 0.046, 12, false);
     iliumGeo.scale(1, 1.25, 0.72);
     const iliumMesh = new THREE.Mesh(iliumGeo, boneMat);
+    iliumMesh.userData = { subPartId: 'pelvis_girdle', organId: 'skeleton' };
     skeletalGroup.add(iliumMesh);
 
     // Ischial & Pubic Ramus loop (framing obturator foramen like Image 1)
@@ -392,6 +412,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     ]);
     const ischiumGeo = new THREE.TubeGeometry(ischiumCurve, 14, 0.025, 10, false);
     const ischiumMesh = new THREE.Mesh(ischiumGeo, boneMat);
+    ischiumMesh.userData = { subPartId: 'pelvis_girdle', organId: 'skeleton' };
     skeletalGroup.add(ischiumMesh);
   });
 
@@ -401,7 +422,18 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const sacrumMesh = new THREE.Mesh(sacrumGeo, boneMat);
   sacrumMesh.position.set(0, -0.36, -0.15);
   sacrumMesh.rotation.x = Math.PI + 0.2;
+  sacrumMesh.userData = { subPartId: 'pelvis_girdle', organId: 'skeleton' };
   skeletalGroup.add(sacrumMesh);
+
+  registerOrganGroup(
+    'skeleton',
+    'Mesh_Skeleton',
+    'skeletal',
+    skeletalGroup,
+    new THREE.Vector3(0, 0.85, 0.0),
+    1.45,
+    organRecords
+  );
 
   // =========================================================================
   // 3. ANATOMICALLY SCULPTED MUSCULAR SYSTEM
@@ -440,6 +472,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       return { offset: striation, colorMix: 0.55 + 0.35 * Math.sin(x * 25 + y * 20) };
     });
     const pecMesh = new THREE.Mesh(pecGeo, muscleMat.clone());
+    pecMesh.userData = { subPartId: 'pectoralis', organId: 'muscles' };
     muscularGroup.add(pecMesh);
   });
 
@@ -473,6 +506,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     return { offset: fiber, colorMix: 0.5 + 0.4 * Math.sin(y * 22) };
   });
   const absMesh = new THREE.Mesh(absGeo, muscleMat.clone());
+  absMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
   muscularGroup.add(absMesh);
 
   // 3. External Obliques (Flanking lateral abdominal walls)
@@ -496,6 +530,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       return { offset: diagonalFiber, colorMix: 0.5 + 0.35 * Math.sin((x + y) * 20) };
     });
     const obMesh = new THREE.Mesh(obGeo, muscleMat.clone());
+    obMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
     muscularGroup.add(obMesh);
   });
 
@@ -516,6 +551,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const deltMesh = new THREE.Mesh(deltGeo, muscleMat.clone());
     deltMesh.position.set(side * 0.52, 1.15, 0.02);
     deltMesh.rotation.z = side * -0.18;
+    deltMesh.userData = { subPartId: 'deltoids', organId: 'muscles' };
     muscularGroup.add(deltMesh);
   });
 
@@ -528,6 +564,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     ]);
     const scmGeo = createVariableTubeGeometry(scmCurve, 12, 8, () => 0.016, 0x9f1239, 0x4c0519);
     const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
+    scmMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
     muscularGroup.add(scmMesh);
 
     const trapCurve = new THREE.CatmullRomCurve3([
@@ -544,6 +581,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       0x4c0519
     );
     const trapMesh = new THREE.Mesh(trapGeo, muscleMat.clone());
+    trapMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
     muscularGroup.add(trapMesh);
   });
 
@@ -560,6 +598,16 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       muscularGroup.add(sMesh);
     });
   });
+
+  registerOrganGroup(
+    'muscles',
+    'Mesh_Muscles',
+    'muscular',
+    muscularGroup,
+    new THREE.Vector3(0, 0.85, 0.0),
+    1.42,
+    organRecords
+  );
 
   // =========================================================================
   // 4. VASCULAR NETWORK (Systemic Aorta, Vena Cava, Carotid/Iliac Vessels)
@@ -656,8 +704,20 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
 
     const hemiMesh = new THREE.Mesh(hemiGeo, brainMat.clone());
     hemiMesh.position.set(side * 0.098, 1.98, 0.02);
-    hemiMesh.userData = { subPartId: 'frontal_lobe', organId: 'brain' };
+    hemiMesh.userData = {
+      subPartId: side === -1 ? 'frontal_lobe' : 'parietal_lobe',
+      organId: 'brain',
+    };
     brainGroup.add(hemiMesh);
+
+    // Posterior occipital cortex dome
+    const occGeo = new THREE.SphereGeometry(0.12, 24, 20);
+    occGeo.scale(0.85, 0.88, 1.05);
+    applyOrganicVertexShading(occGeo, 0xf4b4aa, 0x883542);
+    const occMesh = new THREE.Mesh(occGeo, brainMat.clone());
+    occMesh.position.set(side * 0.085, 1.94, -0.16);
+    occMesh.userData = { subPartId: 'occipital_lobe', organId: 'brain' };
+    brainGroup.add(occMesh);
 
     // Temporal Lobe inferior bulge
     const tempGeo = new THREE.SphereGeometry(0.11, 24, 20);
@@ -884,6 +944,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const spleenMesh = new THREE.Mesh(spleenGeo, spleenMat);
   spleenMesh.position.set(0.31, 0.46, -0.03);
   spleenMesh.rotation.z = -0.28;
+  spleenMesh.userData = { subPartId: 'diaphragmatic_surface', organId: 'spleen' };
   spleenGroup.add(spleenMesh);
 
   registerOrganGroup(
@@ -965,7 +1026,23 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
 
     const lungMesh = new THREE.Mesh(lGeo, lungMat.clone());
     lungMesh.position.set(side * 0.185, 0, 0);
+    lungMesh.userData = {
+      subPartId: isLeft ? 'left_superior_lobe' : 'right_superior_lobe',
+      organId: 'lungs',
+    };
     lungsGroup.add(lungMesh);
+
+    // Sculpt lower diaphragmatic lobe
+    const lowerLobeGeo = new THREE.SphereGeometry(0.19, 28, 24);
+    lowerLobeGeo.scale(0.95, 0.75, 0.95);
+    applyOrganicVertexShading(lowerLobeGeo, 0xd9726a, 0x943832);
+    const lowerLobeMesh = new THREE.Mesh(lowerLobeGeo, lungMat.clone());
+    lowerLobeMesh.position.set(side * 0.19, -0.16, 0.01);
+    lowerLobeMesh.userData = {
+      subPartId: isLeft ? 'left_inferior_lobe' : 'right_inferior_lobe',
+      organId: 'lungs',
+    };
+    lungsGroup.add(lowerLobeMesh);
   });
 
   // Trachea & Cartilaginous C-Rings + Mainstem Bronchi
@@ -982,7 +1059,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xdbeafe,
     0x93c5fd
   );
-  lungsGroup.add(new THREE.Mesh(tracheaGeo, lungMat.clone()));
+  const tracheaMesh = new THREE.Mesh(tracheaGeo, lungMat.clone());
+  tracheaMesh.userData = { subPartId: 'trachea', organId: 'lungs' };
+  lungsGroup.add(tracheaMesh);
 
   registerOrganGroup(
     'lungs',
@@ -1018,6 +1097,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const rHepatic = new THREE.Mesh(rHepaticGeo, liverMat.clone());
   rHepatic.position.set(-0.13, 0.52, 0.09);
   rHepatic.rotation.z = 0.24;
+  rHepatic.userData = { subPartId: 'right_hepatic_lobe', organId: 'liver' };
   liverGroup.add(rHepatic);
 
   const lHepaticGeo = new THREE.SphereGeometry(0.135, 28, 24);
@@ -1026,6 +1106,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const lHepatic = new THREE.Mesh(lHepaticGeo, liverMat.clone());
   lHepatic.position.set(0.05, 0.56, 0.11);
   lHepatic.rotation.z = -0.18;
+  lHepatic.userData = { subPartId: 'left_hepatic_lobe', organId: 'liver' };
   liverGroup.add(lHepatic);
 
   // White Falciform Ligament dividing Right & Left Lobes (like Image 1 & Image 3)
@@ -1042,7 +1123,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xf8fafc,
     0xcbd5e1
   );
-  liverGroup.add(new THREE.Mesh(falciformGeo, liverMat.clone()));
+  const falciformMesh = new THREE.Mesh(falciformGeo, liverMat.clone());
+  falciformMesh.userData = { subPartId: 'falciform_ligament', organId: 'liver' };
+  liverGroup.add(falciformMesh);
 
   // Green Pear-Shaped Gallbladder tucked under Right Lobe
   const gbGeo = new THREE.SphereGeometry(0.042, 18, 16);
@@ -1051,6 +1134,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const gbMesh = new THREE.Mesh(gbGeo, liverMat.clone());
   gbMesh.position.set(-0.14, 0.41, 0.14);
   gbMesh.rotation.z = 0.35;
+  gbMesh.userData = { subPartId: 'gallbladder', organId: 'liver' };
   liverGroup.add(gbMesh);
 
   registerOrganGroup(
@@ -1091,7 +1175,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xf0938c, // Smooth gastric pink-coral (like Image 1)
     0xb5534c
   );
-  stomachGroup.add(new THREE.Mesh(stomachGeo, stomachMat));
+  const stomachMesh = new THREE.Mesh(stomachGeo, stomachMat);
+  stomachMesh.userData = { subPartId: 'greater_curvature', organId: 'stomach' };
+  stomachGroup.add(stomachMesh);
 
   registerOrganGroup(
     'stomach',
@@ -1129,7 +1215,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xfbbf24,
     0xb45309
   );
-  pancreasGroup.add(new THREE.Mesh(pancGeo, pancreasMat));
+  const pancMesh = new THREE.Mesh(pancGeo, pancreasMat);
+  pancMesh.userData = { subPartId: 'pancreas_body', organId: 'pancreas' };
+  pancreasGroup.add(pancMesh);
 
   registerOrganGroup(
     'pancreas',
@@ -1175,7 +1263,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xeb8c86, // Warm rosy intestinal pink (matching Image 1)
     0xa64944
   );
-  smallIntGroup.add(new THREE.Mesh(smallIntGeo, smallIntMat));
+  const smallIntMesh = new THREE.Mesh(smallIntGeo, smallIntMat);
+  smallIntMesh.userData = { subPartId: 'mesenteric_coils', organId: 'small_intestine' };
+  smallIntGroup.add(smallIntMesh);
 
   registerOrganGroup(
     'small_intestine',
@@ -1226,7 +1316,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xe5857b, // Haustrated colon coral-pink (like Image 1)
     0x993d35
   );
-  largeIntGroup.add(new THREE.Mesh(colonGeo, largeIntMat));
+  const colonMesh = new THREE.Mesh(colonGeo, largeIntMat);
+  colonMesh.userData = { subPartId: 'transverse_colon', organId: 'large_intestine' };
+  largeIntGroup.add(colonMesh);
 
   registerOrganGroup(
     'large_intestine',
@@ -1278,6 +1370,10 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const kMesh = new THREE.Mesh(kGeo, kidneyMat.clone());
     kMesh.position.set(side * 0.17, yOffset, -0.06);
     kMesh.rotation.z = side * -0.14;
+    kMesh.userData = {
+      subPartId: side === -1 ? 'right_kidney' : 'left_kidney',
+      organId: 'kidneys',
+    };
     kidneysGroup.add(kMesh);
 
     // Suprarenal (Adrenal) Gland cap atop each kidney
@@ -1287,6 +1383,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const adrenal = new THREE.Mesh(adrenalGeo, kidneyMat.clone());
     adrenal.position.set(side * 0.155, yOffset + 0.13, -0.06);
     adrenal.rotation.z = side * 0.25;
+    adrenal.userData = { subPartId: 'renal_hilum', organId: 'kidneys' };
     kidneysGroup.add(adrenal);
 
     // Ureter descending from renal pelvis to urinary bladder
@@ -1303,7 +1400,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       0xfef08a,
       0xca8a04
     );
-    kidneysGroup.add(new THREE.Mesh(ureterGeo, kidneyMat.clone()));
+    const ureterMesh = new THREE.Mesh(ureterGeo, kidneyMat.clone());
+    ureterMesh.userData = { subPartId: 'ureter', organId: 'kidneys' };
+    kidneysGroup.add(ureterMesh);
   });
 
   // Urinary Bladder at base of pelvis
@@ -1312,6 +1411,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   applyOrganicVertexShading(bladderGeo, 0xd97757, 0x8c3b24);
   const bladderMesh = new THREE.Mesh(bladderGeo, kidneyMat.clone());
   bladderMesh.position.set(0, -0.45, 0.07);
+  bladderMesh.userData = { subPartId: 'urinary_bladder', organId: 'kidneys' };
   kidneysGroup.add(bladderMesh);
 
   registerOrganGroup(
@@ -1324,6 +1424,174 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     organRecords
   );
   urinaryGroup.add(kidneysGroup);
+
+  // =========================================================================
+  // 10. ENDOCRINE SYSTEM: THYROID GLAND & PARATHYROIDS (Mesh_Thyroid)
+  // =========================================================================
+  const endocrineGroup = systemGroups.get('endocrine')!;
+  const thyroidGroup = new THREE.Group();
+  const thyroidMat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.38,
+    metalness: 0.08,
+  });
+
+  // Right & Left Lateral Lobes flanking trachea
+  [-1, 1].forEach((side) => {
+    const lobeGeo = new THREE.SphereGeometry(0.048, 24, 20);
+    lobeGeo.scale(0.85, 1.45, 0.65);
+    applyOrganicVertexShading(lobeGeo, 0x9333ea, 0x581c87);
+    const lobeMesh = new THREE.Mesh(lobeGeo, thyroidMat.clone());
+    lobeMesh.position.set(side * 0.038, 1.46, 0.165);
+    lobeMesh.userData = {
+      subPartId: side === 1 ? 'left_thyroid_lobe' : 'right_thyroid_lobe',
+      organId: 'thyroid',
+    };
+    thyroidGroup.add(lobeMesh);
+  });
+
+  // Central Thyroid Isthmus uniting lobes
+  const isthmusGeo = new THREE.CylinderGeometry(0.024, 0.026, 0.042, 16);
+  isthmusGeo.scale(1.2, 0.6, 0.5);
+  applyOrganicVertexShading(isthmusGeo, 0xa855f7, 0x6b21a8);
+  const isthmusMesh = new THREE.Mesh(isthmusGeo, thyroidMat.clone());
+  isthmusMesh.rotation.z = Math.PI / 2;
+  isthmusMesh.position.set(0, 1.43, 0.178);
+  isthmusMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
+  thyroidGroup.add(isthmusMesh);
+
+  registerOrganGroup(
+    'thyroid',
+    'Mesh_Thyroid',
+    'endocrine',
+    thyroidGroup,
+    new THREE.Vector3(0, 1.45, 0.17),
+    0.42,
+    organRecords
+  );
+  endocrineGroup.add(thyroidGroup);
+
+  // =========================================================================
+  // 11. LYMPHATIC SYSTEM: NODAL CHAINS & THORACIC DUCT (Mesh_LymphNodes)
+  // =========================================================================
+  const lymphaticGroup = systemGroups.get('lymphatic')!;
+  const lymphNodesGroup = new THREE.Group();
+  const lymphMat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.35,
+    metalness: 0.08,
+  });
+
+  // Cervical, Axillary, and Inguinal Node Clusters
+  const nodeClusters = [
+    { side: -1, x: -0.09, y: 1.48, z: 0.08, sub: 'cervical_nodes' },
+    { side: 1, x: 0.09, y: 1.48, z: 0.08, sub: 'cervical_nodes' },
+    { side: -1, x: -0.28, y: 1.08, z: 0.02, sub: 'axillary_nodes' },
+    { side: 1, x: 0.28, y: 1.08, z: 0.02, sub: 'axillary_nodes' },
+    { side: -1, x: -0.16, y: -0.48, z: 0.14, sub: 'inguinal_nodes' },
+    { side: 1, x: 0.16, y: -0.48, z: 0.14, sub: 'inguinal_nodes' },
+  ];
+
+  nodeClusters.forEach((nc) => {
+    const nodeClusterGeo = new THREE.SphereGeometry(0.022, 14, 12);
+    applyOrganicVertexShading(nodeClusterGeo, 0x10b981, 0x064e3b);
+    const nodeMesh = new THREE.Mesh(nodeClusterGeo, lymphMat.clone());
+    nodeMesh.position.set(nc.x, nc.y, nc.z);
+    nodeMesh.userData = { subPartId: nc.sub, organId: 'lymph_nodes' };
+    lymphNodesGroup.add(nodeMesh);
+  });
+
+  // Thoracic Lymphatic Duct
+  const thoracicDuctCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.015, -0.25, -0.02),
+    new THREE.Vector3(0.012, 0.45, -0.03),
+    new THREE.Vector3(0.008, 1.15, -0.04),
+    new THREE.Vector3(-0.045, 1.38, 0.02),
+  ]);
+  const ductGeo = createVariableTubeGeometry(
+    thoracicDuctCurve,
+    22,
+    8,
+    () => 0.006,
+    0x34d399,
+    0x059669
+  );
+  const ductMesh = new THREE.Mesh(ductGeo, lymphMat.clone());
+  ductMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+  lymphNodesGroup.add(ductMesh);
+
+  registerOrganGroup(
+    'lymph_nodes',
+    'Mesh_LymphNodes',
+    'lymphatic',
+    lymphNodesGroup,
+    new THREE.Vector3(0, 0.72, 0.05),
+    1.15,
+    organRecords
+  );
+  lymphaticGroup.add(lymphNodesGroup);
+
+  // =========================================================================
+  // 12. REPRODUCTIVE SYSTEM (Mesh_Reproductive)
+  // =========================================================================
+  const reproductiveGroup = systemGroups.get('reproductive')!;
+  const repGroup = new THREE.Group();
+  const repMat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.36,
+    metalness: 0.08,
+  });
+
+  // Bilateral Gonadal Parenchyma (Ovaries / Testes)
+  [-1, 1].forEach((side) => {
+    const gonadGeo = new THREE.SphereGeometry(0.034, 18, 16);
+    gonadGeo.scale(1.15, 0.85, 0.85);
+    applyOrganicVertexShading(gonadGeo, 0xdb2777, 0x831843);
+    const gonadMesh = new THREE.Mesh(gonadGeo, repMat.clone());
+    gonadMesh.position.set(side * 0.12, -0.42, 0.04);
+    gonadMesh.userData = { subPartId: 'gonads', organId: 'reproductive' };
+    repGroup.add(gonadMesh);
+  });
+
+  // Central Reproductive Organ (Uterine/Prostatic central core)
+  const repCoreGeo = new THREE.SphereGeometry(0.058, 20, 18);
+  repCoreGeo.scale(1.0, 1.25, 0.85);
+  applyOrganicVertexShading(repCoreGeo, 0xf472b6, 0x9d174d);
+  const repCoreMesh = new THREE.Mesh(repCoreGeo, repMat.clone());
+  repCoreMesh.position.set(0, -0.46, 0.05);
+  repCoreMesh.userData = { subPartId: 'genital_tract', organId: 'reproductive' };
+  repGroup.add(repCoreMesh);
+
+  // Ductal Network (Fallopian tubes / Vas deferens arches)
+  [-1, 1].forEach((side) => {
+    const ductCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, -0.42, 0.05),
+      new THREE.Vector3(side * 0.07, -0.38, 0.06),
+      new THREE.Vector3(side * 0.12, -0.42, 0.04),
+    ]);
+    const ductArchGeo = createVariableTubeGeometry(
+      ductCurve,
+      14,
+      6,
+      () => 0.006,
+      0xfbcfe8,
+      0xbe185d
+    );
+    const ductArchMesh = new THREE.Mesh(ductArchGeo, repMat.clone());
+    ductArchMesh.userData = { subPartId: 'duct_network', organId: 'reproductive' };
+    repGroup.add(ductArchMesh);
+  });
+
+  registerOrganGroup(
+    'reproductive',
+    'Mesh_Reproductive',
+    'reproductive',
+    repGroup,
+    new THREE.Vector3(0, -0.44, 0.05),
+    0.54,
+    organRecords
+  );
+  reproductiveGroup.add(repGroup);
 
   // Center entire human model vertically around y=0
   rootGroup.position.set(0, -0.58, 0);
@@ -1355,9 +1623,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     rootGroup.traverse((obj) => {
       if ((obj as THREE.Mesh).isMesh) {
         const mesh = obj as THREE.Mesh;
-        if (!mesh.geometry?.userData?.isCachedGlb) {
-          mesh.geometry?.dispose();
-        }
+        mesh.geometry?.dispose();
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((m) => m.dispose());
         } else {

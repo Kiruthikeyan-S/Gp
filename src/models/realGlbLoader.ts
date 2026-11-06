@@ -1179,7 +1179,7 @@ function attachCachedOrganToGraph(
       metalness: cached.metalness,
     });
 
-    const subMesh = new THREE.Mesh(sm.geometry, mat);
+    const subMesh = new THREE.Mesh(sm.geometry.clone(), mat);
     subMesh.name = sm.subPartId
       ? `${record.meshName}_${sm.subPartId}`
       : record.meshName;
@@ -1265,7 +1265,7 @@ function attachPelvisGeometryToGraph(
     roughness: 0.42,
     metalness: 0.06,
   });
-  const pelvisMesh = new THREE.Mesh(pelvisGeo, pelvisMat);
+  const pelvisMesh = new THREE.Mesh(pelvisGeo.clone(), pelvisMat);
   pelvisMesh.name = 'GLB_Pelvis';
   skeletalGroup.add(pelvisMesh);
 }
@@ -1284,7 +1284,7 @@ function attachSkinGeometryToGraph(
   const sharedShellMat = firstShellChild?.material as THREE.MeshStandardMaterial;
 
   const skinMesh = new THREE.Mesh(
-    skinGeo,
+    skinGeo.clone(),
     sharedShellMat ||
       new THREE.MeshStandardMaterial({
         color: 0x1e293b,
