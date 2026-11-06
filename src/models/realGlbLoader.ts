@@ -244,20 +244,37 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
   },
   {
     organId: 'skeleton',
-    title: 'Axial Pelvis & Vertebral Spine (GLB Scan)',
-    sourceCredit: 'NIH 3D / Visible Human Reference (CC-BY)',
+    title: 'Human Skeletal Framework (GLB Reference)',
+    sourceCredit: 'NIH 3D / Sketchfab High-Resolution Reference (CC-BY)',
     sketchfabReferenceUrl:
-      'https://sketchfab.com/3d-models/human-skeleton-anatomy-8a6a2ef11cb9431e8ea7945d944e99ef',
+      'https://sketchfab.com/3d-models/human-skeleton-highresolution-model-657a31ed9704423c8c4e752fb2506a74',
     urls: [
       'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Male/v1.2/VH_M_Pelvis.glb',
-      'https://raw.githubusercontent.com/code4fukui/human_organs/main/glb/First_lumbar_vertebra_NIH3D.glb',
     ],
     primaryColorHex: 0xf1f5f9,
     secondaryColorHex: 0x94a3b8,
     roughness: 0.40,
     metalness: 0.06,
     coordMode: 'vhm',
-    customFocusRadius: 1.15,
+    customFocusRadius: 1.85,
+  },
+  {
+    organId: 'lymph_nodes',
+    title: 'Anatomical Lymphatic Network (GLB Scan)',
+    sourceCredit: 'NIH 3D / HuBMAP Reference (CC-BY)',
+    sketchfabReferenceUrl:
+      'https://sketchfab.com/3d-models/lymphatic-system-600ffebad40342bab13741c631981a8b',
+    urls: [
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Male/v1.2/NIH_M_Lymph_Node.glb',
+    ],
+    primaryColorHex: 0x10b981,
+    secondaryColorHex: 0x065f46,
+    roughness: 0.35,
+    metalness: 0.08,
+    coordMode: 'fit',
+    targetBoxCenter: [0, 0.35, 0.05],
+    targetMaxDim: 0.65,
+    customFocusRadius: 1.25,
   },
 ];
 
@@ -1244,6 +1261,11 @@ function attachCachedOrganToGraph(
     record.meshes[0].userData?.isRealGlbScan === true
   ) {
     return true;
+  }
+
+  // Safety guard: Never wipe out sculpted procedural models if no valid GLB submeshes exist
+  if (!cached.subMeshes || cached.subMeshes.length === 0) {
+    return false;
   }
 
   while (record.group.children.length > 0) {

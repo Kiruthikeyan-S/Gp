@@ -187,37 +187,36 @@ export const HomeScreen: React.FC = () => {
           </Text>
         </View>
 
-        {/* Current Module Banner matching Image 1 */}
+        {/* Interactive 3D Anatomy Hero Banner */}
         <TouchableOpacity
           style={styles.moduleCard}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate('LearnTab')}
+          onPress={() => navigation.navigate('ExplorerTab')}
         >
           <View style={styles.moduleHeaderRow}>
             <View style={styles.moduleTagPill}>
               <View style={styles.moduleTagSquare} />
-              <Text style={styles.moduleTagText}>CURRENT MODULE</Text>
+              <Text style={styles.moduleTagText}>FEATURED 3D EXPLORER</Text>
             </View>
 
-            {/* Circular Progress Gauge */}
             <View style={styles.progressRing}>
-              <Text style={styles.progressRingValue}>68%</Text>
+              <MaterialCommunityIcons name="cube-scan" size={18} color="#0284C7" />
             </View>
           </View>
 
-          <Text style={styles.moduleTitle}>Cardiovascular Pathology</Text>
-          <Text style={styles.moduleSubtitle}>4 of 6 modules completed</Text>
+          <Text style={styles.moduleTitle}>Interactive 3D Human Anatomy</Text>
+          <Text style={styles.moduleSubtitle}>Explore organs, skeletal framework & musculature in 360°</Text>
 
           <View style={styles.moduleFooterRow}>
             <View style={{ flex: 1 }} />
             <View style={styles.resumeModuleBtn}>
-              <Text style={styles.resumeModuleText}>Resume Module</Text>
+              <Text style={styles.resumeModuleText}>Launch 3D Atlas</Text>
               <Ionicons name="arrow-forward" size={14} color="#0284C7" />
             </View>
           </View>
         </TouchableOpacity>
 
-        {/* Quick Tools & Study Navigation */}
+        {/* Quick Tools Navigation */}
         <View style={styles.quickToolsGrid}>
           <TouchableOpacity
             style={styles.quickToolCard}
@@ -225,46 +224,46 @@ export const HomeScreen: React.FC = () => {
             activeOpacity={0.8}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#E0F2FE' }]}>
-              <MaterialCommunityIcons name="human" size={20} color="#0284C7" />
+              <MaterialCommunityIcons name="cube-scan" size={20} color="#0284C7" />
             </View>
-            <Text style={styles.quickToolTitle}>3D Body Layers</Text>
-            <Text style={styles.quickToolSub}>Skeleton, Muscles & Organs</Text>
+            <Text style={styles.quickToolTitle}>3D Solo Atlas</Text>
+            <Text style={styles.quickToolSub}>Organs & High-Res Scans</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickToolCard}
-            onPress={() => navigation.navigate('Flashcards')}
+            onPress={() => navigation.navigate('SystemsTab')}
             activeOpacity={0.8}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#DCFCE7' }]}>
-              <MaterialCommunityIcons name="cards-outline" size={20} color="#16A34A" />
+              <MaterialCommunityIcons name="human-male-height" size={20} color="#16A34A" />
             </View>
-            <Text style={styles.quickToolTitle}>Flashcards</Text>
-            <Text style={styles.quickToolSub}>Active Recall Cards</Text>
+            <Text style={styles.quickToolTitle}>10 Body Systems</Text>
+            <Text style={styles.quickToolSub}>Osteology, Myology & More</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickToolCard}
-            onPress={() => navigation.navigate('Quiz')}
+            onPress={() => navigation.navigate('ChatTab')}
             activeOpacity={0.8}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="school-outline" size={20} color="#D97706" />
+              <MaterialCommunityIcons name="robot-outline" size={20} color="#D97706" />
             </View>
-            <Text style={styles.quickToolTitle}>Practice Quiz</Text>
-            <Text style={styles.quickToolSub}>Test System Knowledge</Text>
+            <Text style={styles.quickToolTitle}>AI Anatomy Tutor</Text>
+            <Text style={styles.quickToolSub}>Educational Inquiries</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickToolCard}
-            onPress={() => navigation.navigate('Dashboard')}
+            onPress={() => navigation.navigate('Credits')}
             activeOpacity={0.8}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#F3E8FF' }]}>
-              <Ionicons name="stats-chart-outline" size={20} color="#9333EA" />
+              <Ionicons name="information-circle-outline" size={20} color="#9333EA" />
             </View>
-            <Text style={styles.quickToolTitle}>Progress & Stats</Text>
-            <Text style={styles.quickToolSub}>Streak & Focus Topics</Text>
+            <Text style={styles.quickToolTitle}>Medical Scans & Models</Text>
+            <Text style={styles.quickToolSub}>NIH 3D & Sketchfab Library</Text>
           </TouchableOpacity>
         </View>
 

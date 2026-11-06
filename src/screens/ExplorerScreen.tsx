@@ -46,7 +46,7 @@ export const ExplorerScreen: React.FC = () => {
     isBookmarked,
   } = useAnatomyStore();
 
-  const [viewMode, setViewMode] = useState<ViewMode3D>('body');
+  const [viewMode, setViewMode] = useState<ViewMode3D>('isolate');
   const [selectedSubPartId, setSelectedSubPartId] = useState<string | null>(
     null
   );
@@ -74,7 +74,7 @@ export const ExplorerScreen: React.FC = () => {
     if (route.params?.targetSystemId) {
       selectSystem(route.params.targetSystemId);
       setSelectedSubPartId(null);
-      setViewMode('body');
+      setViewMode('isolate');
       setZoomLevel(100);
     }
   }, [route.params, selectOrgan, selectSystem]);
@@ -173,59 +173,16 @@ export const ExplorerScreen: React.FC = () => {
                 </Text>
               </TouchableOpacity>
 
-              {/* 2-Mode 3D Switcher: Full Body vs Isolate Organ */}
-              <View style={styles.modeSegmentedControl}>
-                <TouchableOpacity
-                  style={[
-                    styles.modeSegmentBtn,
-                    viewMode === 'body' && styles.modeSegmentBtnActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedSubPartId(null);
-                    setViewMode('body');
-                    setZoomLevel(100);
-                  }}
-                >
-                  <MaterialCommunityIcons
-                    name="human"
-                    size={15}
-                    color={viewMode === 'body' ? '#FFFFFF' : '#64748B'}
-                  />
-                  <Text
-                    style={[
-                      styles.modeSegmentText,
-                      viewMode === 'body' && styles.modeSegmentTextActive,
-                    ]}
-                  >
-                    Full Body
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.modeSegmentBtn,
-                    viewMode === 'isolate' && styles.modeSegmentBtnActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedSubPartId(null);
-                    setViewMode('isolate');
-                    setZoomLevel(100);
-                  }}
-                >
-                  <MaterialCommunityIcons
-                    name="cube-scan"
-                    size={15}
-                    color={viewMode === 'isolate' ? '#FFFFFF' : '#64748B'}
-                  />
-                  <Text
-                    style={[
-                      styles.modeSegmentText,
-                      viewMode === 'isolate' && styles.modeSegmentTextActive,
-                    ]}
-                  >
-                    Solo 3D
-                  </Text>
-                </TouchableOpacity>
+              {/* 3D Solo Anatomy View Indicator */}
+              <View style={styles.topAtlasBadge}>
+                <MaterialCommunityIcons
+                  name="cube-scan"
+                  size={15}
+                  color="#0284C7"
+                />
+                <Text style={styles.topAtlasBadgeText}>
+                  Solo 3D Atlas
+                </Text>
               </View>
 
               {/* Hide UI Button */}
@@ -639,25 +596,6 @@ export const ExplorerScreen: React.FC = () => {
 
                 <View style={styles.cardActionRow}>
                   <TouchableOpacity
-                    style={styles.secondaryActionBtn}
-                    onPress={() => {
-                      setViewMode((m) => (m === 'body' ? 'isolate' : 'body'));
-                      setSelectedSubPartId(null);
-                    }}
-                  >
-                    <MaterialCommunityIcons
-                      name={
-                        viewMode === 'body' ? 'cube-scan' : 'human-male-height'
-                      }
-                      size={16}
-                      color="#38BDF8"
-                    />
-                    <Text style={styles.secondaryActionText}>
-                      {viewMode === 'body' ? 'Solo 3D' : 'Full Body'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
                     style={[
                       styles.primaryActionBtn,
                       { backgroundColor: activeOrgan.accentColor },
@@ -908,38 +846,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
-  modeSegmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderRadius: 12,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  modeSegmentBtn: {
+  topAtlasBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 9,
-    gap: 4,
+    backgroundColor: '#F0F9FF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    gap: 6,
   },
-  modeSegmentBtnActive: {
-    backgroundColor: '#0284C7',
-  },
-  modeSegmentText: {
+  topAtlasBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  modeSegmentTextActive: {
-    color: '#FFFFFF',
     fontWeight: '700',
+    color: '#0284C7',
   },
   iconGlassBtn: {
     width: 36,

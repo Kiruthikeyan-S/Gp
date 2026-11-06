@@ -94,20 +94,6 @@ function BottomTabs() {
         }}
       />
       <Tab.Screen
-        name="LearnTab"
-        component={LearningScreen}
-        options={{
-          tabBarLabel: 'Learn',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'book' : 'book-outline'}
-              size={21}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tab.Screen
         name="ChatTab"
         component={ChatbotScreen}
         options={{

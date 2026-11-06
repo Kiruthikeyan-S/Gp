@@ -666,13 +666,13 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'Mesh_Skeleton',
     'skeletal',
     skeletalGroup,
-    new THREE.Vector3(0, 0.85, 0.0),
-    1.45,
+    new THREE.Vector3(0, 0.05, 0.0),
+    1.85,
     organRecords
   );
 
   // =========================================================================
-  // 3. ANATOMICALLY SCULPTED MUSCULAR SYSTEM
+  // 3. ANATOMICALLY SCULPTED MUSCULAR SYSTEM (Écorché Anatomical Musculature)
   // =========================================================================
   const muscularGroup = systemGroups.get('muscular')!;
   const muscleMat = new THREE.MeshStandardMaterial({
@@ -682,25 +682,51 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     side: THREE.DoubleSide,
   });
 
-  // 1. PECTORALIS MAJOR (Thick, volumetric fan-shaped chest muscle bellies hugging thorax)
+  // 1. Continuous Contoured Muscular Trunk & Abdominal Wall (Unified Anatomical Core)
+  const coreTorsoGeo = new THREE.CylinderGeometry(0.32, 0.26, 1.05, 32, 40);
+  coreTorsoGeo.scale(1.15, 1.0, 0.68);
+  const ctPos = coreTorsoGeo.attributes.position;
+  for (let i = 0; i < ctPos.count; i++) {
+    const x = ctPos.getX(i);
+    const y = ctPos.getY(i);
+    let z = ctPos.getZ(i);
+
+    // Sculpt waist narrowing, thoracic rib expansion, and abdominal wall curvature
+    const waistIndent = Math.exp(-Math.pow(y + 0.15, 2) * 20) * 0.04;
+    const chestExpansion = Math.exp(-Math.pow(y - 0.28, 2) * 12) * 0.05;
+    if (z > 0) {
+      z += chestExpansion - waistIndent;
+      // Linea Alba depression down central anterior midline
+      const linea = Math.exp(-Math.pow(x * 28, 2)) * 0.015;
+      z -= linea;
+    } else {
+      // Vertebral spinal groove down posterior back
+      const spineGroove = Math.exp(-Math.pow(x * 24, 2)) * 0.018;
+      z += spineGroove;
+    }
+    ctPos.setXYZ(i, x * (1 - waistIndent), y, z);
+  }
+  coreTorsoGeo.computeVertexNormals();
+  applyOrganicVertexShading(coreTorsoGeo, 0x991b1b, 0x4c0519);
+  coreTorsoGeo.computeBoundingBox();
+  coreTorsoGeo.computeBoundingSphere();
+
+  const coreTorsoMesh = new THREE.Mesh(coreTorsoGeo, muscleMat.clone());
+  coreTorsoMesh.position.set(0, 0.65, 0.02);
+  coreTorsoMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
+  muscularGroup.add(coreTorsoMesh);
+
+  // 2. PECTORALIS MAJOR (Broad fan-shaped chest muscle bellies with clavicular & sternal heads)
   [-1, 1].forEach((side) => {
-    const pecGeo = new THREE.SphereGeometry(0.18, 22, 18);
-    pecGeo.scale(1.45, 0.88, 0.62);
+    const pecGeo = new THREE.CylinderGeometry(0.04, 0.22, 0.38, 20, 16);
+    pecGeo.scale(1.35, 1, 0.42);
     const pPos = pecGeo.attributes.position;
     for (let i = 0; i < pPos.count; i++) {
       let x = pPos.getX(i);
       let y = pPos.getY(i);
       let z = pPos.getZ(i);
-
-      if (z < 0) {
-        z *= 0.32;
-      } else {
-        z *= 1.15;
-      }
-      if (side * x > 0.12) {
-        y *= 0.75;
-        z *= 0.65;
-      }
+      if (z > 0) z *= 1.25;
+      if (side * x > 0.14) y *= 0.72;
       pPos.setXYZ(i, x, y, z);
     }
     pecGeo.computeVertexNormals();
@@ -709,232 +735,194 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     pecGeo.computeBoundingSphere();
 
     const pecMesh = new THREE.Mesh(pecGeo, muscleMat.clone());
-    pecMesh.position.set(side * 0.19, 1.10, 0.19);
-    pecMesh.rotation.z = side * -0.16;
+    pecMesh.position.set(side * 0.17, 1.05, 0.18);
+    pecMesh.rotation.z = side * -0.28;
     pecMesh.rotation.y = side * 0.18;
     pecMesh.userData = { subPartId: 'pectoralis', organId: 'muscles' };
     muscularGroup.add(pecMesh);
   });
 
-  // 2. RECTUS ABDOMINIS & EXTERNAL OBLIQUES (Segmented 3D six-pack + contoured lateral flank walls)
-  const absGeo = new THREE.CylinderGeometry(0.19, 0.22, 0.72, 24, 32);
-  absGeo.scale(1.0, 1, 0.65);
-  const aPos = absGeo.attributes.position;
-  for (let i = 0; i < aPos.count; i++) {
-    const x = aPos.getX(i);
-    const y = aPos.getY(i);
-    let z = aPos.getZ(i);
+  // 3. RECTUS ABDOMINIS SEGMENTS (4 Inscriptions / 8-Pack anatomical muscular tiles)
+  for (let r = 0; r < 4; r++) {
+    [-1, 1].forEach((side) => {
+      const tileGeo = new THREE.BoxGeometry(0.088, 0.095, 0.055, 6, 6, 6);
+      applyOrganicVertexShading(tileGeo, 0xa82020, 0x600a12);
+      tileGeo.computeBoundingBox();
+      tileGeo.computeBoundingSphere();
 
-    if (z > 0) {
-      const lineaAlba = Math.exp(-Math.pow(x * 32, 2)) * 0.024;
-      const t1 = Math.exp(-Math.pow(y - 0.22, 2) * 450);
-      const t2 = Math.exp(-Math.pow(y - 0.06, 2) * 450);
-      const t3 = Math.exp(-Math.pow(y - -0.10, 2) * 450);
-      const t4 = Math.exp(-Math.pow(y - -0.24, 2) * 450);
-      const tendinousGroove = (t1 + t2 + t3 + t4) * 0.018;
-      const bellyBulge = Math.cos(x * 9) * (1 - tendinousGroove * 18) * 0.016;
-      z += bellyBulge - lineaAlba - tendinousGroove;
-    } else {
-      z *= 0.42;
-    }
-    aPos.setXYZ(i, x, y, z);
+      const tileMesh = new THREE.Mesh(tileGeo, muscleMat.clone());
+      tileMesh.position.set(side * 0.056, 0.78 - r * 0.125, 0.175);
+      tileMesh.rotation.y = side * -0.08;
+      tileMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
+      muscularGroup.add(tileMesh);
+    });
   }
-  absGeo.computeVertexNormals();
-  applyOrganicVertexShading(absGeo, 0x991b1b, 0x4c0519);
-  absGeo.computeBoundingBox();
-  absGeo.computeBoundingSphere();
 
-  const absMesh = new THREE.Mesh(absGeo, muscleMat.clone());
-  absMesh.position.set(0, 0.46, 0.16);
-  absMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
-  muscularGroup.add(absMesh);
-
+  // 4. EXTERNAL OBLIQUES & SERRATUS ANTERIOR (Lateral flank digitations)
   [-1, 1].forEach((side) => {
-    const obGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.58, 16, 20);
-    obGeo.scale(0.85, 1, 0.6);
-    applyOrganicVertexShading(obGeo, 0x881337, 0x4c0519);
-    obGeo.computeBoundingBox();
-    obGeo.computeBoundingSphere();
+    for (let s = 0; s < 4; s++) {
+      const serrGeo = new THREE.CylinderGeometry(0.016, 0.024, 0.18, 10);
+      serrGeo.scale(1, 1, 0.65);
+      applyOrganicVertexShading(serrGeo, 0x881337, 0x4c0519);
+      serrGeo.computeBoundingBox();
+      serrGeo.computeBoundingSphere();
 
-    const obMesh = new THREE.Mesh(obGeo, muscleMat.clone());
-    obMesh.position.set(side * 0.25, 0.48, 0.08);
-    obMesh.rotation.z = side * 0.12;
-    obMesh.rotation.y = side * 0.28;
-    obMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
-    muscularGroup.add(obMesh);
+      const serrMesh = new THREE.Mesh(serrGeo, muscleMat.clone());
+      serrMesh.position.set(side * 0.26, 0.88 - s * 0.10, 0.11);
+      serrMesh.rotation.z = side * -0.45;
+      serrMesh.rotation.y = side * 0.35;
+      serrMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
+      muscularGroup.add(serrMesh);
+    }
   });
 
-  // 3. DELTOIDS (Volumetric 3D shoulder caps with anterior, middle, and posterior rounded bellies)
+  // 5. DELTOIDS (3-Headed Volumetric Shoulder Caps wrapping humerus)
   [-1, 1].forEach((side) => {
-    const deltGeo = new THREE.SphereGeometry(0.15, 22, 20);
-    deltGeo.scale(0.88, 1.45, 0.95);
-    const dPos = deltGeo.attributes.position;
-    for (let i = 0; i < dPos.count; i++) {
-      let x = dPos.getX(i);
-      const y = dPos.getY(i);
-      const z = dPos.getZ(i);
-      if (side * x < 0) x *= 0.65;
-      dPos.setXYZ(i, x, y, z);
-    }
-    deltGeo.computeVertexNormals();
+    const deltGeo = new THREE.SphereGeometry(0.14, 20, 18);
+    deltGeo.scale(0.85, 1.45, 0.95);
     applyOrganicVertexShading(deltGeo, 0x991b1b, 0x58081f);
     deltGeo.computeBoundingBox();
     deltGeo.computeBoundingSphere();
 
     const deltMesh = new THREE.Mesh(deltGeo, muscleMat.clone());
-    deltMesh.position.set(side * 0.48, 1.18, 0.04);
-    deltMesh.rotation.z = side * -0.18;
+    deltMesh.position.set(side * 0.46, 1.16, 0.03);
+    deltMesh.rotation.z = side * -0.22;
     deltMesh.userData = { subPartId: 'deltoids', organId: 'muscles' };
     muscularGroup.add(deltMesh);
   });
 
-  // 4. TRAPEZIUS & STERNOCLEIDOMASTOID (Neck & Upper Back Muscles)
+  // 6. TRAPEZIUS & STERNOCLEIDOMASTOID (Neck & Upper Back Musculature)
   [-1, 1].forEach((side) => {
-    const trapGeo = new THREE.CylinderGeometry(0.04, 0.18, 0.36, 14);
+    // SCM
+    const scmGeo = new THREE.CylinderGeometry(0.022, 0.028, 0.34, 12);
+    applyOrganicVertexShading(scmGeo, 0x991b1b, 0x5c0911);
+    scmGeo.computeBoundingBox();
+    scmGeo.computeBoundingSphere();
+
+    const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
+    scmMesh.position.set(side * 0.09, 1.40, 0.07);
+    scmMesh.rotation.z = side * 0.26;
+    scmMesh.rotation.x = -0.16;
+    scmMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
+    muscularGroup.add(scmMesh);
+
+    // Trapezius mantle
+    const trapGeo = new THREE.CylinderGeometry(0.06, 0.22, 0.44, 14);
     trapGeo.scale(1.2, 1, 0.45);
     applyOrganicVertexShading(trapGeo, 0x881337, 0x4c0519);
     trapGeo.computeBoundingBox();
     trapGeo.computeBoundingSphere();
 
     const trapMesh = new THREE.Mesh(trapGeo, muscleMat.clone());
-    trapMesh.position.set(side * 0.18, 1.38, -0.07);
-    trapMesh.rotation.z = side * -0.32;
+    trapMesh.position.set(side * 0.16, 1.30, -0.09);
+    trapMesh.rotation.z = side * -0.28;
     trapMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
     muscularGroup.add(trapMesh);
-
-    const scmGeo = new THREE.CylinderGeometry(0.022, 0.026, 0.32, 12);
-    scmGeo.scale(1.1, 1, 0.8);
-    applyOrganicVertexShading(scmGeo, 0x991b1b, 0x5c0911);
-    scmGeo.computeBoundingBox();
-    scmGeo.computeBoundingSphere();
-
-    const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
-    scmMesh.position.set(side * 0.08, 1.44, 0.08);
-    scmMesh.rotation.z = side * 0.22;
-    scmMesh.rotation.x = -0.18;
-    scmMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
-    muscularGroup.add(scmMesh);
   });
 
-  // 5. UPPER LIMB MUSCULATURE: BICEPS BRACHII, TRICEPS & FOREARMS
+  // 7. UPPER LIMB MUSCULATURE: BICEPS BRACHII, TRICEPS & FOREARMS (Contoured Sleeves)
   [-1, 1].forEach((side) => {
     // Biceps Brachii (Anterior arm fusiform flexor)
-    const bicepsGeo = new THREE.SphereGeometry(0.082, 18, 16);
-    bicepsGeo.scale(0.85, 2.2, 0.85);
+    const bicepsGeo = new THREE.CylinderGeometry(0.065, 0.052, 0.38, 16);
+    bicepsGeo.scale(1.15, 1, 0.85);
     applyOrganicVertexShading(bicepsGeo, 0x991b1b, 0x58081f);
     bicepsGeo.computeBoundingBox();
     bicepsGeo.computeBoundingSphere();
 
     const bicepsMesh = new THREE.Mesh(bicepsGeo, muscleMat.clone());
-    bicepsMesh.position.set(side * 0.54, 0.96, 0.04);
-    bicepsMesh.rotation.z = side * -0.12;
+    bicepsMesh.position.set(side * 0.52, 0.88, 0.04);
+    bicepsMesh.rotation.z = side * -0.14;
     bicepsMesh.userData = { subPartId: 'biceps_brachii', organId: 'muscles' };
     muscularGroup.add(bicepsMesh);
 
     // Triceps Brachii (Posterior arm extensor)
-    const tricepsGeo = new THREE.SphereGeometry(0.086, 18, 16);
-    tricepsGeo.scale(0.92, 2.3, 0.82);
+    const tricepsGeo = new THREE.CylinderGeometry(0.072, 0.058, 0.38, 16);
+    tricepsGeo.scale(1.1, 1, 0.95);
     applyOrganicVertexShading(tricepsGeo, 0x881337, 0x4c0519);
     tricepsGeo.computeBoundingBox();
     tricepsGeo.computeBoundingSphere();
 
     const tricepsMesh = new THREE.Mesh(tricepsGeo, muscleMat.clone());
-    tricepsMesh.position.set(side * 0.53, 0.94, -0.04);
-    tricepsMesh.rotation.z = side * -0.12;
+    tricepsMesh.position.set(side * 0.52, 0.88, -0.04);
+    tricepsMesh.rotation.z = side * -0.14;
     tricepsMesh.userData = { subPartId: 'biceps_brachii', organId: 'muscles' };
     muscularGroup.add(tricepsMesh);
 
-    // Forearm Muscular Compartments (Brachioradialis, Flexors & Extensors)
-    const forearmGeo = new THREE.CylinderGeometry(0.042, 0.068, 0.38, 16);
+    // Forearm flexors and extensors tapering to wrist
+    const forearmGeo = new THREE.CylinderGeometry(0.038, 0.062, 0.42, 16);
     forearmGeo.scale(1.1, 1, 0.85);
     applyOrganicVertexShading(forearmGeo, 0x991b1b, 0x5c0911);
     forearmGeo.computeBoundingBox();
     forearmGeo.computeBoundingSphere();
 
     const forearmMesh = new THREE.Mesh(forearmGeo, muscleMat.clone());
-    forearmMesh.position.set(side * 0.64, 0.52, 0.02);
-    forearmMesh.rotation.z = side * -0.25;
+    forearmMesh.position.set(side * 0.62, 0.46, 0.02);
+    forearmMesh.rotation.z = side * -0.22;
     forearmMesh.userData = { subPartId: 'biceps_brachii', organId: 'muscles' };
     muscularGroup.add(forearmMesh);
   });
 
-  // 6. LATISSIMUS DORSI (Broad back muscle plates)
+  // 8. LOWER LIMB MUSCULATURE: GLUTEALS, QUADRICEPS, HAMSTRINGS & CALVES
   [-1, 1].forEach((side) => {
-    const latGeo = new THREE.CylinderGeometry(0.12, 0.22, 0.52, 16);
-    latGeo.scale(1.1, 1, 0.45);
-    applyOrganicVertexShading(latGeo, 0x881337, 0x4c0519);
-    latGeo.computeBoundingBox();
-    latGeo.computeBoundingSphere();
-
-    const latMesh = new THREE.Mesh(latGeo, muscleMat.clone());
-    latMesh.position.set(side * 0.24, 0.78, -0.14);
-    latMesh.rotation.y = side * 0.32;
-    latMesh.rotation.z = side * -0.18;
-    latMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
-    muscularGroup.add(latMesh);
-  });
-
-  // 7. LOWER LIMB MUSCULATURE: GLUTEALS, QUADRICEPS, HAMSTRINGS & CALVES
-  [-1, 1].forEach((side) => {
-    // Gluteus Maximus & Medius (Powerful posterior hip extensor)
-    const gluteGeo = new THREE.SphereGeometry(0.14, 20, 18);
-    gluteGeo.scale(1.0, 1.15, 0.95);
+    // Gluteus Maximus & Medius
+    const gluteGeo = new THREE.SphereGeometry(0.16, 20, 18);
+    gluteGeo.scale(1.0, 1.25, 1.05);
     applyOrganicVertexShading(gluteGeo, 0x991b1b, 0x58081f);
     gluteGeo.computeBoundingBox();
     gluteGeo.computeBoundingSphere();
 
     const gluteMesh = new THREE.Mesh(gluteGeo, muscleMat.clone());
-    gluteMesh.position.set(side * 0.21, -0.46, -0.10);
-    gluteMesh.rotation.y = side * -0.18;
+    gluteMesh.position.set(side * 0.20, -0.38, -0.10);
+    gluteMesh.rotation.y = side * -0.16;
     gluteMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
     muscularGroup.add(gluteMesh);
 
-    // Quadriceps Femoris (Massive 4-headed anterior thigh extensor)
-    const quadGeo = new THREE.CylinderGeometry(0.115, 0.088, 0.56, 18, 16);
-    quadGeo.scale(1.05, 1, 0.92);
+    // Quadriceps Femoris (Massive anterior thigh muscular sleeve)
+    const quadGeo = new THREE.CylinderGeometry(0.125, 0.082, 0.64, 18, 16);
+    quadGeo.scale(1.1, 1, 0.95);
     applyOrganicVertexShading(quadGeo, 0x991b1b, 0x5c0911);
     quadGeo.computeBoundingBox();
     quadGeo.computeBoundingSphere();
 
     const quadMesh = new THREE.Mesh(quadGeo, muscleMat.clone());
-    quadMesh.position.set(side * 0.21, -0.76, 0.04);
-    quadMesh.rotation.z = side * 0.05;
+    quadMesh.position.set(side * 0.21, -0.74, 0.03);
+    quadMesh.rotation.z = side * 0.04;
     quadMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
     muscularGroup.add(quadMesh);
 
     // Hamstrings (Posterior thigh flexor group)
-    const hamGeo = new THREE.CylinderGeometry(0.095, 0.078, 0.54, 16);
-    hamGeo.scale(0.95, 1, 0.85);
+    const hamGeo = new THREE.CylinderGeometry(0.105, 0.075, 0.62, 16);
+    hamGeo.scale(0.95, 1, 0.92);
     applyOrganicVertexShading(hamGeo, 0x881337, 0x4c0519);
     hamGeo.computeBoundingBox();
     hamGeo.computeBoundingSphere();
 
     const hamMesh = new THREE.Mesh(hamGeo, muscleMat.clone());
-    hamMesh.position.set(side * 0.21, -0.76, -0.04);
+    hamMesh.position.set(side * 0.21, -0.74, -0.05);
     hamMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
     muscularGroup.add(hamMesh);
 
-    // Gastrocnemius & Soleus (Prominent two-headed calf muscles)
-    const calfGeo = new THREE.SphereGeometry(0.092, 18, 16);
-    calfGeo.scale(0.95, 2.1, 0.92);
+    // Gastrocnemius (Two-headed calf muscle tapering into Achilles tendon)
+    const calfGeo = new THREE.SphereGeometry(0.098, 18, 16);
+    calfGeo.scale(0.92, 2.3, 0.92);
     applyOrganicVertexShading(calfGeo, 0x991b1b, 0x58081f);
     calfGeo.computeBoundingBox();
     calfGeo.computeBoundingSphere();
 
     const calfMesh = new THREE.Mesh(calfGeo, muscleMat.clone());
-    calfMesh.position.set(side * 0.21, -1.26, -0.04);
+    calfMesh.position.set(side * 0.21, -1.24, -0.04);
     calfMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
     muscularGroup.add(calfMesh);
 
-    // Tibialis Anterior (Anterolateral lower leg dorsiflexor)
-    const tibGeo = new THREE.CylinderGeometry(0.045, 0.032, 0.46, 14);
+    // Tibialis Anterior (Anterior shin dorsiflexor)
+    const tibGeo = new THREE.CylinderGeometry(0.046, 0.030, 0.48, 14);
     tibGeo.scale(0.85, 1, 0.85);
     applyOrganicVertexShading(tibGeo, 0x881337, 0x4c0519);
     tibGeo.computeBoundingBox();
     tibGeo.computeBoundingSphere();
 
     const tibMesh = new THREE.Mesh(tibGeo, muscleMat.clone());
-    tibMesh.position.set(side * 0.21, -1.28, 0.03);
+    tibMesh.position.set(side * 0.21, -1.26, 0.03);
     tibMesh.userData = { subPartId: 'quadriceps', organId: 'muscles' };
     muscularGroup.add(tibMesh);
   });
@@ -944,8 +932,8 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'Mesh_Muscles',
     'muscular',
     muscularGroup,
-    new THREE.Vector3(0, 0.85, 0.0),
-    1.42,
+    new THREE.Vector3(0, 0.05, 0.0),
+    1.85,
     organRecords
   );
 
@@ -1885,47 +1873,94 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   endocrineGroup.add(thyroidGroup);
 
   // =========================================================================
-  // 11. LYMPHATIC SYSTEM: NODAL CHAINS & THORACIC DUCT (Mesh_LymphNodes)
+  // 11. LYMPHATIC SYSTEM: NODAL CHAINS, VESSELS & THORACIC DUCT (Mesh_LymphNodes)
   // =========================================================================
   const lymphaticGroup = systemGroups.get('lymphatic')!;
   const lymphNodesGroup = new THREE.Group();
   const lymphMat = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.35,
-    metalness: 0.08,
+    roughness: 0.32,
+    metalness: 0.12,
   });
 
-  // Cervical, Axillary, and Inguinal Node Clusters
-  const nodeClusters = [
-    { side: -1, x: -0.09, y: 1.48, z: 0.08, sub: 'cervical_nodes' },
-    { side: 1, x: 0.09, y: 1.48, z: 0.08, sub: 'cervical_nodes' },
-    { side: -1, x: -0.28, y: 1.08, z: 0.02, sub: 'axillary_nodes' },
-    { side: 1, x: 0.28, y: 1.08, z: 0.02, sub: 'axillary_nodes' },
-    { side: -1, x: -0.16, y: -0.48, z: 0.14, sub: 'inguinal_nodes' },
-    { side: 1, x: 0.16, y: -0.48, z: 0.14, sub: 'inguinal_nodes' },
+  // 1. Comprehensive Anatomical Node Chains (32 Distinct Encapsulated Nodes)
+  const fullLymphNodes: { x: number; y: number; z: number; r: number; sub: string }[] = [
+    // Cervical Chains (Deep & superficial internal jugular nodes)
+    { x: -0.07, y: 1.48, z: 0.08, r: 0.019, sub: 'cervical_nodes' },
+    { x: 0.07, y: 1.48, z: 0.08, r: 0.019, sub: 'cervical_nodes' },
+    { x: -0.09, y: 1.42, z: 0.07, r: 0.022, sub: 'cervical_nodes' },
+    { x: 0.09, y: 1.42, z: 0.07, r: 0.022, sub: 'cervical_nodes' },
+    { x: -0.11, y: 1.34, z: 0.06, r: 0.020, sub: 'cervical_nodes' },
+    { x: 0.11, y: 1.34, z: 0.06, r: 0.020, sub: 'cervical_nodes' },
+    { x: -0.14, y: 1.26, z: 0.06, r: 0.024, sub: 'cervical_nodes' },
+    { x: 0.14, y: 1.26, z: 0.06, r: 0.024, sub: 'cervical_nodes' },
+
+    // Axillary Clusters (Pectoral, subscapular, central & apical axillary nodes)
+    { x: -0.24, y: 1.15, z: 0.05, r: 0.024, sub: 'axillary_nodes' },
+    { x: 0.24, y: 1.15, z: 0.05, r: 0.024, sub: 'axillary_nodes' },
+    { x: -0.28, y: 1.08, z: 0.03, r: 0.026, sub: 'axillary_nodes' },
+    { x: 0.28, y: 1.08, z: 0.03, r: 0.026, sub: 'axillary_nodes' },
+    { x: -0.32, y: 1.02, z: 0.01, r: 0.022, sub: 'axillary_nodes' },
+    { x: 0.32, y: 1.02, z: 0.01, r: 0.022, sub: 'axillary_nodes' },
+    { x: -0.26, y: 0.98, z: 0.04, r: 0.021, sub: 'axillary_nodes' },
+    { x: 0.26, y: 0.98, z: 0.04, r: 0.021, sub: 'axillary_nodes' },
+
+    // Mediastinal & Para-Aortic Truncal Nodes
+    { x: -0.04, y: 0.88, z: 0.01, r: 0.018, sub: 'thoracic_duct' },
+    { x: 0.04, y: 0.88, z: 0.01, r: 0.018, sub: 'thoracic_duct' },
+    { x: -0.03, y: 0.62, z: -0.01, r: 0.020, sub: 'thoracic_duct' },
+    { x: 0.03, y: 0.62, z: -0.01, r: 0.020, sub: 'thoracic_duct' },
+    { x: -0.02, y: 0.35, z: -0.02, r: 0.022, sub: 'thoracic_duct' },
+    { x: 0.02, y: 0.35, z: -0.02, r: 0.022, sub: 'thoracic_duct' },
+
+    // Inguinal Groups (Horizontal & vertical superficial and deep inguinal nodes)
+    { x: -0.12, y: -0.38, z: 0.12, r: 0.024, sub: 'inguinal_nodes' },
+    { x: 0.12, y: -0.38, z: 0.12, r: 0.024, sub: 'inguinal_nodes' },
+    { x: -0.16, y: -0.46, z: 0.13, r: 0.028, sub: 'inguinal_nodes' },
+    { x: 0.16, y: -0.46, z: 0.13, r: 0.028, sub: 'inguinal_nodes' },
+    { x: -0.20, y: -0.42, z: 0.12, r: 0.022, sub: 'inguinal_nodes' },
+    { x: 0.20, y: -0.42, z: 0.12, r: 0.022, sub: 'inguinal_nodes' },
+    { x: -0.15, y: -0.54, z: 0.14, r: 0.025, sub: 'inguinal_nodes' },
+    { x: 0.15, y: -0.54, z: 0.14, r: 0.025, sub: 'inguinal_nodes' },
   ];
 
-  nodeClusters.forEach((nc) => {
-    const nodeClusterGeo = new THREE.SphereGeometry(0.022, 14, 12);
-    applyOrganicVertexShading(nodeClusterGeo, 0x10b981, 0x064e3b);
-    const nodeMesh = new THREE.Mesh(nodeClusterGeo, lymphMat.clone());
-    nodeMesh.position.set(nc.x, nc.y, nc.z);
-    nodeMesh.userData = { subPartId: nc.sub, organId: 'lymph_nodes' };
+  fullLymphNodes.forEach((nd) => {
+    const nodeGeo = new THREE.SphereGeometry(nd.r, 16, 14);
+    nodeGeo.scale(1.2, 0.9, 0.9);
+    applyOrganicVertexShading(nodeGeo, 0x10b981, 0x064e3b);
+    nodeGeo.computeBoundingBox();
+    nodeGeo.computeBoundingSphere();
+
+    const nodeMesh = new THREE.Mesh(nodeGeo, lymphMat.clone());
+    nodeMesh.position.set(nd.x, nd.y, nd.z);
+    nodeMesh.userData = { subPartId: nd.sub, organId: 'lymph_nodes' };
     lymphNodesGroup.add(nodeMesh);
   });
 
-  // Thoracic Lymphatic Duct
+  // 2. Cisterna Chyli (Dilated lymphatic sac at T12-L2)
+  const cisternaGeo = new THREE.CylinderGeometry(0.016, 0.022, 0.12, 14);
+  applyOrganicVertexShading(cisternaGeo, 0x34d399, 0x059669);
+  cisternaGeo.computeBoundingBox();
+  cisternaGeo.computeBoundingSphere();
+  const cisternaMesh = new THREE.Mesh(cisternaGeo, lymphMat.clone());
+  cisternaMesh.position.set(0.015, 0.08, -0.025);
+  cisternaMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+  lymphNodesGroup.add(cisternaMesh);
+
+  // 3. Main Thoracic Lymphatic Duct (Ascending from cisterna chyli to left subclavian junction)
   const thoracicDuctCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.015, -0.25, -0.02),
-    new THREE.Vector3(0.012, 0.45, -0.03),
-    new THREE.Vector3(0.008, 1.15, -0.04),
-    new THREE.Vector3(-0.045, 1.38, 0.02),
+    new THREE.Vector3(0.015, 0.08, -0.025),
+    new THREE.Vector3(0.018, 0.42, -0.03),
+    new THREE.Vector3(0.012, 0.85, -0.035),
+    new THREE.Vector3(-0.015, 1.18, -0.02),
+    new THREE.Vector3(-0.045, 1.34, 0.02),
+    new THREE.Vector3(-0.08, 1.38, 0.04),
   ]);
   const ductGeo = createVariableTubeGeometry(
     thoracicDuctCurve,
-    22,
+    28,
     8,
-    () => 0.006,
+    () => 0.007,
     0x34d399,
     0x059669
   );
@@ -1933,13 +1968,52 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   ductMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
   lymphNodesGroup.add(ductMesh);
 
+  // 4. Right Lymphatic Duct (Drains upper right quadrant)
+  const rightDuctCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.02, 1.22, 0.02),
+    new THREE.Vector3(0.05, 1.32, 0.03),
+    new THREE.Vector3(0.08, 1.36, 0.04),
+  ]);
+  const rDuctGeo = createVariableTubeGeometry(
+    rightDuctCurve,
+    14,
+    8,
+    () => 0.006,
+    0x34d399,
+    0x059669
+  );
+  const rDuctMesh = new THREE.Mesh(rDuctGeo, lymphMat.clone());
+  rDuctMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+  lymphNodesGroup.add(rDuctMesh);
+
+  // 5. Bilateral Inguinal-to-Cisterna Lymphatic Trunks (Ascending fluid conduits)
+  [-1, 1].forEach((side) => {
+    const ingCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.16, -0.46, 0.13),
+      new THREE.Vector3(side * 0.11, -0.25, 0.08),
+      new THREE.Vector3(side * 0.06, -0.06, 0.02),
+      new THREE.Vector3(0.015, 0.08, -0.025),
+    ]);
+    const ingGeo = createVariableTubeGeometry(
+      ingCurve,
+      18,
+      8,
+      () => 0.005,
+      0x34d399,
+      0x059669
+    );
+    const ingMesh = new THREE.Mesh(ingGeo, lymphMat.clone());
+    ingMesh.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
+    lymphNodesGroup.add(ingMesh);
+  });
+
   registerOrganGroup(
     'lymph_nodes',
     'Mesh_LymphNodes',
     'lymphatic',
     lymphNodesGroup,
-    new THREE.Vector3(0, 0.72, 0.05),
-    1.15,
+    new THREE.Vector3(0, 0.40, 0.05),
+    1.45,
     organRecords
   );
   lymphaticGroup.add(lymphNodesGroup);
