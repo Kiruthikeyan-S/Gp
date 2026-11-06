@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, useIsFocused, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ORGANS, BODY_SYSTEMS } from '../data/anatomyData';
 import { ORGAN_SUB_PARTS, OrganSubPart } from '../data/organSubParts';
@@ -33,6 +33,7 @@ const CAMERA_SEQUENCE: { preset: CameraPreset; label: string }[] = [
 export const ExplorerScreen: React.FC = () => {
   const navigation = useNavigation<ExplorerNavProp>();
   const route = useRoute<ExplorerRouteProp>();
+  const isFocused = useIsFocused();
 
   const {
     selectedOrganId,
@@ -121,6 +122,7 @@ export const ExplorerScreen: React.FC = () => {
           showVascular={showVascular}
           animatePhysiology={animatePhysiology}
           canvasBackgroundColor="#ffebff"
+          isActive={isFocused}
           onSelectOrgan={(organId) => {
             if (organId !== activeOrgan.id || viewMode !== 'isolate') {
               setSelectedSubPartId(null);

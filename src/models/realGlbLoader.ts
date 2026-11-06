@@ -100,7 +100,7 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     roughness: 0.4,
     metalness: 0.04,
     coordMode: 'vhm',
-    customFocusRadius: 0.72,
+    customFocusRadius: 0.92,
   },
   {
     organId: 'stomach',
@@ -636,7 +636,7 @@ function mapNodeNameToSubPart(
   const n = (nodeName || '').toLowerCase();
 
   if (organId === 'brain') {
-    let subPartId: string = 'parietal_lobe';
+    let subPartId: string | null = 'parietal_lobe';
     if (n.includes('cerebellum')) {
       subPartId = 'cerebellum';
     } else if (n.includes('temporal_lobe') || n.includes('temporal')) {
@@ -650,8 +650,13 @@ function mapNodeNameToSubPart(
     } else if (n.includes('pons_medulla') || n.includes('brainstem') || n.includes('stem')) {
       subPartId = 'pons_medulla';
     }
-    // Maintain realistic natural organ tissue color everywhere; individual parts only highlight when clicked!
-    return { subPartId, primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    // Brain subparts share the natural uniform anatomical brain color by default;
+    // only the active clicked lobe dynamically highlights in vibrant color
+    return {
+      subPartId,
+      primaryHex: defaultPrimaryHex,
+      secondaryHex: defaultSecondaryHex,
+    };
   }
 
   if (organId === 'heart') {

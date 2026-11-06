@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, useIsFocused, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ORGANS } from '../data/anatomyData';
 import { ORGAN_SUB_PARTS, getSubPartColor } from '../data/organSubParts';
@@ -125,6 +125,7 @@ const CLINICAL_SPECS: Record<string, OrganClinicalSpecData> = {
 export const OrganDetailsScreen: React.FC = () => {
   const route = useRoute<DetailsRouteProp>();
   const navigation = useNavigation<DetailsNavProp>();
+  const isFocused = useIsFocused();
   const { organId, subPartId: initialSubPartId } = route.params;
 
   const {
@@ -259,7 +260,7 @@ export const OrganDetailsScreen: React.FC = () => {
             <Anatomy3DViewport
               selectedOrganId={organ.id}
               selectedSubPartId={activeSpotlightId}
-              selectedSystemId="all"
+              selectedSystemId={organ.systemId as any}
               cameraPreset={cameraPreset}
               zoomLevel={100}
               viewMode="isolate"
@@ -269,6 +270,7 @@ export const OrganDetailsScreen: React.FC = () => {
               showVascular={false}
               animatePhysiology={true}
               canvasBackgroundColor="#F1F5F9"
+              isActive={isFocused}
               onSelectOrgan={() => {}}
               onSelectSubPart={(subPartId) => {
                 setActiveSpotlightId(subPartId);

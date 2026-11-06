@@ -44,10 +44,21 @@ export const LearningScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Anatomy Lessons</Text>
-          <View style={styles.completedBadge}>
-            <Text style={styles.completedBadgeText}>
-              {completedLessonIds.length}/{LESSONS.length} Complete
-            </Text>
+          <View style={styles.headerRightRow}>
+            <TouchableOpacity
+              style={styles.headerQuizBtn}
+              activeOpacity={0.85}
+              onPress={() => (navigation as any).navigate('Quiz')}
+            >
+              <MaterialCommunityIcons name="school" size={15} color="#0284C7" />
+              <Text style={styles.headerQuizBtnText}>Quiz</Text>
+            </TouchableOpacity>
+
+            <View style={styles.completedBadge}>
+              <Text style={styles.completedBadgeText}>
+                {completedLessonIds.length}/{LESSONS.length} Complete
+              </Text>
+            </View>
           </View>
         </View>
         <Text style={styles.headerSubtitle}>
@@ -95,6 +106,33 @@ export const LearningScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {/* Practice Quiz Banner Card */}
+        <TouchableOpacity
+          style={styles.quizBannerCard}
+          activeOpacity={0.88}
+          onPress={() => (navigation as any).navigate('Quiz')}
+        >
+          <View style={styles.quizBannerLeft}>
+            <View style={styles.quizIconCircle}>
+              <MaterialCommunityIcons
+                name="school-outline"
+                size={22}
+                color="#0284C7"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.quizBannerTitle}>Anatomy Practice Quiz</Text>
+              <Text style={styles.quizBannerSub}>
+                Test your knowledge with clinical MCQs & instant feedback
+              </Text>
+            </View>
+          </View>
+          <View style={styles.quizStartPill}>
+            <Text style={styles.quizStartText}>Start Quiz</Text>
+            <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
+
         {filteredLessons.map((lesson) => {
           const isCompleted = isLessonCompleted(lesson.id);
           const isExpanded = expandedLessonId === lesson.id;
@@ -275,13 +313,34 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     letterSpacing: -0.3,
   },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerQuizBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  headerQuizBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0284C7',
+  },
   completedBadge: {
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
     borderColor: '#A7F3D0',
     borderRadius: 8,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
   },
   completedBadgeText: {
     fontSize: 11,
@@ -326,6 +385,64 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     paddingBottom: 24,
+  },
+  quizBannerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#BAE6FD',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 4,
+  },
+  quizBannerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  quizIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quizBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  quizBannerSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  quizStartPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  quizStartText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   lessonCard: {
     backgroundColor: '#FFFFFF',

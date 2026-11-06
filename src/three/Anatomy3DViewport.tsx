@@ -41,6 +41,7 @@ interface Anatomy3DViewportProps {
   showVascular: boolean;
   animatePhysiology: boolean;
   canvasBackgroundColor?: string;
+  isActive?: boolean;
   onSelectOrgan: (organId: string) => void;
   onSelectSubPart?: (subPartId: string | null) => void;
 }
@@ -130,6 +131,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   showVascular,
   animatePhysiology,
   canvasBackgroundColor,
+  isActive = true,
   onSelectOrgan,
   onSelectSubPart,
 }) => {
@@ -196,6 +198,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     showVascular,
     animatePhysiology,
     zoomLevel,
+    isActive,
     onSelectOrgan,
     onSelectSubPart,
   });
@@ -212,12 +215,14 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     if (mode === 'isolate' && selId && graph) {
       const rec = graph.organRecords.get(selId);
       if (rec) {
-        // World offset includes rootGroup.position.y (-0.58), shifted slightly so organ sits above bottom card
         targetOrbitRef.current.lookX = rec.focusCenter.x;
-        targetOrbitRef.current.lookY =
-          rec.focusCenter.y - 0.58 - rec.focusRadius * 0.06;
+        const isCompact =
+          layoutRef.current.height > 0 && layoutRef.current.height <= 320;
+        targetOrbitRef.current.lookY = isCompact
+          ? rec.focusCenter.y - 0.58
+          : rec.focusCenter.y - 0.58 - rec.focusRadius * 0.06;
         targetOrbitRef.current.lookZ = rec.focusCenter.z;
-        targetOrbitRef.current.radius = (rec.focusRadius * 1.12) / scale;
+        targetOrbitRef.current.radius = (rec.focusRadius * 1.15) / scale;
         return;
       }
     }
@@ -263,12 +268,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         const isTarget = record.organId === activeOrganId;
         record.group.visible = isTarget;
         record.meshes.forEach((mesh) => {
-          let origMat = record.originalMaterials.get(mesh);
+          const origMat = record.originalMaterials.get(mesh);
           const currentMat = mesh.material as THREE.MeshStandardMaterial;
-          if (!origMat && currentMat) {
-            origMat = currentMat.clone();
-            record.originalMaterials.set(mesh, origMat);
-          }
           if (!origMat || !currentMat) return;
           currentMat.color.copy(origMat.color);
           currentMat.opacity = origMat.opacity;
@@ -283,14 +284,12 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           if (isSelectedSubPart && activeSubPartId) {
             const partHex = getSubPartColorHex(activeSubPartId);
             // VIBRANT CLINICAL PART COLOR: Set base & emissive color to the part's distinct hue (pink, yellow, green, etc.)
-            currentMat.vertexColors = false;
             currentMat.color.setHex(partHex);
             currentMat.emissive.setHex(partHex);
             currentMat.emissiveIntensity = 0.65;
             currentMat.opacity = 1.0;
             currentMat.transparent = false;
           } else {
-            currentMat.vertexColors = origMat.vertexColors;
             currentMat.color.copy(origMat.color);
             currentMat.emissive.setHex(0x000000);
             currentMat.emissiveIntensity = 0;
@@ -302,7 +301,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
               currentMat.transparent = origMat.transparent;
             }
           }
-          currentMat.needsUpdate = true;
         });
       });
     } else {
@@ -363,6 +361,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       showVascular,
       animatePhysiology,
       zoomLevel,
+      isActive,
       onSelectOrgan,
       onSelectSubPart,
     };
@@ -780,6 +779,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         const animate = () => {
           if (!isMountedRef.current) return;
           rafIdRef.current = requestAnimationFrame(animate);
+          if (!stateRef.current.isActive) return;
 
           clock += 0.04;
 
@@ -886,6 +886,10 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         cameraRef.current.aspect = width / height;
         cameraRef.current.updateProjectionMatrix();
       }
+      if (rendererRef.current) {
+        rendererRef.current.setSize(width, height, false);
+      }
+      updateCameraFocusForMode();
     }
   };
 
@@ -913,22 +917,23 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     );
   }
 
+  const isLightBg =
+    canvasBackgroundColor &&
+    canvasBackgroundColor !== '#0A0F1D' &&
+    canvasBackgroundColor !== '#0B0F19';
+
   return (
     <View
       style={[
         styles.container,
-        {
-          width: '100%',
-          height: '100%',
-          backgroundColor: canvasBackgroundColor || '#0B0F19',
-        },
+        { backgroundColor: canvasBackgroundColor || '#0B0F19' },
       ]}
       onLayout={handleLayout}
       {...panResponder.panHandlers}
     >
       <GLView
         key={glKey}
-        style={{ width: '100%', height: '100%' }}
+        style={styles.glView}
         onContextCreate={onContextCreate}
       />
 
@@ -936,19 +941,17 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         <View
           style={[
             styles.loadingOverlay,
-            canvasBackgroundColor
-              ? { backgroundColor: canvasBackgroundColor }
-              : null,
+            isLightBg && { backgroundColor: canvasBackgroundColor },
           ]}
         >
-          <ActivityIndicator size="small" color="#0284C7" />
+          <ActivityIndicator size="large" color="#0284C7" />
           <Text
             style={[
               styles.loadingText,
-              canvasBackgroundColor ? { color: '#64748B' } : null,
+              isLightBg && { color: '#64748B' },
             ]}
           >
-            Loading 3D View...
+            Rendering 3D Anatomical Atlas...
           </Text>
         </View>
       )}
@@ -959,11 +962,17 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+    alignSelf: 'stretch',
     backgroundColor: '#0B0F19',
     overflow: 'hidden',
   },
   glView: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+    alignSelf: 'stretch',
   },
   glbStreamingPill: {
     position: 'absolute',

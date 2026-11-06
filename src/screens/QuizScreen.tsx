@@ -8,11 +8,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { theme } from '../theme';
 import { QUIZ_QUESTIONS } from '../data/anatomyData';
 import { useAnatomyStore } from '../state/useAnatomyStore';
 
 export const QuizScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { quizStats, recordQuizScore } = useAnatomyStore();
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -57,10 +59,21 @@ export const QuizScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Anatomy Practice Quiz</Text>
-        <Text style={styles.headerSubtitle}>
-          Test your comprehension of organ functions, locations, and structures.
-        </Text>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="arrow-back" size={20} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>Anatomy Practice Quiz</Text>
+            <Text style={styles.headerSubtitle}>
+              Test your comprehension of organ functions, locations, and structures.
+            </Text>
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -235,6 +248,21 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.cardBorder,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     ...theme.typography.h2,
