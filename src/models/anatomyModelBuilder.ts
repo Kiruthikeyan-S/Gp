@@ -70,6 +70,8 @@ function applyOrganicVertexShading(
 
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
 }
 
 /**
@@ -96,11 +98,18 @@ function createVariableTubeGeometry(
   const radialVec = new THREE.Vector3();
 
   for (let i = 0; i < count; i++) {
-    const u = uvs.getX(i);
-    const v = uvs.getY(i) * Math.PI * 2;
+    const u = uvs ? uvs.getX(i) : i / count;
+    const v = uvs ? uvs.getY(i) * Math.PI * 2 : 0;
     curve.getPointAt(u, centerPt);
 
-    radialVec.set(pos.getX(i), pos.getY(i), pos.getZ(i)).sub(centerPt).normalize();
+    radialVec.set(pos.getX(i), pos.getY(i), pos.getZ(i)).sub(centerPt);
+    const rLen = radialVec.length();
+    if (rLen > 0.00001) {
+      radialVec.multiplyScalar(1 / rLen);
+    } else {
+      radialVec.set(0, 1, 0);
+    }
+
     const r = radiusFn(u, v);
 
     pos.setXYZ(
@@ -122,6 +131,8 @@ function createVariableTubeGeometry(
 
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
   return geometry;
 }
 
@@ -286,90 +297,168 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   // =========================================================================
   const skeletalGroup = systemGroups.get('skeletal')!;
   const boneMat = new THREE.MeshStandardMaterial({
-    color: 0xe6dcc8,
-    roughness: 0.42,
-    metalness: 0.06,
+    color: 0xede4d4,
+    roughness: 0.38,
+    metalness: 0.08,
   });
   const cartilageMat = new THREE.MeshStandardMaterial({
     color: 0xcbd5e1,
-    roughness: 0.35,
+    roughness: 0.32,
     metalness: 0.05,
   });
 
-  // Anatomical Cranium & Mandible (Skull)
-  const skullGeo = new THREE.SphereGeometry(0.18, 28, 24);
-  skullGeo.scale(0.82, 0.95, 1.08);
-  const skullMesh = new THREE.Mesh(skullGeo, boneMat);
-  skullMesh.position.set(0, 1.95, 0.02);
-  skullMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
-  skeletalGroup.add(skullMesh);
+  // 1. ANATOMICALLY SCULPTED CRANIUM & MANDIBLE (Skull)
+  // Neurocranium (Brain Vault)
+  const craniumVaultGeo = new THREE.SphereGeometry(0.19, 28, 24);
+  craniumVaultGeo.scale(0.84, 0.98, 1.06);
+  const craniumMesh = new THREE.Mesh(craniumVaultGeo, boneMat);
+  craniumMesh.position.set(0, 1.96, 0.01);
+  craniumMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
+  skeletalGroup.add(craniumMesh);
 
-  // 22 Articulated Vertebrae (Cervical, Thoracic, Lumbar) + Intervertebral Discs + Spinous Processes
-  for (let i = 0; i < 22; i++) {
-    const t = i / 21;
-    const yPos = 1.56 - i * 0.088;
-    // physiological spinal S-curve (cervical lordosis, thoracic kyphosis, lumbar lordosis)
-    const zCurve = -0.14 + Math.sin(t * Math.PI * 2.2) * 0.035;
-    const radius = 0.048 + t * 0.028;
+  // Facial Skeleton & Brow Ridge (Frontal Bone / Orbit Rim)
+  const browGeo = new THREE.BoxGeometry(0.24, 0.045, 0.06);
+  const browMesh = new THREE.Mesh(browGeo, boneMat);
+  browMesh.position.set(0, 1.94, 0.165);
+  browMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
+  skeletalGroup.add(browMesh);
 
-    const vBodyGeo = new THREE.CylinderGeometry(radius * 0.95, radius, 0.054, 14);
+  // Bilateral Eye Orbits (Deep orbital sockets)
+  [-1, 1].forEach((side) => {
+    const orbitRingGeo = new THREE.TorusGeometry(0.038, 0.014, 12, 20);
+    const orbitMesh = new THREE.Mesh(orbitRingGeo, boneMat);
+    orbitMesh.position.set(side * 0.064, 1.91, 0.168);
+    orbitMesh.rotation.y = side * -0.12;
+    orbitMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
+    skeletalGroup.add(orbitMesh);
+
+    // Zygomatic Arch (Cheekbone)
+    const zygoCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.075, 1.88, 0.16),
+      new THREE.Vector3(side * 0.145, 1.87, 0.08),
+      new THREE.Vector3(side * 0.13, 1.90, -0.04),
+    ]);
+    const zygoGeo = new THREE.TubeGeometry(zygoCurve, 12, 0.012, 8, false);
+    const zygoMesh = new THREE.Mesh(zygoGeo, boneMat);
+    zygoMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
+    skeletalGroup.add(zygoMesh);
+  });
+
+  // Nasal Aperture & Pyriform Bone
+  const nasalGeo = new THREE.ConeGeometry(0.024, 0.075, 8);
+  nasalGeo.scale(1, 1, 0.55);
+  const nasalMesh = new THREE.Mesh(nasalGeo, boneMat);
+  nasalMesh.position.set(0, 1.88, 0.185);
+  nasalMesh.rotation.x = 0.22;
+  nasalMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
+  skeletalGroup.add(nasalMesh);
+
+  // Maxilla & Upper Dental Arcade
+  const maxillaGeo = new THREE.CylinderGeometry(0.062, 0.078, 0.052, 12);
+  maxillaGeo.scale(1.1, 1, 0.75);
+  const maxillaMesh = new THREE.Mesh(maxillaGeo, boneMat);
+  maxillaMesh.position.set(0, 1.81, 0.14);
+  maxillaMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
+  skeletalGroup.add(maxillaMesh);
+
+  // Sculpted Mandible (Lower Jaw with chin and bilateral ascending rami)
+  const mandibleBodyCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.088, 1.78, 0.03),
+    new THREE.Vector3(-0.068, 1.74, 0.12),
+    new THREE.Vector3(0, 1.725, 0.165),
+    new THREE.Vector3(0.068, 1.74, 0.12),
+    new THREE.Vector3(0.088, 1.78, 0.03),
+  ]);
+  const mandibleBodyGeo = new THREE.TubeGeometry(mandibleBodyCurve, 18, 0.018, 8, false);
+  const mandibleBody = new THREE.Mesh(mandibleBodyGeo, boneMat);
+  mandibleBody.userData = { subPartId: 'cranium', organId: 'skeleton' };
+  skeletalGroup.add(mandibleBody);
+
+  [-1, 1].forEach((side) => {
+    const ramusCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.088, 1.78, 0.03),
+      new THREE.Vector3(side * 0.092, 1.84, 0.02),
+      new THREE.Vector3(side * 0.085, 1.88, 0.01),
+    ]);
+    const ramusGeo = new THREE.TubeGeometry(ramusCurve, 10, 0.015, 8, false);
+    const ramusMesh = new THREE.Mesh(ramusGeo, boneMat);
+    ramusMesh.userData = { subPartId: 'cranium', organId: 'skeleton' };
+    skeletalGroup.add(ramusMesh);
+  });
+
+  // 2. ARTICULATED VERTEBRAL COLUMN (24 Distinct Cervical, Thoracic, Lumbar Segments)
+  for (let i = 0; i < 24; i++) {
+    const t = i / 23;
+    const yPos = 1.64 - i * 0.086;
+    const zCurve = -0.13 + Math.sin(t * Math.PI * 2.1) * 0.042;
+    const radius = 0.044 + t * 0.034;
+
+    const vBodyGeo = new THREE.CylinderGeometry(radius * 0.94, radius, 0.052, 16);
+    vBodyGeo.scale(1.15, 1, 0.92);
     const vBody = new THREE.Mesh(vBodyGeo, boneMat);
     vBody.position.set(0, yPos, zCurve);
     vBody.userData = { subPartId: 'vertebral_column', organId: 'skeleton' };
     skeletalGroup.add(vBody);
 
-    // Intervertebral fibrocartilage disc
-    const discGeo = new THREE.CylinderGeometry(radius * 0.96, radius * 0.96, 0.022, 14);
+    const discGeo = new THREE.CylinderGeometry(radius * 0.96, radius * 0.96, 0.022, 16);
+    discGeo.scale(1.12, 1, 0.9);
     const disc = new THREE.Mesh(discGeo, cartilageMat);
-    disc.position.set(0, yPos - 0.038, zCurve);
+    disc.position.set(0, yPos - 0.037, zCurve);
     disc.userData = { subPartId: 'vertebral_column', organId: 'skeleton' };
     skeletalGroup.add(disc);
 
-    // Posterior Spinous Process & Transverse Processes
-    const spinousGeo = new THREE.BoxGeometry(0.022, 0.038, 0.075);
+    const spinousGeo = new THREE.BoxGeometry(0.02, 0.036, 0.082);
     const spinous = new THREE.Mesh(spinousGeo, boneMat);
-    spinous.position.set(0, yPos - 0.01, zCurve - radius - 0.025);
-    spinous.rotation.x = 0.35;
+    spinous.position.set(0, yPos - 0.014, zCurve - radius - 0.028);
+    spinous.rotation.x = 0.38;
     spinous.userData = { subPartId: 'vertebral_column', organId: 'skeleton' };
     skeletalGroup.add(spinous);
 
-    const transGeo = new THREE.BoxGeometry(radius * 2.7, 0.022, 0.024);
+    const transGeo = new THREE.BoxGeometry(radius * 2.8, 0.024, 0.026);
     const trans = new THREE.Mesh(transGeo, boneMat);
-    trans.position.set(0, yPos, zCurve - radius * 0.55);
+    trans.position.set(0, yPos, zCurve - radius * 0.52);
     trans.userData = { subPartId: 'vertebral_column', organId: 'skeleton' };
     skeletalGroup.add(trans);
   }
 
-  // Sternum (Manubrium, Body, Xiphoid Process)
-  const manubriumGeo = new THREE.CylinderGeometry(0.068, 0.048, 0.14, 6);
-  manubriumGeo.scale(1, 1, 0.32);
+  // 3. STERNUM (Manubrium, Sternal Body, Xiphoid Process)
+  const manubriumGeo = new THREE.CylinderGeometry(0.072, 0.052, 0.15, 8);
+  manubriumGeo.scale(1, 1, 0.35);
   const manubrium = new THREE.Mesh(manubriumGeo, boneMat);
-  manubrium.position.set(0, 1.18, 0.23);
+  manubrium.position.set(0, 1.22, 0.23);
   manubrium.userData = { subPartId: 'ribcage', organId: 'skeleton' };
   skeletalGroup.add(manubrium);
 
-  const sternumBodyGeo = new THREE.BoxGeometry(0.065, 0.34, 0.024);
+  const sternumBodyGeo = new THREE.BoxGeometry(0.068, 0.36, 0.026);
   const sternumBody = new THREE.Mesh(sternumBodyGeo, boneMat);
-  sternumBody.position.set(0, 0.94, 0.245);
+  sternumBody.position.set(0, 0.96, 0.245);
   sternumBody.userData = { subPartId: 'ribcage', organId: 'skeleton' };
   skeletalGroup.add(sternumBody);
 
-  // 10 Pairs of Anatomically Curved 3D Ribs wrapping the thorax
-  for (let r = 0; r < 10; r++) {
-    const yStart = 1.21 - r * 0.068;
-    const widthFactor = 0.29 + Math.sin((r / 9) * Math.PI * 0.85) * 0.14;
-    const depthFront = 0.24 - (r > 6 ? (r - 6) * 0.035 : 0);
+  const xiphoidGeo = new THREE.ConeGeometry(0.028, 0.075, 6);
+  xiphoidGeo.scale(1, 1, 0.4);
+  const xiphoid = new THREE.Mesh(xiphoidGeo, cartilageMat);
+  xiphoid.position.set(0, 0.74, 0.245);
+  xiphoid.rotation.x = Math.PI;
+  xiphoid.userData = { subPartId: 'ribcage', organId: 'skeleton' };
+  skeletalGroup.add(xiphoid);
+
+  // 12 Pairs of 3D Articulated Ribs
+  for (let r = 0; r < 12; r++) {
+    const yStart = 1.25 - r * 0.062;
+    const widthFactor = 0.28 + Math.sin((r / 11) * Math.PI * 0.88) * 0.16;
+    const depthFront = 0.25 - (r > 7 ? (r - 7) * 0.038 : 0);
 
     [-1, 1].forEach((side) => {
       const ribCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(side * 0.04, yStart, -0.14),
-        new THREE.Vector3(side * (widthFactor * 0.78), yStart - 0.02, -0.11),
-        new THREE.Vector3(side * widthFactor, yStart - 0.055, 0.04),
-        new THREE.Vector3(side * (widthFactor * 0.65), yStart - 0.085, depthFront * 0.85),
-        new THREE.Vector3(side * (r < 7 ? 0.04 : widthFactor * 0.35), yStart - 0.09, depthFront),
+        new THREE.Vector3(side * 0.045, yStart, -0.13),
+        new THREE.Vector3(side * (widthFactor * 0.76), yStart - 0.02, -0.10),
+        new THREE.Vector3(side * widthFactor, yStart - 0.05, 0.05),
+        new THREE.Vector3(side * (widthFactor * 0.68), yStart - 0.08, depthFront * 0.86),
+        new THREE.Vector3(side * (r < 8 ? 0.045 : widthFactor * 0.38), yStart - 0.09, depthFront),
       ]);
-      const ribGeo = new THREE.TubeGeometry(ribCurve, 20, 0.014, 8, false);
-      const ribMesh = new THREE.Mesh(ribGeo, boneMat);
+      const ribGeo = new THREE.TubeGeometry(ribCurve, 20, 0.015, 8, false);
+      const ribMesh = new THREE.Mesh(ribGeo, r < 7 ? boneMat : (r < 10 ? cartilageMat : boneMat));
       ribMesh.userData = { subPartId: 'ribcage', organId: 'skeleton' };
       skeletalGroup.add(ribMesh);
     });
@@ -378,50 +467,47 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   // S-Curved Clavicles (Collarbones)
   [-1, 1].forEach((side) => {
     const clavCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.05, 1.24, 0.22),
-      new THREE.Vector3(side * 0.22, 1.27, 0.19),
-      new THREE.Vector3(side * 0.44, 1.25, 0.06),
+      new THREE.Vector3(side * 0.05, 1.28, 0.23),
+      new THREE.Vector3(side * 0.24, 1.30, 0.19),
+      new THREE.Vector3(side * 0.46, 1.27, 0.06),
     ]);
-    const clavGeo = new THREE.TubeGeometry(clavCurve, 14, 0.017, 8, false);
+    const clavGeo = new THREE.TubeGeometry(clavCurve, 16, 0.018, 8, false);
     const clavMesh = new THREE.Mesh(clavGeo, boneMat);
     clavMesh.userData = { subPartId: 'ribcage', organId: 'skeleton' };
     skeletalGroup.add(clavMesh);
   });
 
-  // Sculpted Pelvic Girdle (Iliac Wings, Sacrum, Pubic Arch, Obturator Foramen)
+  // 4. SCULPTED PELVIC GIRDLE (Flared Ilium, Ischium, Pubis, Obturator Foramen, Sacrum)
   [-1, 1].forEach((side) => {
-    // Flaring Iliac Wing
     const iliumCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.06, -0.26, -0.14),
-      new THREE.Vector3(side * 0.26, -0.18, -0.06),
-      new THREE.Vector3(side * 0.36, -0.24, 0.09),
-      new THREE.Vector3(side * 0.24, -0.44, 0.14),
-      new THREE.Vector3(side * 0.04, -0.52, 0.15),
+      new THREE.Vector3(side * 0.07, -0.25, -0.14),
+      new THREE.Vector3(side * 0.27, -0.18, -0.06),
+      new THREE.Vector3(side * 0.37, -0.24, 0.09),
+      new THREE.Vector3(side * 0.26, -0.44, 0.14),
+      new THREE.Vector3(side * 0.05, -0.52, 0.15),
     ]);
-    const iliumGeo = new THREE.TubeGeometry(iliumCurve, 22, 0.046, 12, false);
-    iliumGeo.scale(1, 1.25, 0.72);
+    const iliumGeo = new THREE.TubeGeometry(iliumCurve, 24, 0.048, 12, false);
+    iliumGeo.scale(1, 1.22, 0.74);
     const iliumMesh = new THREE.Mesh(iliumGeo, boneMat);
     iliumMesh.userData = { subPartId: 'pelvis_girdle', organId: 'skeleton' };
     skeletalGroup.add(iliumMesh);
 
-    // Ischial & Pubic Ramus loop (framing obturator foramen like Image 1)
     const ischiumCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.22, -0.42, 0.08),
-      new THREE.Vector3(side * 0.19, -0.58, 0.04),
+      new THREE.Vector3(side * 0.24, -0.42, 0.08),
+      new THREE.Vector3(side * 0.20, -0.58, 0.04),
       new THREE.Vector3(side * 0.05, -0.54, 0.14),
     ]);
-    const ischiumGeo = new THREE.TubeGeometry(ischiumCurve, 14, 0.025, 10, false);
+    const ischiumGeo = new THREE.TubeGeometry(ischiumCurve, 16, 0.026, 10, false);
     const ischiumMesh = new THREE.Mesh(ischiumGeo, boneMat);
     ischiumMesh.userData = { subPartId: 'pelvis_girdle', organId: 'skeleton' };
     skeletalGroup.add(ischiumMesh);
   });
 
-  // Sacrum & Coccyx wedge
-  const sacrumGeo = new THREE.ConeGeometry(0.11, 0.24, 12);
-  sacrumGeo.scale(1.1, 1, 0.45);
+  const sacrumGeo = new THREE.ConeGeometry(0.12, 0.26, 14);
+  sacrumGeo.scale(1.15, 1, 0.48);
   const sacrumMesh = new THREE.Mesh(sacrumGeo, boneMat);
-  sacrumMesh.position.set(0, -0.36, -0.15);
-  sacrumMesh.rotation.x = Math.PI + 0.2;
+  sacrumMesh.position.set(0, -0.34, -0.15);
+  sacrumMesh.rotation.x = Math.PI + 0.22;
   sacrumMesh.userData = { subPartId: 'pelvis_girdle', organId: 'skeleton' };
   skeletalGroup.add(sacrumMesh);
 
@@ -442,161 +528,142 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const muscleMat = new THREE.MeshStandardMaterial({
     vertexColors: true,
     roughness: 0.38,
-    metalness: 0.1,
-    transparent: true,
-    opacity: 0.72,
-    depthWrite: false,
+    metalness: 0.08,
     side: THREE.DoubleSide,
   });
 
-  // 1. Pectoralis Major (Contoured fan-shaped chest muscle sheets hugging ribcage)
+  // 1. PECTORALIS MAJOR (Thick, volumetric fan-shaped chest muscle bellies hugging thorax)
   [-1, 1].forEach((side) => {
-    const pecGeo = new THREE.PlaneGeometry(0.38, 0.32, 18, 16);
+    const pecGeo = new THREE.SphereGeometry(0.18, 22, 18);
+    pecGeo.scale(1.45, 0.88, 0.62);
     const pPos = pecGeo.attributes.position;
     for (let i = 0; i < pPos.count; i++) {
-      const u = pPos.getX(i); // -0.19 to 0.19
-      const v = pPos.getY(i); // -0.16 to 0.16
-      const uNorm = (u + 0.19) / 0.38;
-      const vNorm = (v + 0.16) / 0.32;
+      let x = pPos.getX(i);
+      let y = pPos.getY(i);
+      let z = pPos.getZ(i);
 
-      const x = side * (0.05 + uNorm * 0.44);
-      const y = 1.0 + vNorm * 0.28 - uNorm * 0.08;
-      const zBarrel = Math.sqrt(Math.max(0, 0.42 * 0.42 - (x * 0.85) * (x * 0.85))) * 0.58;
-      const bellyThickness = Math.sin(uNorm * Math.PI) * Math.sin(vNorm * Math.PI) * 0.038;
-      const z = zBarrel + 0.03 + bellyThickness;
+      if (z < 0) {
+        z *= 0.32;
+      } else {
+        z *= 1.15;
+      }
+      if (side * x > 0.12) {
+        y *= 0.75;
+        z *= 0.65;
+      }
       pPos.setXYZ(i, x, y, z);
     }
     pecGeo.computeVertexNormals();
-    applyOrganicVertexShading(pecGeo, 0x9f1239, 0x4c0519, (x, y) => {
-      const striation = Math.sin(x * 35 + y * 28) * 0.003;
-      return { offset: striation, colorMix: 0.55 + 0.35 * Math.sin(x * 25 + y * 20) };
-    });
+    applyOrganicVertexShading(pecGeo, 0x991b1b, 0x5c0911);
+    pecGeo.computeBoundingBox();
+    pecGeo.computeBoundingSphere();
+
     const pecMesh = new THREE.Mesh(pecGeo, muscleMat.clone());
+    pecMesh.position.set(side * 0.19, 1.10, 0.19);
+    pecMesh.rotation.z = side * -0.16;
+    pecMesh.rotation.y = side * 0.18;
     pecMesh.userData = { subPartId: 'pectoralis', organId: 'muscles' };
     muscularGroup.add(pecMesh);
   });
 
-  // 2. Rectus Abdominis (Continuous anatomical contoured abdominal wall with Linea Alba & Tendinous Inscriptions)
-  const absGeo = new THREE.PlaneGeometry(0.32, 0.82, 24, 36);
+  // 2. RECTUS ABDOMINIS & EXTERNAL OBLIQUES (Segmented 3D six-pack + contoured lateral flank walls)
+  const absGeo = new THREE.CylinderGeometry(0.19, 0.22, 0.72, 24, 32);
+  absGeo.scale(1.0, 1, 0.65);
   const aPos = absGeo.attributes.position;
   for (let i = 0; i < aPos.count; i++) {
-    const u = aPos.getX(i); // -0.16 to 0.16
-    const v = aPos.getY(i); // -0.41 to 0.41 (bottom to top)
-    const y = 0.24 + v * 0.95; // from ~ -0.15 to ~ 0.63
+    const x = aPos.getX(i);
+    const y = aPos.getY(i);
+    let z = aPos.getZ(i);
 
-    const arch = Math.cos(v * 2.8) * 0.06;
-    const xArch = (1 - (u / 0.16) * (u / 0.16)) * 0.045;
-
-    // Tendinous intersections (horizontal anatomical grooves across rectus abdominis)
-    const t1 = Math.exp(-Math.pow(y - 0.52, 2) * 550);
-    const t2 = Math.exp(-Math.pow(y - 0.34, 2) * 550);
-    const t3 = Math.exp(-Math.pow(y - 0.16, 2) * 550);
-    const t4 = Math.exp(-Math.pow(y - -0.02, 2) * 550);
-    const tendinousGroove = (t1 + t2 + t3 + t4) * 0.016;
-
-    // Linea alba (medial vertical cleft)
-    const lineaAlba = Math.exp(-Math.pow(u * 38, 2)) * 0.022;
-
-    const z = 0.19 + arch + xArch - tendinousGroove - lineaAlba;
-    aPos.setXYZ(i, u * 0.92, y, z);
+    if (z > 0) {
+      const lineaAlba = Math.exp(-Math.pow(x * 32, 2)) * 0.024;
+      const t1 = Math.exp(-Math.pow(y - 0.22, 2) * 450);
+      const t2 = Math.exp(-Math.pow(y - 0.06, 2) * 450);
+      const t3 = Math.exp(-Math.pow(y - -0.10, 2) * 450);
+      const t4 = Math.exp(-Math.pow(y - -0.24, 2) * 450);
+      const tendinousGroove = (t1 + t2 + t3 + t4) * 0.018;
+      const bellyBulge = Math.cos(x * 9) * (1 - tendinousGroove * 18) * 0.016;
+      z += bellyBulge - lineaAlba - tendinousGroove;
+    } else {
+      z *= 0.42;
+    }
+    aPos.setXYZ(i, x, y, z);
   }
   absGeo.computeVertexNormals();
-  applyOrganicVertexShading(absGeo, 0x9f1239, 0x58081f, (_x, y) => {
-    const fiber = Math.sin(y * 45) * 0.002;
-    return { offset: fiber, colorMix: 0.5 + 0.4 * Math.sin(y * 22) };
-  });
+  applyOrganicVertexShading(absGeo, 0x991b1b, 0x4c0519);
+  absGeo.computeBoundingBox();
+  absGeo.computeBoundingSphere();
+
   const absMesh = new THREE.Mesh(absGeo, muscleMat.clone());
+  absMesh.position.set(0, 0.46, 0.16);
   absMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
   muscularGroup.add(absMesh);
 
-  // 3. External Obliques (Flanking lateral abdominal walls)
   [-1, 1].forEach((side) => {
-    const obGeo = new THREE.PlaneGeometry(0.24, 0.62, 16, 22);
-    const oPos = obGeo.attributes.position;
-    for (let i = 0; i < oPos.count; i++) {
-      const u = oPos.getX(i); // -0.12 to 0.12
-      const v = oPos.getY(i); // -0.31 to 0.31
-      const uNorm = (u + 0.12) / 0.24;
-      const vNorm = (v + 0.31) / 0.62;
+    const obGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.58, 16, 20);
+    obGeo.scale(0.85, 1, 0.6);
+    applyOrganicVertexShading(obGeo, 0x881337, 0x4c0519);
+    obGeo.computeBoundingBox();
+    obGeo.computeBoundingSphere();
 
-      const x = side * (0.14 + uNorm * 0.19);
-      const y = 0.22 + vNorm * 0.55;
-      const z = (1 - uNorm) * 0.2 + uNorm * 0.02;
-      oPos.setXYZ(i, x, y, z);
-    }
-    obGeo.computeVertexNormals();
-    applyOrganicVertexShading(obGeo, 0x881337, 0x4c0519, (x, y) => {
-      const diagonalFiber = Math.sin((x * side + y) * 35) * 0.003;
-      return { offset: diagonalFiber, colorMix: 0.5 + 0.35 * Math.sin((x + y) * 20) };
-    });
     const obMesh = new THREE.Mesh(obGeo, muscleMat.clone());
+    obMesh.position.set(side * 0.25, 0.48, 0.08);
+    obMesh.rotation.z = side * 0.12;
+    obMesh.rotation.y = side * 0.28;
     obMesh.userData = { subPartId: 'rectus_abdominis', organId: 'muscles' };
     muscularGroup.add(obMesh);
   });
 
-  // 4. Deltoids (Shoulder caps wrapping acromion and upper humerus)
+  // 3. DELTOIDS (Volumetric 3D shoulder caps with anterior, middle, and posterior rounded bellies)
   [-1, 1].forEach((side) => {
-    const deltGeo = new THREE.SphereGeometry(0.14, 20, 20);
-    deltGeo.scale(0.85, 1.45, 0.95);
+    const deltGeo = new THREE.SphereGeometry(0.15, 22, 20);
+    deltGeo.scale(0.88, 1.45, 0.95);
     const dPos = deltGeo.attributes.position;
     for (let i = 0; i < dPos.count; i++) {
       let x = dPos.getX(i);
       const y = dPos.getY(i);
       const z = dPos.getZ(i);
-      if (side * x < 0) x *= 0.55;
+      if (side * x < 0) x *= 0.65;
       dPos.setXYZ(i, x, y, z);
     }
     deltGeo.computeVertexNormals();
-    applyOrganicVertexShading(deltGeo, 0x9f1239, 0x4c0519);
+    applyOrganicVertexShading(deltGeo, 0x991b1b, 0x58081f);
+    deltGeo.computeBoundingBox();
+    deltGeo.computeBoundingSphere();
+
     const deltMesh = new THREE.Mesh(deltGeo, muscleMat.clone());
-    deltMesh.position.set(side * 0.52, 1.15, 0.02);
+    deltMesh.position.set(side * 0.48, 1.18, 0.04);
     deltMesh.rotation.z = side * -0.18;
     deltMesh.userData = { subPartId: 'deltoids', organId: 'muscles' };
     muscularGroup.add(deltMesh);
   });
 
-  // 5. Trapezius & Sternocleidomastoid (Neck stabilizers connecting cervical spine to clavicle)
+  // 4. TRAPEZIUS & STERNOCLEIDOMASTOID (Neck & Upper Back Muscles)
   [-1, 1].forEach((side) => {
-    const scmCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.12, 1.58, -0.04),
-      new THREE.Vector3(side * 0.09, 1.42, 0.08),
-      new THREE.Vector3(side * 0.05, 1.28, 0.18),
-    ]);
-    const scmGeo = createVariableTubeGeometry(scmCurve, 12, 8, () => 0.016, 0x9f1239, 0x4c0519);
-    const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
-    scmMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
-    muscularGroup.add(scmMesh);
+    const trapGeo = new THREE.CylinderGeometry(0.04, 0.18, 0.36, 14);
+    trapGeo.scale(1.2, 1, 0.45);
+    applyOrganicVertexShading(trapGeo, 0x881337, 0x4c0519);
+    trapGeo.computeBoundingBox();
+    trapGeo.computeBoundingSphere();
 
-    const trapCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.04, 1.55, -0.1),
-      new THREE.Vector3(side * 0.22, 1.38, -0.06),
-      new THREE.Vector3(side * 0.42, 1.25, -0.02),
-    ]);
-    const trapGeo = createVariableTubeGeometry(
-      trapCurve,
-      14,
-      8,
-      (u) => 0.024 * (1 - u * 0.3),
-      0x881337,
-      0x4c0519
-    );
     const trapMesh = new THREE.Mesh(trapGeo, muscleMat.clone());
+    trapMesh.position.set(side * 0.18, 1.38, -0.07);
+    trapMesh.rotation.z = side * -0.32;
     trapMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
     muscularGroup.add(trapMesh);
-  });
 
-  // 6. Serratus Anterior (Ribcage lateral muscular slips)
-  [-1, 1].forEach((side) => {
-    [0.82, 0.72, 0.62, 0.52].forEach((sy, sIdx) => {
-      const sCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(side * 0.28, sy, 0.12 - sIdx * 0.02),
-        new THREE.Vector3(side * 0.36, sy - 0.04, 0.04 - sIdx * 0.02),
-        new THREE.Vector3(side * 0.39, sy - 0.08, -0.06),
-      ]);
-      const sGeo = createVariableTubeGeometry(sCurve, 8, 6, () => 0.012, 0x9f1239, 0x4c0519);
-      const sMesh = new THREE.Mesh(sGeo, muscleMat.clone());
-      muscularGroup.add(sMesh);
-    });
+    const scmGeo = new THREE.CylinderGeometry(0.022, 0.026, 0.32, 12);
+    scmGeo.scale(1.1, 1, 0.8);
+    applyOrganicVertexShading(scmGeo, 0x991b1b, 0x5c0911);
+    scmGeo.computeBoundingBox();
+    scmGeo.computeBoundingSphere();
+
+    const scmMesh = new THREE.Mesh(scmGeo, muscleMat.clone());
+    scmMesh.position.set(side * 0.08, 1.44, 0.08);
+    scmMesh.rotation.z = side * 0.22;
+    scmMesh.rotation.x = -0.18;
+    scmMesh.userData = { subPartId: 'trapezius', organId: 'muscles' };
+    muscularGroup.add(scmMesh);
   });
 
   registerOrganGroup(
@@ -1426,23 +1493,81 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   urinaryGroup.add(kidneysGroup);
 
   // =========================================================================
-  // 10. ENDOCRINE SYSTEM: THYROID GLAND & PARATHYROIDS (Mesh_Thyroid)
+  // 10. ENDOCRINE SYSTEM: ANATOMICALLY SCULPTED THYROID GLAND & LARYNX
   // =========================================================================
   const endocrineGroup = systemGroups.get('endocrine')!;
   const thyroidGroup = new THREE.Group();
   const thyroidMat = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.38,
+    roughness: 0.36,
     metalness: 0.08,
   });
+  const laryngealCartilageMat = new THREE.MeshStandardMaterial({
+    color: 0xcbd5e1,
+    roughness: 0.32,
+    metalness: 0.06,
+  });
 
-  // Right & Left Lateral Lobes flanking trachea
+  // 1. Laryngeal Cartilaginous Framework (Thyroid Cartilage Shield & Trachea)
+  // Thyroid Cartilage (Adam's Apple) V-shaped shield
+  const thyroidCartGeo = new THREE.CylinderGeometry(0.042, 0.038, 0.075, 12, 1, true, -Math.PI * 0.65, Math.PI * 1.3);
+  const tCartMesh = new THREE.Mesh(thyroidCartGeo, laryngealCartilageMat);
+  tCartMesh.position.set(0, 1.50, 0.16);
+  tCartMesh.rotation.y = Math.PI;
+  tCartMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
+  thyroidGroup.add(tCartMesh);
+
+  // Cricoid Cartilage Ring
+  const cricoidGeo = new THREE.TorusGeometry(0.032, 0.010, 10, 20);
+  const cricoidMesh = new THREE.Mesh(cricoidGeo, laryngealCartilageMat);
+  cricoidMesh.position.set(0, 1.45, 0.16);
+  cricoidMesh.rotation.x = Math.PI / 2;
+  cricoidMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
+  thyroidGroup.add(cricoidMesh);
+
+  // Descending Tracheal Rings (Cartilaginous windpipe rings)
+  for (let t = 0; t < 4; t++) {
+    const ringGeo = new THREE.TorusGeometry(0.030, 0.007, 8, 18);
+    const ringMesh = new THREE.Mesh(ringGeo, laryngealCartilageMat);
+    ringMesh.position.set(0, 1.42 - t * 0.024, 0.16);
+    ringMesh.rotation.x = Math.PI / 2;
+    ringMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
+    thyroidGroup.add(ringMesh);
+  }
+
+  // 2. Anatomical Butterfly Thyroid Gland Lobes
+  // Bilateral Lateral Lobes (Tapered superior pole, broad rounded inferior base hugging trachea)
   [-1, 1].forEach((side) => {
-    const lobeGeo = new THREE.SphereGeometry(0.048, 24, 20);
-    lobeGeo.scale(0.85, 1.45, 0.65);
-    applyOrganicVertexShading(lobeGeo, 0x9333ea, 0x581c87);
+    const lobeGeo = new THREE.SphereGeometry(0.046, 22, 20);
+    lobeGeo.scale(0.85, 1.55, 0.75);
+    const lPos = lobeGeo.attributes.position;
+    for (let i = 0; i < lPos.count; i++) {
+      let x = lPos.getX(i);
+      let y = lPos.getY(i);
+      let z = lPos.getZ(i);
+
+      if (y > 0) {
+        x *= 1 - (y / 0.075) * 0.42;
+        z *= 1 - (y / 0.075) * 0.42;
+      }
+      if (side * x < 0) {
+        x *= 0.55;
+      }
+      lPos.setXYZ(i, x, y, z);
+    }
+    lobeGeo.computeVertexNormals();
+    applyOrganicVertexShading(
+      lobeGeo,
+      side === 1 ? 0xa855f7 : 0x9333ea,
+      side === 1 ? 0x6b21a8 : 0x581c87
+    );
+    lobeGeo.computeBoundingBox();
+    lobeGeo.computeBoundingSphere();
+
     const lobeMesh = new THREE.Mesh(lobeGeo, thyroidMat.clone());
-    lobeMesh.position.set(side * 0.038, 1.46, 0.165);
+    lobeMesh.position.set(side * 0.038, 1.44, 0.178);
+    lobeMesh.rotation.z = side * -0.14;
+    lobeMesh.rotation.y = side * 0.22;
     lobeMesh.userData = {
       subPartId: side === 1 ? 'left_thyroid_lobe' : 'right_thyroid_lobe',
       organId: 'thyroid',
@@ -1450,22 +1575,37 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     thyroidGroup.add(lobeMesh);
   });
 
-  // Central Thyroid Isthmus uniting lobes
-  const isthmusGeo = new THREE.CylinderGeometry(0.024, 0.026, 0.042, 16);
-  isthmusGeo.scale(1.2, 0.6, 0.5);
-  applyOrganicVertexShading(isthmusGeo, 0xa855f7, 0x6b21a8);
+  // 3. Central Thyroid Isthmus & Pyramidal Lobe
+  const isthmusGeo = new THREE.CylinderGeometry(0.018, 0.020, 0.048, 16);
+  isthmusGeo.scale(1.25, 0.65, 0.55);
+  applyOrganicVertexShading(isthmusGeo, 0xc084fc, 0x7e22ce);
+  isthmusGeo.computeBoundingBox();
+  isthmusGeo.computeBoundingSphere();
+
   const isthmusMesh = new THREE.Mesh(isthmusGeo, thyroidMat.clone());
   isthmusMesh.rotation.z = Math.PI / 2;
-  isthmusMesh.position.set(0, 1.43, 0.178);
+  isthmusMesh.position.set(0, 1.41, 0.192);
   isthmusMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
   thyroidGroup.add(isthmusMesh);
+
+  // Pyramidal Lobe (authentic anatomical variant ascending from isthmus toward hyoid)
+  const pyramidGeo = new THREE.ConeGeometry(0.012, 0.052, 10);
+  pyramidGeo.scale(0.85, 1, 0.55);
+  applyOrganicVertexShading(pyramidGeo, 0xa855f7, 0x6b21a8);
+  pyramidGeo.computeBoundingBox();
+  pyramidGeo.computeBoundingSphere();
+
+  const pyramidMesh = new THREE.Mesh(pyramidGeo, thyroidMat.clone());
+  pyramidMesh.position.set(-0.010, 1.445, 0.190);
+  pyramidMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
+  thyroidGroup.add(pyramidMesh);
 
   registerOrganGroup(
     'thyroid',
     'Mesh_Thyroid',
     'endocrine',
     thyroidGroup,
-    new THREE.Vector3(0, 1.45, 0.17),
+    new THREE.Vector3(0, 1.44, 0.18),
     0.42,
     organRecords
   );
@@ -1542,44 +1682,103 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     metalness: 0.08,
   });
 
-  // Bilateral Gonadal Parenchyma (Ovaries / Testes)
+  // 1. CENTRAL GENITAL TRACT: Pear-Shaped Piriform Uterus (Fundus, Corpus, Cervix)
+  const uterusGeo = new THREE.SphereGeometry(0.068, 24, 22);
+  uterusGeo.scale(1.15, 1.45, 0.85);
+  const uPos = uterusGeo.attributes.position;
+  for (let i = 0; i < uPos.count; i++) {
+    let x = uPos.getX(i);
+    let y = uPos.getY(i);
+    let z = uPos.getZ(i);
+
+    if (y < 0) {
+      const taper = 1 + (y / 0.10) * 0.48;
+      x *= taper;
+      z *= taper;
+    }
+    z += Math.cos((y / 0.10) * Math.PI * 0.5) * 0.012;
+    uPos.setXYZ(i, x, y, z);
+  }
+  uterusGeo.computeVertexNormals();
+  applyOrganicVertexShading(uterusGeo, 0xf472b6, 0x9d174d);
+  uterusGeo.computeBoundingBox();
+  uterusGeo.computeBoundingSphere();
+
+  const uterusMesh = new THREE.Mesh(uterusGeo, repMat.clone());
+  uterusMesh.position.set(0, -0.45, 0.05);
+  uterusMesh.userData = { subPartId: 'genital_tract', organId: 'reproductive' };
+  repGroup.add(uterusMesh);
+
+  // Cylindrical Cervix with external os
+  const cervixGeo = new THREE.CylinderGeometry(0.024, 0.022, 0.045, 16);
+  cervixGeo.scale(1.1, 1, 0.85);
+  applyOrganicVertexShading(cervixGeo, 0xec4899, 0x831843);
+  cervixGeo.computeBoundingBox();
+  cervixGeo.computeBoundingSphere();
+
+  const cervixMesh = new THREE.Mesh(cervixGeo, repMat.clone());
+  cervixMesh.position.set(0, -0.53, 0.05);
+  cervixMesh.userData = { subPartId: 'genital_tract', organId: 'reproductive' };
+  repGroup.add(cervixMesh);
+
+  // 2. GONADAL PARENCHYMA: Bilateral Almond-Shaped Ovaries
   [-1, 1].forEach((side) => {
-    const gonadGeo = new THREE.SphereGeometry(0.034, 18, 16);
-    gonadGeo.scale(1.15, 0.85, 0.85);
-    applyOrganicVertexShading(gonadGeo, 0xdb2777, 0x831843);
-    const gonadMesh = new THREE.Mesh(gonadGeo, repMat.clone());
-    gonadMesh.position.set(side * 0.12, -0.42, 0.04);
-    gonadMesh.userData = { subPartId: 'gonads', organId: 'reproductive' };
-    repGroup.add(gonadMesh);
+    const ovaryGeo = new THREE.SphereGeometry(0.032, 18, 16);
+    ovaryGeo.scale(1.35, 0.85, 0.80);
+    applyOrganicVertexShading(ovaryGeo, 0xdb2777, 0x831843);
+    ovaryGeo.computeBoundingBox();
+    ovaryGeo.computeBoundingSphere();
+
+    const ovaryMesh = new THREE.Mesh(ovaryGeo, repMat.clone());
+    ovaryMesh.position.set(side * 0.145, -0.41, 0.035);
+    ovaryMesh.rotation.z = side * -0.22;
+    ovaryMesh.userData = { subPartId: 'gonads', organId: 'reproductive' };
+    repGroup.add(ovaryMesh);
+
+    // Ovarian Ligament anchoring ovary to uterine cornu
+    const ligCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.065, -0.41, 0.048),
+      new THREE.Vector3(side * 0.105, -0.415, 0.040),
+      new THREE.Vector3(side * 0.130, -0.41, 0.035),
+    ]);
+    const ligGeo = new THREE.TubeGeometry(ligCurve, 10, 0.005, 6, false);
+    applyOrganicVertexShading(ligGeo, 0xfce7f3, 0xdb2777);
+    ligGeo.computeBoundingBox();
+    ligGeo.computeBoundingSphere();
+
+    const ligMesh = new THREE.Mesh(ligGeo, repMat.clone());
+    ligMesh.userData = { subPartId: 'gonads', organId: 'reproductive' };
+    repGroup.add(ligMesh);
   });
 
-  // Central Reproductive Organ (Uterine/Prostatic central core)
-  const repCoreGeo = new THREE.SphereGeometry(0.058, 20, 18);
-  repCoreGeo.scale(1.0, 1.25, 0.85);
-  applyOrganicVertexShading(repCoreGeo, 0xf472b6, 0x9d174d);
-  const repCoreMesh = new THREE.Mesh(repCoreGeo, repMat.clone());
-  repCoreMesh.position.set(0, -0.46, 0.05);
-  repCoreMesh.userData = { subPartId: 'genital_tract', organId: 'reproductive' };
-  repGroup.add(repCoreMesh);
-
-  // Ductal Network (Fallopian tubes / Vas deferens arches)
+  // 3. REPRODUCTIVE DUCT NETWORK: Elegant Arched Fallopian Tubes with Infundibulum & Fimbriae
   [-1, 1].forEach((side) => {
-    const ductCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, -0.42, 0.05),
-      new THREE.Vector3(side * 0.07, -0.38, 0.06),
-      new THREE.Vector3(side * 0.12, -0.42, 0.04),
+    const tubeCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.062, -0.395, 0.05),
+      new THREE.Vector3(side * 0.110, -0.365, 0.055),
+      new THREE.Vector3(side * 0.160, -0.380, 0.045),
+      new THREE.Vector3(side * 0.165, -0.415, 0.035),
     ]);
-    const ductArchGeo = createVariableTubeGeometry(
-      ductCurve,
-      14,
-      6,
-      () => 0.006,
-      0xfbcfe8,
-      0xbe185d
-    );
-    const ductArchMesh = new THREE.Mesh(ductArchGeo, repMat.clone());
-    ductArchMesh.userData = { subPartId: 'duct_network', organId: 'reproductive' };
-    repGroup.add(ductArchMesh);
+    const tubeGeo = new THREE.TubeGeometry(tubeCurve, 16, 0.008, 8, false);
+    applyOrganicVertexShading(tubeGeo, 0xf472b6, 0x9d174d);
+    tubeGeo.computeBoundingBox();
+    tubeGeo.computeBoundingSphere();
+
+    const tubeMesh = new THREE.Mesh(tubeGeo, repMat.clone());
+    tubeMesh.userData = { subPartId: 'duct_network', organId: 'reproductive' };
+    repGroup.add(tubeMesh);
+
+    // Trumpet-shaped fimbriated infundibulum embracing the ovary
+    const fimbriaeGeo = new THREE.ConeGeometry(0.018, 0.032, 10, 1, true);
+    applyOrganicVertexShading(fimbriaeGeo, 0xec4899, 0x831843);
+    fimbriaeGeo.computeBoundingBox();
+    fimbriaeGeo.computeBoundingSphere();
+
+    const fimbriaeMesh = new THREE.Mesh(fimbriaeGeo, repMat.clone());
+    fimbriaeMesh.position.set(side * 0.165, -0.422, 0.035);
+    fimbriaeMesh.rotation.z = side * Math.PI * 0.65;
+    fimbriaeMesh.userData = { subPartId: 'duct_network', organId: 'reproductive' };
+    repGroup.add(fimbriaeMesh);
   });
 
   registerOrganGroup(

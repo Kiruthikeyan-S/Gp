@@ -203,6 +203,62 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     coordMode: 'vhm',
     customFocusRadius: 0.88,
   },
+  {
+    organId: 'thyroid',
+    title: 'Anatomical Larynx & Thyroid Complex (GLB Scan)',
+    sourceCredit: 'NIH 3D / HuBMAP Visible Human (CC-BY)',
+    sketchfabReferenceUrl:
+      'https://sketchfab.com/3d-models/thyroid-gland-3d-model-a89c97b830494cf8a7d5b128cba8c895',
+    urls: [
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Male/v1.4/3d-vh-m-larynx.glb',
+    ],
+    primaryColorHex: 0xa855f7,
+    secondaryColorHex: 0x6b21a8,
+    roughness: 0.36,
+    metalness: 0.08,
+    coordMode: 'vhm',
+    customFocusRadius: 0.44,
+    focusYOffset: 0.04,
+  },
+  {
+    organId: 'reproductive',
+    title: 'Uterus, Ovaries & Fallopian Salpinges (GLB Scan)',
+    sourceCredit: 'NIH 3D / Visible Human Female Reference (CC-BY)',
+    sketchfabReferenceUrl:
+      'https://sketchfab.com/3d-models/female-reproductive-system-9c29d67e2051406497f1f9e8a5ec99be',
+    urls: [
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Female/v1.2/VH_F_Uterus.glb',
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Female/v1.2/VH_F_Ovary_L.glb',
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Female/v1.2/VH_F_Ovary_R.glb',
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Female/v1.2/VH_F_Fallopian_Tube_L.glb',
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Female/v1.2/VH_F_Fallopian_Tube_R.glb',
+    ],
+    primaryColorHex: 0xec4899,
+    secondaryColorHex: 0x831843,
+    roughness: 0.36,
+    metalness: 0.08,
+    coordMode: 'fit',
+    targetBoxCenter: [0, -0.44, 0.05],
+    targetMaxDim: 0.46,
+    customFocusRadius: 0.52,
+  },
+  {
+    organId: 'skeleton',
+    title: 'Axial Pelvis & Vertebral Spine (GLB Scan)',
+    sourceCredit: 'NIH 3D / Visible Human Reference (CC-BY)',
+    sketchfabReferenceUrl:
+      'https://sketchfab.com/3d-models/human-skeleton-anatomy-8a6a2ef11cb9431e8ea7945d944e99ef',
+    urls: [
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Male/v1.2/VH_M_Pelvis.glb',
+      'https://raw.githubusercontent.com/code4fukui/human_organs/main/glb/First_lumbar_vertebra_NIH3D.glb',
+    ],
+    primaryColorHex: 0xf1f5f9,
+    secondaryColorHex: 0x94a3b8,
+    roughness: 0.40,
+    metalness: 0.06,
+    coordMode: 'vhm',
+    customFocusRadius: 1.15,
+  },
 ];
 
 const SKIN_GLB_URL =
@@ -801,6 +857,39 @@ function mapNodeNameToSubPart(
       return { subPartId: 'superior_pole', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
     }
     return { subPartId: 'inferior_pole', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
+  if (organId === 'thyroid') {
+    if (n.includes('cartilage') || n.includes('cricoid') || n.includes('isthmus')) {
+      return { subPartId: 'thyroid_isthmus', primaryHex: 0xec4899, secondaryHex: 0x9d174d };
+    }
+    if (n.includes('arytenoid') || n.includes('_r') || n.endsWith('r')) {
+      return { subPartId: 'right_thyroid_lobe', primaryHex: 0x9333ea, secondaryHex: 0x581c87 };
+    }
+    return { subPartId: 'left_thyroid_lobe', primaryHex: 0xa855f7, secondaryHex: 0x6b21a8 };
+  }
+
+  if (organId === 'reproductive') {
+    if (n.includes('ovary') || n.includes('gonad')) {
+      return { subPartId: 'gonads', primaryHex: 0xdb2777, secondaryHex: 0x831843 };
+    }
+    if (n.includes('fallopian') || n.includes('tube')) {
+      return { subPartId: 'duct_network', primaryHex: 0xe11d48, secondaryHex: 0x9f1239 };
+    }
+    return { subPartId: 'genital_tract', primaryHex: 0xf472b6, secondaryHex: 0x9d174d };
+  }
+
+  if (organId === 'skeleton') {
+    if (n.includes('pelvis') || n.includes('ilium') || n.includes('sacrum') || n.includes('ischium')) {
+      return { subPartId: 'pelvis_girdle', primaryHex: 0xec4899, secondaryHex: 0x9d174d };
+    }
+    if (n.includes('vertebra') || n.includes('lumbar') || n.includes('spine')) {
+      return { subPartId: 'vertebral_column', primaryHex: 0xeab308, secondaryHex: 0x854d0e };
+    }
+    if (n.includes('skull') || n.includes('cranium') || n.includes('mandible')) {
+      return { subPartId: 'cranium', primaryHex: 0x0284c7, secondaryHex: 0x075985 };
+    }
+    return { subPartId: 'ribcage', primaryHex: 0x10b981, secondaryHex: 0x064e3b };
   }
 
   return { subPartId: null, primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
