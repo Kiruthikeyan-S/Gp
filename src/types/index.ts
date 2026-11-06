@@ -1,11 +1,24 @@
 export type BodySystemId =
+  | 'skeletal'
+  | 'muscular'
+  | 'nervous'
   | 'circulatory'
   | 'respiratory'
-  | 'nervous'
   | 'digestive'
   | 'urinary'
-  | 'skeletal'
-  | 'muscular';
+  | 'reproductive'
+  | 'endocrine'
+  | 'lymphatic';
+
+export interface Flashcard {
+  id: string;
+  systemId: BodySystemId;
+  organId?: string;
+  term: string;
+  definition: string;
+  clinicalNote?: string;
+  category: 'Structure' | 'Function' | 'Physiology' | 'Clinical';
+}
 
 export interface Organ {
   id: string;
@@ -48,6 +61,8 @@ export interface QuizQuestion {
   id: string;
   question: string;
   organId?: string;
+  systemId?: BodySystemId;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
   options: string[];
   correctIndex: number;
   explanation: string;
@@ -56,7 +71,11 @@ export interface QuizQuestion {
 export type RootStackParamList = {
   MainTabs: undefined;
   OrganDetails: { organId: string; subPartId?: string };
-  Quiz: undefined;
+  Quiz: { systemId?: BodySystemId } | undefined;
+  Flashcards: { systemId?: BodySystemId } | undefined;
+  Dashboard: undefined;
+  Search: undefined;
+  Credits: undefined;
 };
 
 export type TabParamList = {

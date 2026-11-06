@@ -13,6 +13,10 @@ import { LearningScreen } from '../screens/LearningScreen';
 import { ChatbotScreen } from '../screens/ChatbotScreen';
 import { OrganDetailsScreen } from '../screens/OrganDetailsScreen';
 import { QuizScreen } from '../screens/QuizScreen';
+import { FlashcardsScreen } from '../screens/FlashcardsScreen';
+import { DashboardScreen } from '../screens/DashboardScreen';
+import { SearchScreen } from '../screens/SearchScreen';
+import { CreditsScreen } from '../screens/CreditsScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -132,6 +136,10 @@ export function AppNavigator() {
       <Stack.Screen name="MainTabs" component={BottomTabs} />
       <Stack.Screen name="OrganDetails" component={OrganDetailsScreen} />
       <Stack.Screen name="Quiz" component={QuizScreen} />
+      <Stack.Screen name="Flashcards" component={FlashcardsScreen} />
+      <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="Credits" component={CreditsScreen} />
     </Stack.Navigator>
   );
 }

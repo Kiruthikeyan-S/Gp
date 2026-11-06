@@ -14,7 +14,7 @@ export const SystemBadge: React.FC<SystemBadgeProps> = ({
   label,
   size = 'md',
 }) => {
-  const color = theme.colors.systems[systemId] || theme.colors.primary;
+  const color = (theme.colors.systems as Record<string, string>)[systemId] || theme.colors.primary;
   const isSm = size === 'sm';
 
   return (

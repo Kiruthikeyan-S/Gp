@@ -48,10 +48,28 @@ export const LearningScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.headerQuizBtn}
               activeOpacity={0.85}
+              onPress={() => (navigation as any).navigate('Flashcards')}
+            >
+              <MaterialCommunityIcons name="cards-outline" size={15} color="#16A34A" />
+              <Text style={[styles.headerQuizBtnText, { color: '#16A34A' }]}>Cards</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.headerQuizBtn}
+              activeOpacity={0.85}
               onPress={() => (navigation as any).navigate('Quiz')}
             >
               <MaterialCommunityIcons name="school" size={15} color="#0284C7" />
               <Text style={styles.headerQuizBtnText}>Quiz</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.headerQuizBtn}
+              activeOpacity={0.85}
+              onPress={() => (navigation as any).navigate('Dashboard')}
+            >
+              <Ionicons name="stats-chart" size={13} color="#9333EA" />
+              <Text style={[styles.headerQuizBtnText, { color: '#9333EA' }]}>Stats</Text>
             </TouchableOpacity>
 
             <View style={styles.completedBadge}>
@@ -71,8 +89,19 @@ export const LearningScreen: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}
         >
-          {['all', 'circulatory', 'respiratory', 'nervous', 'digestive'].map(
-            (sys) => {
+          {[
+            'all',
+            'circulatory',
+            'respiratory',
+            'nervous',
+            'digestive',
+            'urinary',
+            'skeletal',
+            'muscular',
+            'endocrine',
+            'lymphatic',
+            'reproductive',
+          ].map((sys) => {
               const isActive = activeSystemFilter === sys;
               return (
                 <TouchableOpacity

@@ -55,6 +55,9 @@ export const ExplorerScreen: React.FC = () => {
   const [showSkeletal, setShowSkeletal] = useState<boolean>(false);
   const [showMuscular, setShowMuscular] = useState<boolean>(false);
   const [showVascular, setShowVascular] = useState<boolean>(true);
+  const [showInternalOrgans, setShowInternalOrgans] = useState<boolean>(true);
+  const [showNervous, setShowNervous] = useState<boolean>(true);
+  const [showLayersDrawer, setShowLayersDrawer] = useState<boolean>(false);
   const [animatePhysiology, setAnimatePhysiology] = useState<boolean>(true);
   const [showSystemsFilter, setShowSystemsFilter] = useState<boolean>(false);
   const [isCardMinimized, setIsCardMinimized] = useState<boolean>(false);
@@ -120,6 +123,8 @@ export const ExplorerScreen: React.FC = () => {
           showSkeletal={showSkeletal}
           showMuscular={showMuscular}
           showVascular={showVascular}
+          showInternalOrgans={showInternalOrgans}
+          showNervous={showNervous}
           animatePhysiology={animatePhysiology}
           canvasBackgroundColor="#ffebff"
           isActive={isFocused}
@@ -384,6 +389,52 @@ export const ExplorerScreen: React.FC = () => {
               </TouchableOpacity>
             )}
 
+            {/* Skeletal Layer Toggle */}
+            {viewMode === 'body' && (
+              <TouchableOpacity
+                style={[styles.dockBtn, showSkeletal && styles.dockBtnActive]}
+                onPress={() => setShowSkeletal((v) => !v)}
+              >
+                <MaterialCommunityIcons
+                  name="bone"
+                  size={18}
+                  color={showSkeletal ? '#0284C7' : '#64748B'}
+                />
+                <Text style={styles.dockTinyLabel}>BONE</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Muscular Layer Toggle */}
+            {viewMode === 'body' && (
+              <TouchableOpacity
+                style={[styles.dockBtn, showMuscular && styles.dockBtnActive]}
+                onPress={() => setShowMuscular((v) => !v)}
+              >
+                <MaterialCommunityIcons
+                  name="arm-flex"
+                  size={18}
+                  color={showMuscular ? '#E11D48' : '#64748B'}
+                />
+                <Text style={styles.dockTinyLabel}>MUSCLE</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Layers Explorer Drawer Toggle */}
+            <TouchableOpacity
+              style={[
+                styles.dockBtn,
+                showLayersDrawer && styles.dockBtnActive,
+              ]}
+              onPress={() => setShowLayersDrawer((v) => !v)}
+            >
+              <MaterialCommunityIcons
+                name="layers-triple"
+                size={18}
+                color={showLayersDrawer ? '#0284C7' : '#64748B'}
+              />
+              <Text style={styles.dockTinyLabel}>LAYERS</Text>
+            </TouchableOpacity>
+
             {/* Live Heartbeat & Breathing Pulse */}
             <TouchableOpacity
               style={[
@@ -630,6 +681,178 @@ export const ExplorerScreen: React.FC = () => {
                 </View>
               </View>
             )}
+          </View>
+        )}
+
+        {/* FLOATING BODY LAYER EXPLORER PANEL */}
+        {showLayersDrawer && !hideInterface && (
+          <View style={styles.layersDrawerCard}>
+            <View style={styles.layersDrawerHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MaterialCommunityIcons name="layers-triple" size={18} color="#0284C7" />
+                <Text style={styles.layersDrawerTitle}>Body Layer Explorer</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowLayersDrawer(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.layersList}>
+              {/* Layer 1: Skin */}
+              <View style={styles.layerRow}>
+                <View style={styles.layerInfo}>
+                  <MaterialCommunityIcons name="human-handsdown" size={18} color="#0284C7" />
+                  <Text style={styles.layerName}>Skin / Body Shell</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.layerCyclePill, { backgroundColor: '#E0F2FE' }]}
+                  onPress={cycleShellMode}
+                >
+                  <Text style={[styles.layerCycleText, { color: '#0284C7' }]}>
+                    {shellMode.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Layer 2: Muscles */}
+              <View style={styles.layerRow}>
+                <View style={styles.layerInfo}>
+                  <MaterialCommunityIcons name="arm-flex" size={18} color="#E11D48" />
+                  <Text style={styles.layerName}>Muscular System</Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.layerTogglePill,
+                    showMuscular ? styles.layerTogglePillOn : styles.layerTogglePillOff,
+                  ]}
+                  onPress={() => setShowMuscular((v) => !v)}
+                >
+                  <Text
+                    style={[
+                      styles.layerToggleText,
+                      showMuscular ? styles.layerToggleTextOn : styles.layerToggleTextOff,
+                    ]}
+                  >
+                    {showMuscular ? 'ON' : 'OFF'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Layer 3: Skeleton */}
+              <View style={styles.layerRow}>
+                <View style={styles.layerInfo}>
+                  <MaterialCommunityIcons name="bone" size={18} color="#64748B" />
+                  <Text style={styles.layerName}>Skeletal Framework</Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.layerTogglePill,
+                    showSkeletal ? styles.layerTogglePillOn : styles.layerTogglePillOff,
+                  ]}
+                  onPress={() => setShowSkeletal((v) => !v)}
+                >
+                  <Text
+                    style={[
+                      styles.layerToggleText,
+                      showSkeletal ? styles.layerToggleTextOn : styles.layerToggleTextOff,
+                    ]}
+                  >
+                    {showSkeletal ? 'ON' : 'OFF'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Layer 4: Nervous */}
+              <View style={styles.layerRow}>
+                <View style={styles.layerInfo}>
+                  <MaterialCommunityIcons name="brain" size={18} color="#7C3AED" />
+                  <Text style={styles.layerName}>Nervous Structures</Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.layerTogglePill,
+                    showNervous ? styles.layerTogglePillOn : styles.layerTogglePillOff,
+                  ]}
+                  onPress={() => setShowNervous((v) => !v)}
+                >
+                  <Text
+                    style={[
+                      styles.layerToggleText,
+                      showNervous ? styles.layerToggleTextOn : styles.layerToggleTextOff,
+                    ]}
+                  >
+                    {showNervous ? 'ON' : 'OFF'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Layer 5: Internal Organs */}
+              <View style={styles.layerRow}>
+                <View style={styles.layerInfo}>
+                  <MaterialCommunityIcons name="heart-pulse" size={18} color="#DC2626" />
+                  <Text style={styles.layerName}>Internal Organs</Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.layerTogglePill,
+                    showInternalOrgans ? styles.layerTogglePillOn : styles.layerTogglePillOff,
+                  ]}
+                  onPress={() => setShowInternalOrgans((v) => !v)}
+                >
+                  <Text
+                    style={[
+                      styles.layerToggleText,
+                      showInternalOrgans ? styles.layerToggleTextOn : styles.layerToggleTextOff,
+                    ]}
+                  >
+                    {showInternalOrgans ? 'ON' : 'OFF'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Layer 6: Vessels */}
+              <View style={styles.layerRow}>
+                <View style={styles.layerInfo}>
+                  <MaterialCommunityIcons name="source-branch" size={18} color="#EF4444" />
+                  <Text style={styles.layerName}>Vascular System</Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.layerTogglePill,
+                    showVascular ? styles.layerTogglePillOn : styles.layerTogglePillOff,
+                  ]}
+                  onPress={() => setShowVascular((v) => !v)}
+                >
+                  <Text
+                    style={[
+                      styles.layerToggleText,
+                      showVascular ? styles.layerToggleTextOn : styles.layerToggleTextOff,
+                    ]}
+                  >
+                    {showVascular ? 'ON' : 'OFF'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Reset Button */}
+            <TouchableOpacity
+              style={styles.resetLayersBtn}
+              onPress={() => {
+                setShellMode('xray');
+                setShowMuscular(true);
+                setShowSkeletal(true);
+                setShowInternalOrgans(true);
+                setShowNervous(true);
+                setShowVascular(true);
+              }}
+            >
+              <Ionicons name="refresh" size={14} color="#0284C7" />
+              <Text style={styles.resetLayersText}>Reset All Layers</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -1039,5 +1262,105 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0284C7',
     letterSpacing: 0.4,
+  },
+  layersDrawerCard: {
+    position: 'absolute',
+    top: 70,
+    left: 64,
+    right: 56,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 100,
+  },
+  layersDrawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  layersDrawerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  layersList: {
+    paddingVertical: 8,
+    gap: 8,
+  },
+  layerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  layerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  layerName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  layerCyclePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  layerCycleText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  layerTogglePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    minWidth: 42,
+    alignItems: 'center',
+  },
+  layerTogglePillOn: {
+    backgroundColor: '#DCFCE7',
+  },
+  layerTogglePillOff: {
+    backgroundColor: '#F1F5F9',
+  },
+  layerToggleText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  layerToggleTextOn: {
+    color: '#16A34A',
+  },
+  layerToggleTextOff: {
+    color: '#94A3B8',
+  },
+  resetLayersBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    backgroundColor: '#F0F9FF',
+    borderRadius: 10,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  resetLayersText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
   },
 });

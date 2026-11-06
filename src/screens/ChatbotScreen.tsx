@@ -18,7 +18,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { theme } from '../theme';
 import { useAnatomyStore } from '../state/useAnatomyStore';
 import { TabParamList } from '../types';
-import { queryDoctorChatbot } from '../services/medicalAiService';
+import { queryAnatomyAiAssistant } from '../services/medicalAiService';
 
 interface ChatMessage {
   id: string;
@@ -119,24 +119,24 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: 'welcome_1',
     sender: 'bot',
-    text: "Hello! I am Dr. Alex, your Clinical Medical & Human Anatomy AI Assistant.\n\nI am exclusively designed for doctor-level clinical consultations, health checkups, laboratory test results, medical documents, and comprehensive human organ anatomy (Heart, Brain, Lungs, Liver, Kidneys, Stomach, etc.).\n\nHow may I assist your medical examination today?",
+    text: "Hello! I am your Educational Anatomy Assistant for the 3D Human Anatomy Explorer.\n\nI can explain human organs, body systems, anatomical structures, terminology, and physiological mechanisms in clear, student-friendly terms.\n\nWhat anatomical structure or system would you like to explore today?",
     timestamp: 'Just now',
     suggestedTopics: [
-      'Interpret a health checkup report (BP, Blood work, ECG)',
-      'Explain cardiac cycle and coronary perfusion',
-      'What do elevated liver enzymes (ALT/AST) signify?',
-      'How do kidneys regulate filtration & creatinine?',
+      'Explain the chambers and valves of the heart',
+      'What are the functions of the cerebral cortex lobes?',
+      'How do the lungs and alveoli perform gas exchange?',
+      'How do nephrons in the kidneys filter blood?',
     ],
   },
 ];
 
 const QUICK_PROMPTS = [
-  { label: '🩺 Health Checkup Lab', query: 'What are the essential parameters in a comprehensive annual health checkup?' },
-  { label: '❤️ Cardiac & BP Review', query: 'My blood pressure report is 140/90 mmHg. What does this mean clinically?' },
-  { label: '🫁 Pulmonary Function', query: 'How does gas exchange and alveolar ventilation work in the lungs?' },
-  { label: '🧠 Neurological Diagnostics', query: 'What are the clinical functions of the cranial nerves and cerebral cortex?' },
-  { label: '🫘 Kidney & Renal Panel', query: 'What does serum creatinine and eGFR indicate in a renal checkup?' },
-  { label: '🧪 Liver Enzyme Profile', query: 'What is the clinical role of the liver in metabolism and lipid digestion?' },
+  { label: '🫀 Heart & Circulation', query: 'How does blood flow through the heart chambers and valves?' },
+  { label: '🧠 Brain & Nervous', query: 'What are the main functions of the cerebrum, cerebellum, and brainstem?' },
+  { label: '🫁 Respiratory System', query: 'How does gas exchange occur across pulmonary alveoli?' },
+  { label: '🦴 Skeletal Framework', query: 'What are the primary differences between the axial and appendicular skeletons?' },
+  { label: '💪 Muscular Action', query: 'How do actin and myosin filaments cause muscle contraction?' },
+  { label: '🫘 Kidney & Filtration', query: 'How do nephrons filter metabolic wastes from blood plasma?' },
 ];
 
 export const ChatbotScreen: React.FC = () => {
@@ -146,7 +146,6 @@ export const ChatbotScreen: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
-  const [keyboardOffset, setKeyboardOffset] = useState<number>(0);
   const scrollViewRef = useRef<any>(null);
 
   useEffect(() => {
@@ -159,23 +158,16 @@ export const ChatbotScreen: React.FC = () => {
     const hideEvent =
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      if (Platform.OS === 'android') {
-        setKeyboardOffset(e.endCoordinates.height);
-      }
+    const showSub = Keyboard.addListener(showEvent, () => {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 50);
+      }, 100);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 250);
     });
 
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      if (Platform.OS === 'android') {
-        setKeyboardOffset(0);
-      }
-    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {});
 
     return () => {
       showSub.remove();
@@ -201,8 +193,8 @@ export const ChatbotScreen: React.FC = () => {
     setIsTyping(true);
 
     try {
-      // Map conversation history for context continuity
-      const historyPayload = updatedMessages
+      // Map prior conversation history for context continuity (excluding the latest question to prevent duplication)
+      const historyPayload = messages
         .filter((m) => m.id !== 'welcome_1')
         .map((m) => ({
           role: (m.sender === 'user' ? 'user' : 'assistant') as
@@ -211,7 +203,7 @@ export const ChatbotScreen: React.FC = () => {
           content: m.text,
         }));
 
-      const res = await queryDoctorChatbot(historyPayload, trimmed);
+      const res = await queryAnatomyAiAssistant(historyPayload, trimmed);
 
       const botMsg: ChatMessage = {
         id: `bot_${Date.now()}`,
@@ -222,11 +214,11 @@ export const ChatbotScreen: React.FC = () => {
       };
       setMessages((prev) => [...prev, botMsg]);
     } catch (err) {
-      console.error('Doctor AI consultation error:', err);
+      console.error('Anatomy AI consultation error:', err);
       const errorMsg: ChatMessage = {
         id: `bot_err_${Date.now()}`,
         sender: 'bot',
-        text: 'The clinical consultation link experienced a temporary network disruption. Please verify your internet connection and submit your medical query again.',
+        text: 'The educational assistant experienced a temporary network disruption. Please verify your internet connection or backend server and submit your question again.',
         timestamp: 'Just now',
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -250,13 +242,13 @@ export const ChatbotScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.botAvatarBadge}>
-            <MaterialCommunityIcons name="robot-confused-outline" size={20} color="#0284C7" />
+            <MaterialCommunityIcons name="school-outline" size={20} color="#0284C7" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>Anatomy AI Assistant</Text>
+            <Text style={styles.headerTitle}>Anatomy Educational Tutor</Text>
             <View style={styles.statusRow}>
               <View style={styles.statusDot} />
-              <Text style={styles.statusText}>Medical Knowledge Base Active</Text>
+              <Text style={styles.statusText}>Educational Knowledge Base Active</Text>
             </View>
           </View>
         </View>
@@ -292,10 +284,7 @@ export const ChatbotScreen: React.FC = () => {
 
       {/* Keyboard-aware Chat Container */}
       <KeyboardAvoidingView
-        style={[
-          styles.keyboardAvoidingWrap,
-          Platform.OS === 'android' && { paddingBottom: keyboardOffset },
-        ]}
+        style={styles.keyboardAvoidingWrap}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
@@ -386,7 +375,7 @@ export const ChatbotScreen: React.FC = () => {
               </View>
               <View style={[styles.messageBubble, styles.bubbleBot, styles.typingBubble]}>
                 <ActivityIndicator size="small" color="#0284C7" />
-                <Text style={styles.typingText}>Dr. Alex is reviewing...</Text>
+                <Text style={styles.typingText}>Anatomy Tutor is reviewing...</Text>
               </View>
             </View>
           )}
@@ -403,7 +392,7 @@ export const ChatbotScreen: React.FC = () => {
             />
             <TextInput
               style={styles.textInput}
-              placeholder="Ask Dr. Alex a clinical question..."
+              placeholder="Ask about organs, anatomy & body systems..."
               placeholderTextColor="#94A3B8"
               value={inputText}
               onChangeText={setInputText}

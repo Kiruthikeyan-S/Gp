@@ -1,0 +1,12 @@
+{
+  "name": "anatomy-ai-backend",
+  "version": "1.0.0",
+  "description": "Secure educational anatomy assistant backend for 3D Human Anatomy Explorer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["anatomy", "education", "backend", "groq"],
+  "author": "",
+  "license": "ISC"
+}

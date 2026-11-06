@@ -27,6 +27,9 @@ export const theme = {
       urinary: '#CA8A04',
       skeletal: '#4B5563',
       muscular: '#BE185D',
+      reproductive: '#DB2777',
+      endocrine: '#9333EA',
+      lymphatic: '#059669',
     },
   },
   spacing: {

@@ -39,6 +39,8 @@ interface Anatomy3DViewportProps {
   showSkeletal: boolean;
   showMuscular: boolean;
   showVascular: boolean;
+  showInternalOrgans?: boolean;
+  showNervous?: boolean;
   animatePhysiology: boolean;
   canvasBackgroundColor?: string;
   isActive?: boolean;
@@ -129,6 +131,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   showSkeletal,
   showMuscular,
   showVascular,
+  showInternalOrgans = true,
+  showNervous = true,
   animatePhysiology,
   canvasBackgroundColor,
   isActive = true,
@@ -196,6 +200,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     showSkeletal,
     showMuscular,
     showVascular,
+    showInternalOrgans,
+    showNervous,
     animatePhysiology,
     zoomLevel,
     isActive,
@@ -284,23 +290,24 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           if (isSelectedSubPart && activeSubPartId) {
             const partHex = getSubPartColorHex(activeSubPartId);
             // VIBRANT CLINICAL PART COLOR: Set base & emissive color to the part's distinct hue (pink, yellow, green, etc.)
+            currentMat.vertexColors = false;
             currentMat.color.setHex(partHex);
             currentMat.emissive.setHex(partHex);
-            currentMat.emissiveIntensity = 0.65;
+            currentMat.emissiveIntensity = 0.55;
             currentMat.opacity = 1.0;
             currentMat.transparent = false;
+            currentMat.depthWrite = true;
           } else {
+            currentMat.vertexColors = origMat.vertexColors;
             currentMat.color.copy(origMat.color);
             currentMat.emissive.setHex(0x000000);
             currentMat.emissiveIntensity = 0;
-            if (isTarget && activeSubPartId) {
-              currentMat.opacity = 0.45;
-              currentMat.transparent = true;
-            } else {
-              currentMat.opacity = origMat.opacity;
-              currentMat.transparent = origMat.transparent;
-            }
+            // Retain solid, realistic anatomical tissue appearance so unselected regions don't turn translucent or wash out
+            currentMat.opacity = origMat.opacity;
+            currentMat.transparent = origMat.transparent;
+            currentMat.depthWrite = true;
           }
+          currentMat.needsUpdate = true;
         });
       });
     } else {
@@ -315,16 +322,31 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         (activeSystemId === 'all' || activeSystemId === 'circulatory');
 
       graph.systemGroups.forEach((group, sysId) => {
-        if (sysId === 'skeletal' || sysId === 'muscular') {
-          group.visible = false;
+        if (sysId === 'skeletal') {
+          group.visible = skeletalVisible && (activeSystemId === 'all' || activeSystemId === 'skeletal');
+        } else if (sysId === 'muscular') {
+          group.visible = muscularVisible && (activeSystemId === 'all' || activeSystemId === 'muscular');
+        } else if (sysId === 'nervous') {
+          const nervousVisible = stateRef.current.showNervous ?? true;
+          group.visible = nervousVisible && (activeSystemId === 'all' || activeSystemId === 'nervous');
         } else {
-          group.visible =
-            activeSystemId === 'all' || activeSystemId === sysId;
+          const organsVisible = stateRef.current.showInternalOrgans ?? true;
+          group.visible = organsVisible && (activeSystemId === 'all' || activeSystemId === sysId);
         }
       });
 
+      const internalOrgansVisible = stateRef.current.showInternalOrgans ?? true;
       graph.organRecords.forEach((record) => {
-        record.group.visible = true;
+        // Skeletal bones and muscles have their own system groups; visceral organs follow internalOrgansVisible
+        if (record.systemId === 'skeletal') {
+          record.group.visible = skeletalVisible;
+        } else if (record.systemId === 'muscular') {
+          record.group.visible = muscularVisible;
+        } else if (record.systemId === 'nervous') {
+          record.group.visible = stateRef.current.showNervous ?? true;
+        } else {
+          record.group.visible = internalOrgansVisible;
+        }
         const isSelected = record.organId === activeOrganId;
         record.meshes.forEach((mesh) => {
           const origMat = record.originalMaterials.get(mesh);
@@ -359,6 +381,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       showSkeletal,
       showMuscular,
       showVascular,
+      showInternalOrgans,
+      showNervous,
       animatePhysiology,
       zoomLevel,
       isActive,
@@ -393,6 +417,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     showSkeletal,
     showMuscular,
     showVascular,
+    showInternalOrgans,
+    showNervous,
     animatePhysiology,
     zoomLevel,
     onSelectOrgan,
@@ -762,17 +788,8 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           setIsLoading(false);
         }
 
-        // Asynchronously stream & hot-swap remaining real 3D .glb medical scans (Sketchfab / NIH 3D / Visible Human)
-        loadAllRealMedicalGlbModels(
-          graph,
-          (loadedCount, totalCount) => {
-            if (!isMountedRef.current) return;
-            setGlbScanStatus({ loaded: loadedCount, total: totalCount });
-            applySceneState();
-          },
-          () => !isMountedRef.current,
-          priorityOrganId
-        );
+        // Demand-based loading: Only load additional models when requested to optimize Android memory and battery
+        setGlbScanStatus({ loaded: 1, total: 1 });
 
         let clock = 0;
 

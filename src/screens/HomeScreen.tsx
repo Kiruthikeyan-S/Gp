@@ -150,7 +150,7 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.headerRightActions}>
           <TouchableOpacity
             style={styles.headerIconBtn}
-            onPress={() => navigation.navigate('SystemsTab')}
+            onPress={() => navigation.navigate('Search')}
             activeOpacity={0.7}
           >
             <Ionicons name="search-outline" size={20} color="#0F172A" />
@@ -158,11 +158,18 @@ export const HomeScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.headerIconBtn}
-            onPress={() => navigation.navigate('ChatTab')}
+            onPress={() => navigation.navigate('Dashboard')}
             activeOpacity={0.7}
           >
-            <Ionicons name="notifications-outline" size={20} color="#0F172A" />
-            <View style={styles.notifDot} />
+            <Ionicons name="stats-chart-outline" size={19} color="#0284C7" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={() => navigation.navigate('Credits')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="information-circle-outline" size={20} color="#0F172A" />
           </TouchableOpacity>
         </View>
       </View>
@@ -172,11 +179,11 @@ export const HomeScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* User Greeting matching Image 1 */}
+        {/* User Greeting */}
         <View style={styles.greetingSection}>
-          <Text style={styles.greetingTitle}>Hello, Dr. Alex</Text>
+          <Text style={styles.greetingTitle}>Welcome, Anatomy Student</Text>
           <Text style={styles.greetingSubtitle}>
-            Welcome to 3D Human Anatomy Explorer
+            Interactive 3D Human Anatomy & Medical Atlas
           </Text>
         </View>
 
@@ -219,9 +226,7 @@ export const HomeScreen: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.systemsScroll}
         >
-          {BODY_SYSTEMS.filter(
-            (s) => s.id !== 'skeletal' && s.id !== 'muscular'
-          ).map((system) => {
+          {BODY_SYSTEMS.map((system) => {
             const count = ORGANS.filter((o) => o.systemId === system.id).length;
             return (
               <TouchableOpacity

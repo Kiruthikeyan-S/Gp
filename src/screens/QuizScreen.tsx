@@ -8,25 +8,51 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { theme } from '../theme';
 import { QUIZ_QUESTIONS } from '../data/anatomyData';
 import { useAnatomyStore } from '../state/useAnatomyStore';
+import { RootStackParamList, BodySystemId } from '../types';
+
+const SYSTEM_QUIZ_FILTERS: { id: BodySystemId | 'all'; label: string }[] = [
+  { id: 'all', label: 'All Systems' },
+  { id: 'circulatory', label: 'Circulatory' },
+  { id: 'respiratory', label: 'Respiratory' },
+  { id: 'nervous', label: 'Nervous' },
+  { id: 'skeletal', label: 'Skeletal' },
+  { id: 'muscular', label: 'Muscular' },
+  { id: 'digestive', label: 'Digestive' },
+  { id: 'urinary', label: 'Urinary' },
+  { id: 'endocrine', label: 'Endocrine' },
+  { id: 'lymphatic', label: 'Lymphatic' },
+  { id: 'reproductive', label: 'Reproductive' },
+];
 
 export const QuizScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { quizStats, recordQuizScore } = useAnatomyStore();
+  const route = useRoute<RouteProp<RootStackParamList, 'Quiz'>>();
+  const initialSystemId = route.params?.systemId || 'all';
 
+  const { quizStats, recordQuizScore, recordDailyActivity } = useAnatomyStore();
+
+  const [activeSystemId, setActiveSystemId] = useState<BodySystemId | 'all'>(initialSystemId);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
   const [sessionCorrectCount, setSessionCorrectCount] = useState<number>(0);
   const [isQuizCompleted, setIsQuizCompleted] = useState<boolean>(false);
 
-  const currentQ = QUIZ_QUESTIONS[currentIndex];
+  const filteredQuestions =
+    activeSystemId === 'all'
+      ? QUIZ_QUESTIONS
+      : QUIZ_QUESTIONS.filter((q) => q.systemId === activeSystemId);
+
+  const safeIndex = Math.min(currentIndex, Math.max(0, filteredQuestions.length - 1));
+  const currentQ = filteredQuestions[safeIndex] || QUIZ_QUESTIONS[0];
 
   const handleSelectOption = (index: number) => {
     if (isAnswered) return;
+    recordDailyActivity();
     setSelectedOption(index);
     setIsAnswered(true);
 
@@ -37,13 +63,13 @@ export const QuizScreen: React.FC = () => {
   };
 
   const handleNext = () => {
-    if (currentIndex < QUIZ_QUESTIONS.length - 1) {
+    if (safeIndex < filteredQuestions.length - 1) {
       setCurrentIndex((i) => i + 1);
       setSelectedOption(null);
       setIsAnswered(false);
     } else {
       const finalCorrect = sessionCorrectCount;
-      recordQuizScore(finalCorrect, QUIZ_QUESTIONS.length);
+      recordQuizScore(finalCorrect, filteredQuestions.length);
       setIsQuizCompleted(true);
     }
   };
@@ -54,6 +80,17 @@ export const QuizScreen: React.FC = () => {
     setIsAnswered(false);
     setSessionCorrectCount(0);
     setIsQuizCompleted(false);
+  };
+
+  const getDifficultyColor = (diff?: string) => {
+    switch (diff) {
+      case 'advanced':
+        return '#EF4444';
+      case 'intermediate':
+        return '#F59E0B';
+      default:
+        return '#10B981';
+    }
   };
 
   return (
@@ -70,10 +107,52 @@ export const QuizScreen: React.FC = () => {
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>Anatomy Practice Quiz</Text>
             <Text style={styles.headerSubtitle}>
-              Test your comprehension of organ functions, locations, and structures.
+              Clinical MCQs, instant rationale & difficulty levels
             </Text>
           </View>
         </View>
+
+        {/* System Filter Strip */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+        >
+          {SYSTEM_QUIZ_FILTERS.map((f) => {
+            const isActive = activeSystemId === f.id;
+            return (
+              <TouchableOpacity
+                key={f.id}
+                style={[
+                  {
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
+                    borderRadius: 16,
+                    backgroundColor: isActive ? '#0284C7' : '#F1F5F9',
+                  },
+                ]}
+                onPress={() => {
+                  setActiveSystemId(f.id);
+                  setCurrentIndex(0);
+                  setSelectedOption(null);
+                  setIsAnswered(false);
+                  setSessionCorrectCount(0);
+                  setIsQuizCompleted(false);
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '600',
+                    color: isActive ? '#FFFFFF' : '#475569',
+                  }}
+                >
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -89,15 +168,15 @@ export const QuizScreen: React.FC = () => {
             </View>
             <Text style={styles.resultsTitle}>Quiz Completed!</Text>
             <Text style={styles.resultsScore}>
-              {sessionCorrectCount} / {QUIZ_QUESTIONS.length}
+              {sessionCorrectCount} / {filteredQuestions.length}
             </Text>
             <Text style={styles.resultsPercent}>
-              Score: {Math.round((sessionCorrectCount / QUIZ_QUESTIONS.length) * 100)}%
+              Score: {Math.round((sessionCorrectCount / filteredQuestions.length) * 100)}%
             </Text>
             <Text style={styles.resultsMessage}>
-              {sessionCorrectCount === QUIZ_QUESTIONS.length
+              {sessionCorrectCount === filteredQuestions.length
                 ? 'Outstanding! You answered every question correctly.'
-                : sessionCorrectCount >= 3
+                : sessionCorrectCount >= Math.ceil(filteredQuestions.length * 0.6)
                 ? 'Great job! You have a solid grasp of human anatomy.'
                 : 'Good attempt! Review the lessons and try again to improve.'}
             </Text>
@@ -126,9 +205,32 @@ export const QuizScreen: React.FC = () => {
             {/* Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressLabelRow}>
-                <Text style={styles.progressQuestionText}>
-                  Question {currentIndex + 1} of {QUIZ_QUESTIONS.length}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.progressQuestionText}>
+                    Question {safeIndex + 1} of {filteredQuestions.length}
+                  </Text>
+                  {currentQ.difficulty && (
+                    <View
+                      style={{
+                        backgroundColor: `${getDifficultyColor(currentQ.difficulty)}15`,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                        borderRadius: 6,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 9,
+                          fontWeight: '800',
+                          color: getDifficultyColor(currentQ.difficulty),
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        {currentQ.difficulty.toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.progressScoreText}>
                   Correct: {sessionCorrectCount}
                 </Text>
@@ -138,7 +240,7 @@ export const QuizScreen: React.FC = () => {
                   style={[
                     styles.progressBarFill,
                     {
-                      width: `${((currentIndex + 1) / QUIZ_QUESTIONS.length) * 100}%`,
+                      width: `${((safeIndex + 1) / filteredQuestions.length) * 100}%`,
                     },
                   ]}
                 />

@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { useAnatomyStore } from '../state/useAnatomyStore';
+import { BODY_SYSTEMS, ORGANS } from '../data/anatomyData';
 import { SYSTEM_IMAGES } from '../constants/anatomyImages';
 
 type SystemsNavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -24,91 +25,155 @@ interface SystemClinicalSpec {
   id: string;
   name: string;
   subTitle: string;
-  badge1: string;
   badge2: string;
   chips: string[];
   simulationText: string;
   icon: string;
   color: string;
   representativeOrganId: string;
-  category: 'visceral' | 'neural';
+  category: 'structural' | 'visceral' | 'regulatory';
 }
 
 const CLINICAL_SYSTEMS: SystemClinicalSpec[] = [
   {
     systemNumber: 'SYSTEM 01',
-    tag: 'Exploration Ready',
-    id: 'circulatory',
-    name: 'Circulatory System',
-    subTitle: 'Heart, Blood Vessels & Arterial Network...',
-    badge1: '12 MODELED ORGANS',
-    badge2: 'HIGH RESOLUTION',
-    chips: ['Myocardium', 'Aortic Valve', 'Pulmonary Trunk', 'Vena Cava'],
-    simulationText: 'Cardiovascular Flow Simulation',
-    icon: 'heart-pulse',
-    color: '#DC2626',
-    representativeOrganId: 'heart',
-    category: 'visceral',
+    tag: 'Osteology',
+    id: 'skeletal',
+    name: 'Skeletal System',
+    subTitle: '206 Bones, Axial Skeleton, Pelvis & Limbs...',
+    badge2: 'AXIAL & APPENDICULAR',
+    chips: ['Cranium', 'Vertebrae', 'Pelvis', 'Femur'],
+    simulationText: 'Biomechanical Levers & Load Bearing',
+    icon: 'bone',
+    color: '#0EA5E9',
+    representativeOrganId: 'skeleton',
+    category: 'structural',
   },
   {
     systemNumber: 'SYSTEM 02',
-    tag: 'Pulmonology',
-    id: 'respiratory',
-    name: 'Respiratory System',
-    subTitle: 'Lungs, Trachea, Bronchial Tree & Alveoli...',
-    badge1: '8 MODELED ORGANS',
-    badge2: 'DYNAMIC AIRFLOW',
-    chips: ['Trachea', 'Bronchioles', 'Alveoli', 'Pleura'],
-    simulationText: 'Gas Exchange Mechanics',
-    icon: 'lungs',
-    color: '#0284C7',
-    representativeOrganId: 'lungs',
-    category: 'visceral',
+    tag: 'Myology',
+    id: 'muscular',
+    name: 'Muscular System',
+    subTitle: 'Over 600 Muscles, Striated Sarcomeres & Tendons...',
+    badge2: 'CONTRACTILE FORCE',
+    chips: ['Deltoid', 'Pectoralis', 'Quadriceps', 'Sarcomere'],
+    simulationText: 'Actin-Myosin Sliding Filament Action',
+    icon: 'arm-flex',
+    color: '#E11D48',
+    representativeOrganId: 'muscles',
+    category: 'structural',
   },
   {
     systemNumber: 'SYSTEM 03',
     tag: 'Neurology',
     id: 'nervous',
     name: 'Nervous System',
-    subTitle: 'Brain, Spinal Cord & Peripheral Nerves...',
-    badge1: '16 MODELED ORGANS',
-    badge2: 'SYNAPSE LAYER',
-    chips: ['Cerebrum', 'Brainstem', 'Vagus Nerve', 'Spinal Medulla'],
-    simulationText: 'Signal Transmission Pathway',
+    subTitle: 'Brain, Cerebral Lobes, Spinal Cord & Nerves...',
+    badge2: 'SYNAPSE TRANSMISSION',
+    chips: ['Cerebrum', 'Cerebellum', 'Brainstem', 'Cranial Nerves'],
+    simulationText: 'Electrochemical Impulse Pathways',
     icon: 'brain',
     color: '#7C3AED',
     representativeOrganId: 'brain',
-    category: 'neural',
+    category: 'regulatory',
   },
   {
     systemNumber: 'SYSTEM 04',
+    tag: 'Cardiology',
+    id: 'circulatory',
+    name: 'Circulatory System',
+    subTitle: 'Heart Chambers, Coronary Vessels & Systemic Loops...',
+    badge2: 'PULMONARY & SYSTEMIC',
+    chips: ['Myocardium', 'Aortic Valve', 'Ventricles', 'Vena Cava'],
+    simulationText: 'Continuous Hydrostatic Perfusion Gradient',
+    icon: 'heart-pulse',
+    color: '#DC2626',
+    representativeOrganId: 'heart',
+    category: 'visceral',
+  },
+  {
+    systemNumber: 'SYSTEM 05',
+    tag: 'Pulmonology',
+    id: 'respiratory',
+    name: 'Respiratory System',
+    subTitle: 'Bilateral Lungs, Trachea, Bronchi & Alveoli...',
+    badge2: 'GAS DIFFUSION',
+    chips: ['Alveoli', 'Trachea', 'Bronchioles', 'Pleural Cavity'],
+    simulationText: 'Oxygen Saturation & CO2 Expulsion',
+    icon: 'weather-windy',
+    color: '#0284C7',
+    representativeOrganId: 'lungs',
+    category: 'visceral',
+  },
+  {
+    systemNumber: 'SYSTEM 06',
     tag: 'Gastroenterology',
     id: 'digestive',
     name: 'Digestive System',
     subTitle: 'Stomach, Intestines, Liver & Biliary Tract...',
-    badge1: '14 MODELED ORGANS',
-    badge2: 'CROSS SECTIONAL',
-    chips: ['Hepatic Lobes', 'Duodenum', 'Pancreas', 'Mesentery'],
-    simulationText: 'Nutrient Absorption Simulation',
-    icon: 'food-drumstick',
+    badge2: 'MACERATION & ABSORPTION',
+    chips: ['Hepatic Lobes', 'Duodenum', 'Pancreas', 'Gastric Rugae'],
+    simulationText: 'Enzymatic Hydrolysis & Nutrient Transport',
+    icon: 'food-apple-outline',
     color: '#EA580C',
     representativeOrganId: 'stomach',
     category: 'visceral',
   },
   {
-    systemNumber: 'SYSTEM 05',
+    systemNumber: 'SYSTEM 07',
     tag: 'Nephrology',
     id: 'urinary',
     name: 'Urinary System',
-    subTitle: 'Kidneys, Ureters, Bladder & Urethra...',
-    badge1: '4 MODELED ORGANS',
-    badge2: 'FILTRATION MODEL',
-    chips: ['Renal Cortex', 'Nephron Units', 'Renal Pelvis', 'Detrusor'],
-    simulationText: 'Fluid & Electrolyte Regulation',
+    subTitle: 'Kidneys, Nephrons, Ureters & Bladder...',
+    badge2: 'PLASMA CLEARANCE',
+    chips: ['Renal Cortex', 'Glomerulus', 'Renal Pelvis', 'Ureter'],
+    simulationText: 'Electrolyte Balance & Osmotic Regulation',
     icon: 'water-outline',
     color: '#CA8A04',
     representativeOrganId: 'kidneys',
     category: 'visceral',
+  },
+  {
+    systemNumber: 'SYSTEM 08',
+    tag: 'Reproductive Biology',
+    id: 'reproductive',
+    name: 'Reproductive System',
+    subTitle: 'Gonads, Gametogenesis, Uterus & Endocrine Loop...',
+    badge2: 'GAMETOGENESIS',
+    chips: ['Gonads', 'Steroidogenesis', 'Gametes', 'Pelvic Viscera'],
+    simulationText: 'Hormonal Cycling & Gamete Maturation',
+    icon: 'gender-male-female',
+    color: '#D946EF',
+    representativeOrganId: 'reproductive',
+    category: 'visceral',
+  },
+  {
+    systemNumber: 'SYSTEM 09',
+    tag: 'Endocrinology',
+    id: 'endocrine',
+    name: 'Endocrine System',
+    subTitle: 'Thyroid, Adrenal Glands, Pituitary & Hormone Loop...',
+    badge2: 'CHEMICAL MESSENGERS',
+    chips: ['Thyroid Lobes', 'T3 / T4', 'Adrenals', 'Parathyroid'],
+    simulationText: 'Basal Metabolic Regulation',
+    icon: 'molecule',
+    color: '#10B981',
+    representativeOrganId: 'thyroid',
+    category: 'regulatory',
+  },
+  {
+    systemNumber: 'SYSTEM 10',
+    tag: 'Immunology',
+    id: 'lymphatic',
+    name: 'Lymphatic & Immune System',
+    subTitle: 'Spleen, Lymph Nodes, Thymus & Interstitial Channels...',
+    badge2: 'PATHOGEN SURVEILLANCE',
+    chips: ['Spleen', 'Lymph Nodes', 'Thymus', 'Lymphatics'],
+    simulationText: 'Adaptive Immunity & Fluid Drainage',
+    icon: 'shield-check-outline',
+    color: '#8B5CF6',
+    representativeOrganId: 'spleen',
+    category: 'regulatory',
   },
 ];
 
@@ -117,7 +182,7 @@ export const SystemsScreen: React.FC = () => {
   const { selectOrgan, selectSystem } = useAnatomyStore();
 
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeCategory, setActiveCategory] = useState<'all' | 'visceral' | 'neural'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'structural' | 'visceral' | 'regulatory'>('all');
 
   const filteredSystems = CLINICAL_SYSTEMS.filter((sys) => {
     const matchesCategory =
@@ -133,7 +198,6 @@ export const SystemsScreen: React.FC = () => {
   const handleExploreIn3D = (system: SystemClinicalSpec) => {
     selectSystem(system.id as any);
     selectOrgan(system.representativeOrganId);
-    // Directly opens the dedicated 3D Organ Details view (Image 3)
     navigation.navigate('OrganDetails', {
       organId: system.representativeOrganId,
     });
@@ -154,7 +218,11 @@ export const SystemsScreen: React.FC = () => {
           <Text style={styles.appTitle}>3D Human Anatomy Explorer</Text>
         </View>
 
-        <TouchableOpacity style={styles.headerIconBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Search' as any)}
+        >
           <Ionicons name="search-outline" size={20} color="#0F172A" />
         </TouchableOpacity>
       </View>
@@ -169,11 +237,11 @@ export const SystemsScreen: React.FC = () => {
           <View style={styles.titleRow}>
             <Text style={styles.mainTitle}>Body Systems</Text>
             <View style={styles.clinicalBadge}>
-              <Text style={styles.clinicalBadgeText}>CLINICAL V4.2</Text>
+              <Text style={styles.clinicalBadgeText}>10 SYSTEMS</Text>
             </View>
           </View>
           <Text style={styles.subtitle}>
-            5 Primary Anatomical Systems
+            10 Comprehensive Anatomical Systems & Visceral Networks
           </Text>
         </View>
 
@@ -194,7 +262,11 @@ export const SystemsScreen: React.FC = () => {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.filterBtn}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Search' as any)}
+          >
             <Ionicons name="options-outline" size={20} color="#0F172A" />
           </TouchableOpacity>
         </View>
@@ -219,7 +291,30 @@ export const SystemsScreen: React.FC = () => {
                 activeCategory === 'all' && styles.filterPillTextActive,
               ]}
             >
-              All Systems (5)
+              All Systems (10)
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterPill,
+              activeCategory === 'structural' && styles.filterPillActive,
+            ]}
+            onPress={() => setActiveCategory('structural')}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name="bone"
+              size={14}
+              color={activeCategory === 'structural' ? '#FFFFFF' : '#64748B'}
+            />
+            <Text
+              style={[
+                styles.filterPillText,
+                activeCategory === 'structural' && styles.filterPillTextActive,
+              ]}
+            >
+              Structural (2)
             </Text>
           </TouchableOpacity>
 
@@ -232,7 +327,7 @@ export const SystemsScreen: React.FC = () => {
             activeOpacity={0.8}
           >
             <MaterialCommunityIcons
-              name="source-branch"
+              name="heart-pulse"
               size={14}
               color={activeCategory === 'visceral' ? '#FFFFFF' : '#64748B'}
             />
@@ -242,30 +337,30 @@ export const SystemsScreen: React.FC = () => {
                 activeCategory === 'visceral' && styles.filterPillTextActive,
               ]}
             >
-              Visceral
+              Visceral (5)
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.filterPill,
-              activeCategory === 'neural' && styles.filterPillActive,
+              activeCategory === 'regulatory' && styles.filterPillActive,
             ]}
-            onPress={() => setActiveCategory('neural')}
+            onPress={() => setActiveCategory('regulatory')}
             activeOpacity={0.8}
           >
             <MaterialCommunityIcons
               name="brain"
               size={14}
-              color={activeCategory === 'neural' ? '#FFFFFF' : '#64748B'}
+              color={activeCategory === 'regulatory' ? '#FFFFFF' : '#64748B'}
             />
             <Text
               style={[
                 styles.filterPillText,
-                activeCategory === 'neural' && styles.filterPillTextActive,
+                activeCategory === 'regulatory' && styles.filterPillTextActive,
               ]}
             >
-              Neural
+              Regulatory (3)
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -310,7 +405,12 @@ export const SystemsScreen: React.FC = () => {
 
                   <View style={styles.badgesRow}>
                     <View style={styles.specBadge}>
-                      <Text style={styles.specBadgeText}>{system.badge1}</Text>
+                      <Text style={styles.specBadgeText}>
+                        {ORGANS.filter((o) => o.systemId === system.id).length}{' '}
+                        {ORGANS.filter((o) => o.systemId === system.id).length === 1
+                          ? 'MODELED ORGAN'
+                          : 'MODELED ORGANS'}
+                      </Text>
                     </View>
                     <View style={styles.specBadge}>
                       <Text style={styles.specBadgeText}>{system.badge2}</Text>
