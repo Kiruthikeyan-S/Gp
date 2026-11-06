@@ -656,6 +656,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
 
     const hemiMesh = new THREE.Mesh(hemiGeo, brainMat.clone());
     hemiMesh.position.set(side * 0.098, 1.98, 0.02);
+    hemiMesh.userData = { subPartId: 'frontal_lobe', organId: 'brain' };
     brainGroup.add(hemiMesh);
 
     // Temporal Lobe inferior bulge
@@ -668,6 +669,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     const tempMesh = new THREE.Mesh(tempGeo, brainMat.clone());
     tempMesh.position.set(side * 0.13, 1.86, 0.05);
     tempMesh.rotation.x = 0.22;
+    tempMesh.userData = { subPartId: 'temporal_lobe', organId: 'brain' };
     brainGroup.add(tempMesh);
   });
 
@@ -680,6 +682,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   });
   const cerebellumMesh = new THREE.Mesh(cerebellumGeo, brainMat.clone());
   cerebellumMesh.position.set(0, 1.79, -0.12);
+  cerebellumMesh.userData = { subPartId: 'cerebellum', organId: 'brain' };
   brainGroup.add(cerebellumMesh);
 
   // Pons & Medulla Oblongata (Brainstem)
@@ -697,6 +700,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     0xb87a74
   );
   const stemMesh = new THREE.Mesh(stemGeo, brainMat.clone());
+  stemMesh.userData = { subPartId: 'pons_medulla', organId: 'brain' };
   brainGroup.add(stemMesh);
 
   registerOrganGroup(

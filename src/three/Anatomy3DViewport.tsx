@@ -273,10 +273,10 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           const meshSubPartId = mesh.userData?.subPartId;
           const isSelectedSubPart =
             isTarget &&
-            activeSubPartId &&
-            (meshSubPartId === activeSubPartId || record.meshes.length === 1);
+            Boolean(activeSubPartId) &&
+            meshSubPartId === activeSubPartId;
 
-          if (isSelectedSubPart) {
+          if (isSelectedSubPart && activeSubPartId) {
             const partHex = getSubPartColorHex(activeSubPartId);
             // VIBRANT CLINICAL PART COLOR: Set base & emissive color to the part's distinct hue (pink, yellow, green, etc.)
             currentMat.color.setHex(partHex);

@@ -635,6 +635,28 @@ function mapNodeNameToSubPart(
 ): { subPartId: string | null; primaryHex: number; secondaryHex: number } {
   const n = (nodeName || '').toLowerCase();
 
+  if (organId === 'brain') {
+    if (n.includes('cerebellum')) {
+      return { subPartId: 'cerebellum', primaryHex: 0x8b5cf6, secondaryHex: 0x6d28d9 };
+    }
+    if (n.includes('temporal_lobe') || n.includes('temporal')) {
+      return { subPartId: 'temporal_lobe', primaryHex: 0xeab308, secondaryHex: 0xa16207 };
+    }
+    if (n.includes('frontal_lobe') || n.includes('frontal')) {
+      return { subPartId: 'frontal_lobe', primaryHex: 0x0284c7, secondaryHex: 0x0369a1 };
+    }
+    if (n.includes('parietal_lobe') || n.includes('parietal')) {
+      return { subPartId: 'parietal_lobe', primaryHex: 0x10b981, secondaryHex: 0x047857 };
+    }
+    if (n.includes('occipital_lobe') || n.includes('occipital')) {
+      return { subPartId: 'occipital_lobe', primaryHex: 0xec4899, secondaryHex: 0xbe185d };
+    }
+    if (n.includes('pons_medulla') || n.includes('brainstem') || n.includes('stem')) {
+      return { subPartId: 'pons_medulla', primaryHex: 0xf97316, secondaryHex: 0xc2410c };
+    }
+    return { subPartId: 'parietal_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+  }
+
   if (organId === 'heart') {
     if (n.includes('mitral_valve')) {
       return { subPartId: 'mitral_valve', primaryHex: 0xfef2f2, secondaryHex: 0xfecdd3 };
@@ -783,6 +805,123 @@ function mapNodeNameToSubPart(
 }
 
 /**
+ * Anatomically partitions a unified MRI Brain GLB into 6 individually highlightable lobes/structures:
+ * Frontal, Temporal, Parietal, Occipital, Cerebellum, and Brainstem (Pons/Medulla).
+ */
+function partitionBrainPrimitive(
+  prim: ParsedPrimitive,
+  rawCenter: THREE.Vector3,
+  rawSize: THREE.Vector3
+): Map<string, ParsedPrimitive> {
+  const result = new Map<string, ParsedPrimitive>();
+  const pos = prim.positions;
+  const norm = prim.normals;
+  const ind = prim.indices;
+
+  const halfX = Math.max(rawSize.x / 2, 0.0001);
+  const halfY = Math.max(rawSize.y / 2, 0.0001);
+  const halfZ = Math.max(rawSize.z / 2, 0.0001);
+
+  function classify(cx: number, cy: number, cz: number): string {
+    const nx = (cx - rawCenter.x) / halfX;
+    const ny = (cy - rawCenter.y) / halfY;
+    const nz = (cz - rawCenter.z) / halfZ;
+
+    // 1. Brainstem (Pons & Medulla): Lowest central downward projection
+    if (ny < -0.42 && Math.abs(nx) < 0.38 && nz > -0.45) {
+      return 'pons_medulla';
+    }
+    // 2. Cerebellum: Lower posterior lobes
+    if (ny < -0.12 && nz < -0.12) {
+      return 'cerebellum';
+    }
+    // 3. Temporal Lobe: Lateral inferior bulges
+    if (ny < 0.14 && Math.abs(nx) > 0.36 && nz > -0.28 && nz < 0.48) {
+      return 'temporal_lobe';
+    }
+    // 4. Occipital Lobe: Posterior cortex
+    if (nz < -0.32) {
+      return 'occipital_lobe';
+    }
+    // 5. Frontal Lobe: Anterior cortex
+    if (nz > 0.08) {
+      return 'frontal_lobe';
+    }
+    // 6. Parietal Lobe: Superior/middle cortex
+    return 'parietal_lobe';
+  }
+
+  const buckets: Record<string, number[]> = {
+    frontal_lobe: [],
+    temporal_lobe: [],
+    parietal_lobe: [],
+    occipital_lobe: [],
+    cerebellum: [],
+    pons_medulla: [],
+  };
+
+  const triCount = ind ? Math.floor(ind.length / 3) : Math.floor(pos.length / 9);
+
+  for (let t = 0; t < triCount; t++) {
+    let i0 = t * 3;
+    let i1 = t * 3 + 1;
+    let i2 = t * 3 + 2;
+    if (ind) {
+      i0 = ind[t * 3];
+      i1 = ind[t * 3 + 1];
+      i2 = ind[t * 3 + 2];
+    }
+
+    const cx = (pos[i0 * 3] + pos[i1 * 3] + pos[i2 * 3]) / 3;
+    const cy = (pos[i0 * 3 + 1] + pos[i1 * 3 + 1] + pos[i2 * 3 + 1]) / 3;
+    const cz = (pos[i0 * 3 + 2] + pos[i1 * 3 + 2] + pos[i2 * 3 + 2]) / 3;
+
+    const subId = classify(cx, cy, cz);
+    const b = buckets[subId] || buckets.parietal_lobe;
+    b.push(i0, i1, i2);
+  }
+
+  for (const [subId, triIndices] of Object.entries(buckets)) {
+    if (triIndices.length === 0) continue;
+    const vertMap = new Map<number, number>();
+    const newPositions: number[] = [];
+    const newNormals: number[] = [];
+    const newIndices: number[] = [];
+
+    for (const oldIdx of triIndices) {
+      let mapped = vertMap.get(oldIdx);
+      if (mapped === undefined) {
+        mapped = newPositions.length / 3;
+        vertMap.set(oldIdx, mapped);
+        newPositions.push(
+          pos[oldIdx * 3],
+          pos[oldIdx * 3 + 1],
+          pos[oldIdx * 3 + 2]
+        );
+        if (norm) {
+          newNormals.push(
+            norm[oldIdx * 3],
+            norm[oldIdx * 3 + 1],
+            norm[oldIdx * 3 + 2]
+          );
+        }
+      }
+      newIndices.push(mapped);
+    }
+
+    result.set(subId, {
+      nodeName: `brain_${subId}`,
+      positions: new Float32Array(newPositions),
+      normals: norm ? new Float32Array(newNormals) : null,
+      indices: new Uint32Array(newIndices),
+      baseColor: prim.baseColor,
+    });
+  }
+
+  return result;
+}
+
+/**
  * Builds and caches the THREE.BufferGeometry sub-meshes for a single organ specification.
  */
 async function buildAndCacheOrganModel(
@@ -890,6 +1029,20 @@ async function buildAndCacheOrganModel(
       );
     }
 
+    let processedPrimitives = allPrimitives;
+    if (spec.organId === 'brain') {
+      const brainPrims: ParsedPrimitive[] = [];
+      for (const p of allPrimitives) {
+        const partitioned = partitionBrainPrimitive(p, rawCenter, rawSize);
+        for (const partPrim of partitioned.values()) {
+          brainPrims.push(partPrim);
+        }
+      }
+      if (brainPrims.length > 0) {
+        processedPrimitives = brainPrims;
+      }
+    }
+
     // Group primitives by anatomical subPartId so each part is an individually highlightable 3D mesh
     const groupedPrims = new Map<
       string,
@@ -901,7 +1054,7 @@ async function buildAndCacheOrganModel(
       }
     >();
 
-    for (const p of allPrimitives) {
+    for (const p of processedPrimitives) {
       const mapped = mapNodeNameToSubPart(
         spec.organId,
         p.nodeName,
