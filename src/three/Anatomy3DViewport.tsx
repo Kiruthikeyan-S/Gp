@@ -263,8 +263,12 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         const isTarget = record.organId === activeOrganId;
         record.group.visible = isTarget;
         record.meshes.forEach((mesh) => {
-          const origMat = record.originalMaterials.get(mesh);
+          let origMat = record.originalMaterials.get(mesh);
           const currentMat = mesh.material as THREE.MeshStandardMaterial;
+          if (!origMat && currentMat) {
+            origMat = currentMat.clone();
+            record.originalMaterials.set(mesh, origMat);
+          }
           if (!origMat || !currentMat) return;
           currentMat.color.copy(origMat.color);
           currentMat.opacity = origMat.opacity;
@@ -279,12 +283,14 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           if (isSelectedSubPart && activeSubPartId) {
             const partHex = getSubPartColorHex(activeSubPartId);
             // VIBRANT CLINICAL PART COLOR: Set base & emissive color to the part's distinct hue (pink, yellow, green, etc.)
+            currentMat.vertexColors = false;
             currentMat.color.setHex(partHex);
             currentMat.emissive.setHex(partHex);
             currentMat.emissiveIntensity = 0.65;
             currentMat.opacity = 1.0;
             currentMat.transparent = false;
           } else {
+            currentMat.vertexColors = origMat.vertexColors;
             currentMat.color.copy(origMat.color);
             currentMat.emissive.setHex(0x000000);
             currentMat.emissiveIntensity = 0;
@@ -296,6 +302,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
               currentMat.transparent = origMat.transparent;
             }
           }
+          currentMat.needsUpdate = true;
         });
       });
     } else {
@@ -908,21 +915,40 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
 
   return (
     <View
-      style={styles.container}
+      style={[
+        styles.container,
+        {
+          width: '100%',
+          height: '100%',
+          backgroundColor: canvasBackgroundColor || '#0B0F19',
+        },
+      ]}
       onLayout={handleLayout}
       {...panResponder.panHandlers}
     >
       <GLView
         key={glKey}
-        style={styles.glView}
+        style={{ width: '100%', height: '100%' }}
         onContextCreate={onContextCreate}
       />
 
       {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#38BDF8" />
-          <Text style={styles.loadingText}>
-            Rendering 3D Anatomical Atlas...
+        <View
+          style={[
+            styles.loadingOverlay,
+            canvasBackgroundColor
+              ? { backgroundColor: canvasBackgroundColor }
+              : null,
+          ]}
+        >
+          <ActivityIndicator size="small" color="#0284C7" />
+          <Text
+            style={[
+              styles.loadingText,
+              canvasBackgroundColor ? { color: '#64748B' } : null,
+            ]}
+          >
+            Loading 3D View...
           </Text>
         </View>
       )}

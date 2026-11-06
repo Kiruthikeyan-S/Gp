@@ -100,7 +100,7 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     roughness: 0.4,
     metalness: 0.04,
     coordMode: 'vhm',
-    customFocusRadius: 0.92,
+    customFocusRadius: 0.72,
   },
   {
     organId: 'stomach',
@@ -636,25 +636,22 @@ function mapNodeNameToSubPart(
   const n = (nodeName || '').toLowerCase();
 
   if (organId === 'brain') {
+    let subPartId: string = 'parietal_lobe';
     if (n.includes('cerebellum')) {
-      return { subPartId: 'cerebellum', primaryHex: 0x8b5cf6, secondaryHex: 0x6d28d9 };
+      subPartId = 'cerebellum';
+    } else if (n.includes('temporal_lobe') || n.includes('temporal')) {
+      subPartId = 'temporal_lobe';
+    } else if (n.includes('frontal_lobe') || n.includes('frontal')) {
+      subPartId = 'frontal_lobe';
+    } else if (n.includes('parietal_lobe') || n.includes('parietal')) {
+      subPartId = 'parietal_lobe';
+    } else if (n.includes('occipital_lobe') || n.includes('occipital')) {
+      subPartId = 'occipital_lobe';
+    } else if (n.includes('pons_medulla') || n.includes('brainstem') || n.includes('stem')) {
+      subPartId = 'pons_medulla';
     }
-    if (n.includes('temporal_lobe') || n.includes('temporal')) {
-      return { subPartId: 'temporal_lobe', primaryHex: 0xeab308, secondaryHex: 0xa16207 };
-    }
-    if (n.includes('frontal_lobe') || n.includes('frontal')) {
-      return { subPartId: 'frontal_lobe', primaryHex: 0x0284c7, secondaryHex: 0x0369a1 };
-    }
-    if (n.includes('parietal_lobe') || n.includes('parietal')) {
-      return { subPartId: 'parietal_lobe', primaryHex: 0x10b981, secondaryHex: 0x047857 };
-    }
-    if (n.includes('occipital_lobe') || n.includes('occipital')) {
-      return { subPartId: 'occipital_lobe', primaryHex: 0xec4899, secondaryHex: 0xbe185d };
-    }
-    if (n.includes('pons_medulla') || n.includes('brainstem') || n.includes('stem')) {
-      return { subPartId: 'pons_medulla', primaryHex: 0xf97316, secondaryHex: 0xc2410c };
-    }
-    return { subPartId: 'parietal_lobe', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
+    // Maintain realistic natural organ tissue color everywhere; individual parts only highlight when clicked!
+    return { subPartId, primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
   }
 
   if (organId === 'heart') {

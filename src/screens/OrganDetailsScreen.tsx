@@ -637,11 +637,9 @@ const styles = StyleSheet.create({
   },
   renderCanvasBox: {
     width: '100%',
-    height: 235,
+    height: 240,
     backgroundColor: '#F1F5F9',
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
     position: 'relative',
     overflow: 'hidden',
   },

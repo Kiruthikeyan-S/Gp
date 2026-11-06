@@ -990,7 +990,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     'respiratory',
     lungsGroup,
     new THREE.Vector3(0, 0.94, 0.03),
-    1.15,
+    0.72,
     organRecords
   );
   respiratoryGroup.add(lungsGroup);
