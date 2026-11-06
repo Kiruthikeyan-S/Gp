@@ -10,8 +10,89 @@ export interface OrganSubPart {
   description: string;
 }
 
+export const SUB_PART_COLORS: Record<string, string> = {
+  // Heart (Chambers & Great Vessels in distinct clinical colors)
+  right_atrium: '#EC4899',       // Vibrant Pink
+  right_ventricle: '#EAB308',    // Vibrant Yellow / Gold
+  left_ventricle: '#10B981',     // Vibrant Emerald Green
+  left_atrium: '#8B5CF6',        // Vibrant Violet / Purple
+  aorta: '#EF4444',              // Vibrant Coral Red
+  pulmonary_artery: '#0284C7',   // Vibrant Sky Blue
+  superior_vena_cava: '#3B82F6', // Vibrant Royal Blue
+  inferior_vena_cava: '#2563EB', // Deep Blue
+  pulmonary_vein: '#F43F5E',     // Rose Pink
+  pulmonary_valve: '#FDE047',    // Light Gold
+  tricuspid_valve: '#FACC15',    // Bright Gold
+  mitral_valve: '#FBBF24',       // Amber Gold
+  aortic_valve: '#FCD34D',       // Gold
+
+  // Brain (Cortical Lobes)
+  frontal_lobe: '#0284C7',       // Sky Blue
+  temporal_lobe: '#EAB308',      // Amber Yellow
+  parietal_lobe: '#10B981',      // Emerald Green
+  occipital_lobe: '#EC4899',     // Vibrant Pink
+  cerebellum: '#8B5CF6',         // Violet Purple
+  pons_medulla: '#F97316',       // Orange Coral
+
+  // Lungs
+  right_superior_lobe: '#EC4899',// Vibrant Pink
+  right_inferior_lobe: '#EAB308',// Vibrant Yellow
+  left_superior_lobe: '#10B981', // Vibrant Green
+  left_inferior_lobe: '#0284C7', // Sky Blue
+  trachea: '#8B5CF6',            // Purple
+  cardiac_notch: '#F43F5E',      // Coral
+
+  // Liver
+  right_hepatic_lobe: '#EAB308', // Vibrant Yellow
+  left_hepatic_lobe: '#EC4899',  // Vibrant Pink
+  gallbladder: '#10B981',        // Vibrant Green
+  falciform_ligament: '#06B6D4', // Vibrant Cyan
+
+  // Kidneys
+  right_kidney: '#EC4899',       // Vibrant Pink
+  left_kidney: '#10B981',        // Vibrant Green
+  ureter: '#EAB308',             // Vibrant Yellow
+  urinary_bladder: '#0284C7',    // Sky Blue
+  adrenal_gland: '#F59E0B',      // Amber
+  renal_hilum: '#8B5CF6',        // Purple
+
+  // Stomach
+  gastric_fundus: '#EC4899',     // Vibrant Pink
+  greater_curvature: '#EAB308',  // Vibrant Yellow
+  pylorus: '#10B981',            // Vibrant Green
+  cardia: '#8B5CF6',             // Purple
+  lesser_curvature: '#0284C7',   // Sky Blue
+
+  // Intestines
+  duodenum: '#0284C7',           // Sky Blue
+  jejunum: '#EAB308',            // Yellow
+  ileum: '#10B981',              // Green
+  ascending_colon: '#EC4899',    // Pink
+  transverse_colon: '#EAB308',   // Yellow
+  descending_colon: '#10B981',   // Green
+  sigmoid_colon: '#8B5CF6',      // Purple
+  cecum: '#F97316',              // Orange
+  rectum: '#0284C7',             // Blue
+};
+
+export function getSubPartColor(subPartId: string): string {
+  if (SUB_PART_COLORS[subPartId]) {
+    return SUB_PART_COLORS[subPartId];
+  }
+  for (const organKey of Object.keys(ORGAN_SUB_PARTS)) {
+    const found = ORGAN_SUB_PARTS[organKey]?.find((sp) => sp.id === subPartId);
+    if (found) return found.color;
+  }
+  return '#EC4899'; // Default vibrant pink
+}
+
+export function getSubPartColorHex(subPartId: string): number {
+  const hexStr = getSubPartColor(subPartId).replace('#', '');
+  return parseInt(hexStr, 16);
+}
+
 export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
-  // 1. HEART — All 13 Labeled Cross-Section Parts matching Reference Diagram
+  // 1. HEART — All 13 Labeled Cross-Section Parts with distinct colors
   heart: [
     // Left Column (top to bottom)
     {
@@ -19,7 +100,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'superior vena cava',
       side: 'left',
       localAnchor: [-0.118, 0.21, 0.015],
-      color: '#0284C7',
+      color: '#3B82F6',
       description:
         'Large venous trunk returning deoxygenated blood from the head, neck, chest, and arms into the right atrium.',
     },
@@ -28,7 +109,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'pulmonary vein',
       side: 'left',
       localAnchor: [-0.165, 0.082, 0.0],
-      color: '#EF4444',
+      color: '#F43F5E',
       description:
         'Delivers freshly oxygenated blood from the lungs into the posterior wall of the left atrium.',
     },
@@ -37,7 +118,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'right atrium',
       side: 'left',
       localAnchor: [-0.102, 0.035, 0.055],
-      color: '#9F1239',
+      color: '#EC4899',
       description:
         'Upper-right cardiac chamber that receives deoxygenated venous blood from the venae cavae and coronary sinus.',
     },
@@ -46,7 +127,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'pulmonary valve',
       side: 'left',
       localAnchor: [-0.022, 0.018, 0.076],
-      color: '#F8FAFC',
+      color: '#FDE047',
       description:
         'Three-cusp semilunar valve at the entrance of the pulmonary trunk that prevents backflow into the right ventricle.',
     },
@@ -55,7 +136,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'tricuspid valve',
       side: 'left',
       localAnchor: [-0.076, -0.024, 0.068],
-      color: '#F8FAFC',
+      color: '#FACC15',
       description:
         'Right atrioventricular valve with three leaflets preventing regurgitation from the right ventricle into the right atrium.',
     },
@@ -64,7 +145,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'inferior vena cava',
       side: 'left',
       localAnchor: [-0.125, -0.165, -0.01],
-      color: '#0284C7',
+      color: '#2563EB',
       description:
         'Largest vein in the human body, carrying deoxygenated blood from the abdomen and lower limbs up into the right atrium.',
     },
@@ -73,7 +154,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'right ventricle',
       side: 'left',
       localAnchor: [-0.042, -0.105, 0.062],
-      color: '#9F1239',
+      color: '#EAB308',
       description:
         'Muscular lower chamber that pumps deoxygenated blood upward through the pulmonary valve into the pulmonary artery.',
     },
@@ -102,7 +183,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'left atrium',
       side: 'right',
       localAnchor: [0.092, 0.065, 0.052],
-      color: '#9F1239',
+      color: '#8B5CF6',
       description:
         'Upper-left cardiac chamber that receives oxygenated blood from four pulmonary veins and funnels it into the left ventricle.',
     },
@@ -111,7 +192,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'mitral valve',
       side: 'right',
       localAnchor: [0.082, 0.005, 0.068],
-      color: '#F8FAFC',
+      color: '#FBBF24',
       description:
         'Bicuspid valve between the left atrium and left ventricle that seals shut during ventricular systole.',
     },
@@ -120,7 +201,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'aortic valve',
       side: 'right',
       localAnchor: [0.032, 0.014, 0.072],
-      color: '#F8FAFC',
+      color: '#FCD34D',
       description:
         'High-pressure semilunar valve between the left ventricle and ascending aorta.',
     },
@@ -129,7 +210,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'left ventricle',
       side: 'right',
       localAnchor: [0.068, -0.095, 0.062],
-      color: '#9F1239',
+      color: '#10B981',
       description:
         'Thickest-walled chamber of the heart; contracts powerfully to pump oxygenated blood through the aortic arch.',
     },
@@ -142,7 +223,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'frontal lobe',
       side: 'left',
       localAnchor: [-0.095, 2.04, 0.12],
-      color: '#F4B4AA',
+      color: '#0284C7',
       description:
         'Anterior cerebral cortex governing executive decision-making, voluntary motor control, and speech production.',
     },
@@ -151,7 +232,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'temporal lobe',
       side: 'left',
       localAnchor: [-0.145, 1.87, 0.05],
-      color: '#E89B90',
+      color: '#EAB308',
       description:
         'Lateral cerebral lobe responsible for auditory processing, language comprehension, and memory encoding.',
     },
@@ -160,7 +241,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'brainstem',
       side: 'left',
       localAnchor: [0.0, 1.72, -0.04],
-      color: '#F5D0C8',
+      color: '#F97316',
       description:
         'Pons and medulla oblongata regulating autonomous breathing, heart rate, and cranial nerve reflexes.',
     },
@@ -169,7 +250,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'parietal lobe',
       side: 'right',
       localAnchor: [0.098, 2.06, -0.04],
-      color: '#F4B4AA',
+      color: '#10B981',
       description:
         'Superior cortical region integrating somatosensory touch, temperature, proprioception, and spatial awareness.',
     },
@@ -178,7 +259,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'occipital lobe',
       side: 'right',
       localAnchor: [0.085, 1.94, -0.16],
-      color: '#E09287',
+      color: '#EC4899',
       description:
         'Posterior cerebral cortex housing the primary visual cortex for processing sight, color, and motion.',
     },
@@ -187,7 +268,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'cerebellum',
       side: 'right',
       localAnchor: [0.075, 1.79, -0.13],
-      color: '#DFA099',
+      color: '#8B5CF6',
       description:
         'Striated hindbrain structure coordinating fine motor precision, posture, balance, and motor learning.',
     },
@@ -200,7 +281,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'trachea',
       side: 'left',
       localAnchor: [0.0, 0.34, 0.01],
-      color: '#93C5FD',
+      color: '#8B5CF6',
       description:
         'Cartilaginous C-ringed windpipe conducting inhaled air from the larynx down to the bronchial carina.',
     },
@@ -209,7 +290,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'right upper lobe',
       side: 'left',
       localAnchor: [-0.175, 0.14, 0.04],
-      color: '#E67E76',
+      color: '#EC4899',
       description:
         'Apical section of the three-lobed right lung sitting superior to the horizontal fissure.',
     },
@@ -218,7 +299,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'right lower lobe',
       side: 'left',
       localAnchor: [-0.195, -0.14, 0.02],
-      color: '#D1655D',
+      color: '#EAB308',
       description:
         'Broad diaphragmatic base of the right lung containing dense alveolar capillary beds for gas exchange.',
     },
@@ -227,7 +308,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'left upper lobe',
       side: 'right',
       localAnchor: [0.175, 0.14, 0.04],
-      color: '#E67E76',
+      color: '#10B981',
       description:
         'Upper division of the left lung featuring the lingula and oblique interlobar fissure.',
     },
@@ -236,7 +317,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'cardiac notch',
       side: 'right',
       localAnchor: [0.115, -0.04, 0.05],
-      color: '#F87171',
+      color: '#F43F5E',
       description:
         'Medial concavity on the anterior border of the left lung accommodating the apex of the heart.',
     },
@@ -245,7 +326,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'left lower lobe',
       side: 'right',
       localAnchor: [0.195, -0.15, 0.02],
-      color: '#D1655D',
+      color: '#0284C7',
       description:
         'Inferior lobe of the left lung resting directly upon the left dome of the thoracic diaphragm.',
     },
@@ -258,7 +339,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'right hepatic lobe',
       side: 'left',
       localAnchor: [-0.14, 0.54, 0.1],
-      color: '#853228',
+      color: '#EAB308',
       description:
         'Largest functional lobe of the liver, performing metabolic detoxification, glycogen storage, and bile synthesis.',
     },
@@ -267,7 +348,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'gallbladder',
       side: 'left',
       localAnchor: [-0.14, 0.41, 0.14],
-      color: '#65A30D',
+      color: '#10B981',
       description:
         'Pear-shaped biliary sac tucked beneath the right lobe that stores and concentrates bile for lipid digestion.',
     },
@@ -276,7 +357,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'falciform ligament',
       side: 'right',
       localAnchor: [-0.03, 0.54, 0.17],
-      color: '#F8FAFC',
+      color: '#06B6D4',
       description:
         'Fibrous peritoneal fold anatomically dividing the right and left lobes and anchoring the liver to the anterior wall.',
     },
@@ -285,7 +366,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'left hepatic lobe',
       side: 'right',
       localAnchor: [0.06, 0.56, 0.11],
-      color: '#993B30',
+      color: '#EC4899',
       description:
         'Tapered medial lobe extending across the epigastrium superior to the lesser curvature of the stomach.',
     },
@@ -298,7 +379,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'cardia',
       side: 'left',
       localAnchor: [0.04, 0.63, 0.04],
-      color: '#F0938C',
+      color: '#8B5CF6',
       description:
         'Superior inlet where ingested food passes from the esophagus through the lower esophageal sphincter.',
     },
@@ -307,7 +388,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'lesser curvature',
       side: 'left',
       localAnchor: [0.09, 0.48, 0.08],
-      color: '#D9726B',
+      color: '#0284C7',
       description:
         'Concave medial border of the stomach anchoring the lesser omentum and gastric vasculature.',
     },
@@ -316,7 +397,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'pyloric sphincter',
       side: 'left',
       localAnchor: [0.02, 0.37, 0.08],
-      color: '#C25953',
+      color: '#10B981',
       description:
         'Muscular outlet valve regulating the release of acidic chyme into the duodenum of the small intestine.',
     },
@@ -325,7 +406,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'gastric fundus',
       side: 'right',
       localAnchor: [0.18, 0.58, 0.06],
-      color: '#F0938C',
+      color: '#EC4899',
       description:
         'Dome-shaped superior bulge beneath the left diaphragm that collects digestive gases and secretes pepsinogen.',
     },
@@ -334,7 +415,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'greater curvature',
       side: 'right',
       localAnchor: [0.22, 0.45, 0.09],
-      color: '#E58079',
+      color: '#EAB308',
       description:
         'Long convex lateral border lined with deep gastric rugae folds that expand during meals.',
     },
@@ -347,7 +428,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'right kidney',
       side: 'left',
       localAnchor: [-0.17, 0.21, -0.06],
-      color: '#A13D2D',
+      color: '#EC4899',
       description:
         'Bean-shaped retroperitoneal organ containing ~1 million nephrons that filter blood plasma and regulate electrolytes.',
     },
@@ -356,7 +437,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'renal hilum',
       side: 'left',
       localAnchor: [-0.13, 0.19, -0.05],
-      color: '#FEF08A',
+      color: '#8B5CF6',
       description:
         'Concave medial fissure where the renal artery enters and the renal vein and ureter exit.',
     },
@@ -365,7 +446,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'urinary bladder',
       side: 'left',
       localAnchor: [0.0, -0.45, 0.07],
-      color: '#D97757',
+      color: '#0284C7',
       description:
         'Hollow muscular pelvic reservoir lined by transitional epithelium that stores urine prior to micturition.',
     },
@@ -383,7 +464,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'left kidney',
       side: 'right',
       localAnchor: [0.17, 0.25, -0.06],
-      color: '#A13D2D',
+      color: '#10B981',
       description:
         'Left renal parenchyma positioned slightly higher than the right kidney beneath the spleen.',
     },
@@ -392,7 +473,7 @@ export const ORGAN_SUB_PARTS: Record<string, OrganSubPart[]> = {
       name: 'ureter',
       side: 'right',
       localAnchor: [0.11, -0.12, -0.03],
-      color: '#FDE047',
+      color: '#EAB308',
       description:
         'Fibromuscular tube propelling urine downward from the renal pelvis to the bladder via peristaltic waves.',
     },

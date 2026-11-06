@@ -20,7 +20,7 @@ import {
   ensurePriorityOrganGlbLoaded,
   loadAllRealMedicalGlbModels,
 } from '../models/realGlbLoader';
-import { ORGAN_SUB_PARTS } from '../data/organSubParts';
+import { ORGAN_SUB_PARTS, getSubPartColorHex } from '../data/organSubParts';
 import { BodySystemId } from '../types';
 import { CameraPreset } from '../state/useAnatomyStore';
 import { theme } from '../theme';
@@ -40,6 +40,7 @@ interface Anatomy3DViewportProps {
   showMuscular: boolean;
   showVascular: boolean;
   animatePhysiology: boolean;
+  canvasBackgroundColor?: string;
   onSelectOrgan: (organId: string) => void;
   onSelectSubPart?: (subPartId: string | null) => void;
 }
@@ -128,6 +129,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   showMuscular,
   showVascular,
   animatePhysiology,
+  canvasBackgroundColor,
   onSelectOrgan,
   onSelectSubPart,
 }) => {
@@ -269,17 +271,30 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           currentMat.transparent = origMat.transparent;
 
           const meshSubPartId = mesh.userData?.subPartId;
-          if (
+          const isSelectedSubPart =
             isTarget &&
             activeSubPartId &&
-            (meshSubPartId === activeSubPartId || record.meshes.length === 1)
-          ) {
-            currentMat.emissive.setHex(0x38bdf8);
-            currentMat.emissiveIntensity =
-              record.meshes.length === 1 ? 0.28 : 0.45;
+            (meshSubPartId === activeSubPartId || record.meshes.length === 1);
+
+          if (isSelectedSubPart) {
+            const partHex = getSubPartColorHex(activeSubPartId);
+            // VIBRANT CLINICAL PART COLOR: Set base & emissive color to the part's distinct hue (pink, yellow, green, etc.)
+            currentMat.color.setHex(partHex);
+            currentMat.emissive.setHex(partHex);
+            currentMat.emissiveIntensity = 0.65;
+            currentMat.opacity = 1.0;
+            currentMat.transparent = false;
           } else {
+            currentMat.color.copy(origMat.color);
             currentMat.emissive.setHex(0x000000);
             currentMat.emissiveIntensity = 0;
+            if (isTarget && activeSubPartId) {
+              currentMat.opacity = 0.45;
+              currentMat.transparent = true;
+            } else {
+              currentMat.opacity = origMat.opacity;
+              currentMat.transparent = origMat.transparent;
+            }
           }
         });
       });
@@ -378,6 +393,15 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     onSelectSubPart,
     applySceneState,
   ]);
+
+  useEffect(() => {
+    if (rendererRef.current) {
+      const clearHex = canvasBackgroundColor
+        ? new THREE.Color(canvasBackgroundColor).getHex()
+        : 0xf8fafc;
+      rendererRef.current.setClearColor(clearHex, 1);
+    }
+  }, [canvasBackgroundColor]);
 
   useEffect(() => {
     switch (cameraPreset) {
@@ -635,8 +659,11 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
           antialias: true,
         });
         renderer.setSize(width, height, false);
-        // Clean Clinical Studio Light Slate Backdrop matching Home Theme
-        renderer.setClearColor(0xf8fafc, 1);
+        // Background color support (custom per screen, e.g. #ffebff on Explorer)
+        const clearHex = canvasBackgroundColor
+          ? new THREE.Color(canvasBackgroundColor).getHex()
+          : 0xf8fafc;
+        renderer.setClearColor(clearHex, 1);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.12;
         rendererRef.current = renderer;

@@ -120,6 +120,7 @@ export const ExplorerScreen: React.FC = () => {
           showMuscular={showMuscular}
           showVascular={showVascular}
           animatePhysiology={animatePhysiology}
+          canvasBackgroundColor="#ffebff"
           onSelectOrgan={(organId) => {
             if (organId !== activeOrgan.id || viewMode !== 'isolate') {
               setSelectedSubPartId(null);
@@ -287,21 +288,32 @@ export const ExplorerScreen: React.FC = () => {
             )}
             {/* Touch-Activated 3D Part Name Callout Badge (Shows ONLY when a part is touched on the 3D model) */}
             {activeSubPart && (
-              <View style={styles.touchedPartBanner}>
+              <View
+                style={[
+                  styles.touchedPartBanner,
+                  { borderColor: activeSubPart.color },
+                ]}
+              >
                 <View
                   style={[
                     styles.organDot,
                     { backgroundColor: activeSubPart.color },
                   ]}
                 />
-                <Text style={styles.touchedPartLabel} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.touchedPartLabel,
+                    { color: activeSubPart.color },
+                  ]}
+                  numberOfLines={1}
+                >
                   {activeSubPart.name.toUpperCase()}
                 </Text>
                 <TouchableOpacity
                   onPress={() => setSelectedSubPartId(null)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="close-circle" size={17} color="#94A3B8" />
+                  <Ionicons name="close-circle" size={17} color={activeSubPart.color} />
                 </TouchableOpacity>
               </View>
             )}
@@ -625,12 +637,12 @@ export const ExplorerScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffebff',
   },
   viewportContainer: {
     flex: 1,
     position: 'relative',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#ffebff',
   },
   topFloatingContainer: {
     position: 'absolute',
