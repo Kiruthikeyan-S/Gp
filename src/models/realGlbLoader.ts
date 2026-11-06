@@ -244,37 +244,39 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
   },
   {
     organId: 'skeleton',
-    title: 'Human Skeletal Framework (GLB Reference)',
-    sourceCredit: 'NIH 3D / Sketchfab High-Resolution Reference (CC-BY)',
+    title: 'Full Human Skeletal Framework (Écorché GLB)',
+    sourceCredit: 'Sketchfab Anatomical High-Resolution Scan (CC-BY)',
     sketchfabReferenceUrl:
       'https://sketchfab.com/3d-models/human-skeleton-highresolution-model-657a31ed9704423c8c4e752fb2506a74',
     urls: [
-      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Male/v1.2/VH_M_Pelvis.glb',
+      'https://raw.githubusercontent.com/Charleeh/ecorche/master/model/ecorche.glb',
     ],
-    primaryColorHex: 0xf1f5f9,
+    primaryColorHex: 0xf3f4f6,
     secondaryColorHex: 0x94a3b8,
     roughness: 0.40,
     metalness: 0.06,
-    coordMode: 'vhm',
+    coordMode: 'fit',
+    targetBoxCenter: [0, 0, 0],
+    targetMaxDim: 2.75,
     customFocusRadius: 1.85,
   },
   {
-    organId: 'lymph_nodes',
-    title: 'Anatomical Lymphatic Network (GLB Scan)',
-    sourceCredit: 'NIH 3D / HuBMAP Reference (CC-BY)',
+    organId: 'muscles',
+    title: 'Complete Human Muscular System (Écorché GLB)',
+    sourceCredit: 'Sketchfab Anatomical Musculature Scan (CC-BY)',
     sketchfabReferenceUrl:
-      'https://sketchfab.com/3d-models/lymphatic-system-600ffebad40342bab13741c631981a8b',
+      'https://sketchfab.com/3d-models/ecorche-anatomy-human-male-musculature-9bfa112a99844626ac2480fff6276f0e',
     urls: [
-      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Male/v1.2/NIH_M_Lymph_Node.glb',
+      'https://raw.githubusercontent.com/Charleeh/ecorche/master/model/ecorche.glb',
     ],
-    primaryColorHex: 0x10b981,
-    secondaryColorHex: 0x065f46,
-    roughness: 0.35,
-    metalness: 0.08,
+    primaryColorHex: 0x991b1b,
+    secondaryColorHex: 0x5c0911,
+    roughness: 0.38,
+    metalness: 0.05,
     coordMode: 'fit',
-    targetBoxCenter: [0, 0.35, 0.05],
-    targetMaxDim: 0.65,
-    customFocusRadius: 1.25,
+    targetBoxCenter: [0, 0, 0],
+    targetMaxDim: 2.75,
+    customFocusRadius: 1.85,
   },
 ];
 
@@ -318,9 +320,31 @@ interface ParsedPrimitive {
 
 /**
  * Skips unseen microscopic internal sub-meshes enclosed completely inside solid outer organ capsules
- * (removes 180,000+ occluded triangles in Kidneys & Lungs for 3x faster loading and 60fps rendering).
+ * (removes 180,000+ occluded triangles in Kidneys & Lungs for 3x faster loading and 60fps rendering)
+ * and isolates skeletal bones and muscle fibers from unified multi-layer anatomical scans.
  */
-function shouldSkipInternalPrimitive(organId: string, nodeName: string): boolean {
+function shouldSkipInternalPrimitive(
+  organId: string,
+  nodeName: string,
+  extras?: { layer?: string; [key: string]: any }
+): boolean {
+  if (organId === 'skeleton') {
+    if (extras && extras.layer && extras.layer !== 'skeleton') {
+      return true;
+    }
+  }
+  if (organId === 'muscles') {
+    if (
+      extras &&
+      extras.layer &&
+      extras.layer !== 'superficial muscles' &&
+      extras.layer !== 'deep muscles' &&
+      extras.layer !== 'muscles'
+    ) {
+      return true;
+    }
+  }
+
   const n = (nodeName || '').toLowerCase();
   if (organId === 'kidneys') {
     if (
@@ -384,7 +408,9 @@ export function parseGlbBinary(
   const gltf = JSON.parse(jsonStr);
   const binChunkOffset = 20 + jsonLen + 8;
 
-  function readAccessor(accIdx: number): Float32Array | Uint16Array | Uint32Array {
+  function readAccessor(
+    accIdx: number
+  ): Float32Array | Uint16Array | Uint32Array | Uint8Array {
     const acc = gltf.accessors[accIdx];
     const bv = gltf.bufferViews[acc.bufferView];
     const byteOffset =
@@ -425,6 +451,30 @@ export function parseGlbBinary(
           }
         }
         return out;
+      } else if (acc.componentType === 5122) {
+        const out = new Float32Array(totalLen);
+        const step = byteStride || numComp * 2;
+        const norm = acc.normalized === true;
+        for (let i = 0; i < acc.count; i++) {
+          const base = byteOffset + i * step;
+          for (let c = 0; c < numComp; c++) {
+            const v = dv.getInt16(base + c * 2, true);
+            out[i * numComp + c] = norm ? Math.max(v / 32767.0, -1.0) : v;
+          }
+        }
+        return out;
+      } else if (acc.componentType === 5120) {
+        const out = new Float32Array(totalLen);
+        const step = byteStride || numComp;
+        const norm = acc.normalized === true;
+        for (let i = 0; i < acc.count; i++) {
+          const base = byteOffset + i * step;
+          for (let c = 0; c < numComp; c++) {
+            const v = dv.getInt8(base + c);
+            out[i * numComp + c] = norm ? Math.max(v / 127.0, -1.0) : v;
+          }
+        }
+        return out;
       } else {
         const out = new Uint32Array(totalLen);
         const step = byteStride || numComp * 4;
@@ -447,6 +497,24 @@ export function parseGlbBinary(
       return new Uint16Array(arrayBuffer, byteOffset, totalLen);
     } else if (acc.componentType === 5125) {
       return new Uint32Array(arrayBuffer, byteOffset, totalLen);
+    } else if (acc.componentType === 5122) {
+      const src = new Int16Array(arrayBuffer, byteOffset, totalLen);
+      const out = new Float32Array(totalLen);
+      const norm = acc.normalized === true;
+      for (let i = 0; i < totalLen; i++) {
+        out[i] = norm ? Math.max(src[i] / 32767.0, -1.0) : src[i];
+      }
+      return out;
+    } else if (acc.componentType === 5120) {
+      const src = new Int8Array(arrayBuffer, byteOffset, totalLen);
+      const out = new Float32Array(totalLen);
+      const norm = acc.normalized === true;
+      for (let i = 0; i < totalLen; i++) {
+        out[i] = norm ? Math.max(src[i] / 127.0, -1.0) : src[i];
+      }
+      return out;
+    } else if (acc.componentType === 5121) {
+      return new Uint8Array(arrayBuffer, byteOffset, totalLen);
     } else {
       const u8 = new Uint8Array(arrayBuffer, byteOffset, totalLen);
       return new Uint16Array(u8);
@@ -486,7 +554,7 @@ export function parseGlbBinary(
       node.mesh !== undefined &&
       gltf.meshes?.[node.mesh] &&
       (!organIdForFilter ||
-        !shouldSkipInternalPrimitive(organIdForFilter, nodeName))
+        !shouldSkipInternalPrimitive(organIdForFilter, nodeName, node.extras))
     ) {
       const meshDef = gltf.meshes[node.mesh];
       for (const prim of meshDef.primitives || []) {
@@ -526,7 +594,9 @@ export function parseGlbBinary(
           const rawIdx = readAccessor(prim.indices);
           indices =
             rawIdx instanceof Uint16Array
-              ? new Uint16Array(rawIdx)
+              ? rawIdx
+              : rawIdx instanceof Uint32Array
+              ? rawIdx
               : new Uint32Array(rawIdx);
         }
 
@@ -897,16 +967,113 @@ function mapNodeNameToSubPart(
   }
 
   if (organId === 'skeleton') {
-    if (n.includes('pelvis') || n.includes('ilium') || n.includes('sacrum') || n.includes('ischium')) {
-      return { subPartId: 'pelvis_girdle', primaryHex: 0xec4899, secondaryHex: 0x9d174d };
+    if (
+      /skull|cranium|facial|mandible|maxilla|frontal|parietal|occipital|temporal|sphenoid|ethmoid|nasal|zygomatic|lacrimal|ear|teeth|tooth|incisor|molar|canine|premolar|hyoid|vomer|palatine|concha|cornea|sclera|cartilage|alar/.test(
+        n
+      )
+    ) {
+      return {
+        subPartId: 'cranium',
+        primaryHex: 0x0284c7,
+        secondaryHex: 0x075985,
+      };
     }
-    if (n.includes('vertebra') || n.includes('lumbar') || n.includes('spine')) {
-      return { subPartId: 'vertebral_column', primaryHex: 0xeab308, secondaryHex: 0x854d0e };
+    if (/vertebra|atlas|axis|cervical|sacrum|coccyx|thoracic vertebra|lumbar vertebra|spine/.test(n)) {
+      return {
+        subPartId: 'vertebral_column',
+        primaryHex: 0xeab308,
+        secondaryHex: 0x854d0e,
+      };
     }
-    if (n.includes('skull') || n.includes('cranium') || n.includes('mandible')) {
-      return { subPartId: 'cranium', primaryHex: 0x0284c7, secondaryHex: 0x075985 };
+    if (/rib|sternum|costal|manubrium|xiphoid/.test(n)) {
+      return {
+        subPartId: 'ribcage',
+        primaryHex: 0x10b981,
+        secondaryHex: 0x064e3b,
+      };
     }
-    return { subPartId: 'ribcage', primaryHex: 0x10b981, secondaryHex: 0x064e3b };
+    if (/pelvis|ilium|ischium|pubis|hip|sacroiliac/.test(n)) {
+      return {
+        subPartId: 'pelvis_girdle',
+        primaryHex: 0xec4899,
+        secondaryHex: 0x9d174d,
+      };
+    }
+    if (
+      /clavicle|scapula|humerus|radius|ulna|carpal|metacarpal|finger|thumb|scaphoid|lunate|triquetrum|pisiform|trapezium|trapezoid|capitate|hamate/.test(
+        n
+      )
+    ) {
+      return {
+        subPartId: 'upper_limbs',
+        primaryHex: 0x38bdf8,
+        secondaryHex: 0x0284c7,
+      };
+    }
+    return {
+      subPartId: 'lower_limbs',
+      primaryHex: 0xa855f7,
+      secondaryHex: 0x6b21a8,
+    };
+  }
+
+  if (organId === 'muscles') {
+    if (/pectoral|subclavius|serratus|intercostal/.test(n)) {
+      return {
+        subPartId: 'pectoralis',
+        primaryHex: 0xef4444,
+        secondaryHex: 0x991b1b,
+      };
+    }
+    if (
+      /rectus abdominis|abdominis|oblique|transversus|pyramidalis|linea alba/.test(
+        n
+      )
+    ) {
+      return {
+        subPartId: 'rectus_abdominis',
+        primaryHex: 0xf59e0b,
+        secondaryHex: 0xb45309,
+      };
+    }
+    if (
+      /deltoid|supraspinatus|infraspinatus|teres minor|teres major|subscapularis/.test(
+        n
+      )
+    ) {
+      return {
+        subPartId: 'deltoids',
+        primaryHex: 0x8b5cf6,
+        secondaryHex: 0x5b21b6,
+      };
+    }
+    if (
+      /trapezius|latissimus|rhomboid|levator scapulae|splenius|erector spinae|longissimus|iliocostalis|spinalis|occipitalis|frontalis|masseter|temporalis|pterygoid|platysma|sternocleidomastoid|scalene|mylohyoid|digastric|orbicularis|corrugator|procerus|zygomaticus|mentalis|buccinator|auricular|pharyngeal|laryngeal/.test(
+        n
+      )
+    ) {
+      return {
+        subPartId: 'trapezius',
+        primaryHex: 0x10b981,
+        secondaryHex: 0x047857,
+      };
+    }
+    if (
+      /biceps|triceps|brachialis|coracobrachialis|brachioradialis|pronator|supinator|carpi|palmaris|anconeus|pollicis|indicis|digiti minimi of.*hand|lumbrical of.*hand|interosseous of.*hand|extensor digitorum|flexor digitorum/.test(
+        n
+      )
+    ) {
+      return {
+        subPartId: 'biceps_brachii',
+        primaryHex: 0xec4899,
+        secondaryHex: 0xbe185d,
+      };
+    }
+    return {
+      subPartId: 'quadriceps',
+      primaryHex: 0x06b6d4,
+      secondaryHex: 0x0e7490,
+    };
   }
 
   return { subPartId: null, primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
