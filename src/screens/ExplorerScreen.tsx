@@ -612,6 +612,7 @@ export const ExplorerScreen: React.FC = () => {
                     onPress={() =>
                       navigation.navigate('OrganDetails', {
                         organId: activeOrgan.id,
+                        subPartId: selectedSubPartId || undefined,
                       })
                     }
                   >

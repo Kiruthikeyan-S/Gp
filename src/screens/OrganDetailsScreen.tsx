@@ -13,9 +13,9 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ORGANS } from '../data/anatomyData';
-import { ORGAN_SUB_PARTS } from '../data/organSubParts';
-import { ORGAN_IMAGES } from '../constants/anatomyImages';
-import { useAnatomyStore } from '../state/useAnatomyStore';
+import { ORGAN_SUB_PARTS, getSubPartColor } from '../data/organSubParts';
+import { Anatomy3DViewport } from '../three/Anatomy3DViewport';
+import { useAnatomyStore, CameraPreset } from '../state/useAnatomyStore';
 import { RootStackParamList } from '../types';
 
 type DetailsRouteProp = RouteProp<RootStackParamList, 'OrganDetails'>;
@@ -125,7 +125,7 @@ const CLINICAL_SPECS: Record<string, OrganClinicalSpecData> = {
 export const OrganDetailsScreen: React.FC = () => {
   const route = useRoute<DetailsRouteProp>();
   const navigation = useNavigation<DetailsNavProp>();
-  const { organId } = route.params;
+  const { organId, subPartId: initialSubPartId } = route.params;
 
   const {
     selectOrgan,
@@ -137,10 +137,20 @@ export const OrganDetailsScreen: React.FC = () => {
   const bookmarked = isBookmarked(organ.id);
   const organSubParts = ORGAN_SUB_PARTS[organ.id] || [];
 
-  const [activeSpotlightId, setActiveSpotlightId] = useState<string>(
-    organSubParts[0]?.id || 'part_1'
+  const [activeSpotlightId, setActiveSpotlightId] = useState<string | null>(
+    initialSubPartId || null
   );
   const [activeAngle, setActiveAngle] = useState<'FRONT' | 'LATERAL' | 'ISO'>('FRONT');
+
+  const cameraPreset: CameraPreset =
+    activeAngle === 'LATERAL'
+      ? 'side'
+      : activeAngle === 'ISO'
+      ? 'isometric'
+      : 'front';
+
+  const activeSpotlight =
+    organSubParts.find((sp) => sp.id === activeSpotlightId) || null;
 
   const clinicalData = CLINICAL_SPECS[organ.id] || {
     latinName: `${organ.name} Details`,
@@ -244,68 +254,55 @@ export const OrganDetailsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* 3D Visual Box with Anatomical Callout Pins matching Image 3 */}
-          <TouchableOpacity
-            style={styles.renderCanvasBox}
-            activeOpacity={0.92}
-            onPress={handleStart3DDissection}
-          >
-            {ORGAN_IMAGES[organ.id] ? (
-              <Image
-                source={ORGAN_IMAGES[organ.id]}
-                style={styles.organRenderImage}
-                resizeMode="contain"
-              />
-            ) : (
-              <View style={styles.organAvatarBig}>
-                <MaterialCommunityIcons
-                  name={organ.icon as any}
-                  size={78}
-                  color={organ.accentColor}
+          {/* 3D Visual Box with Interactive 360 Viewport */}
+          <View style={styles.renderCanvasBox}>
+            <Anatomy3DViewport
+              selectedOrganId={organ.id}
+              selectedSubPartId={activeSpotlightId}
+              selectedSystemId="all"
+              cameraPreset={cameraPreset}
+              zoomLevel={100}
+              viewMode="isolate"
+              shellMode="hidden"
+              showSkeletal={false}
+              showMuscular={false}
+              showVascular={false}
+              animatePhysiology={true}
+              canvasBackgroundColor="#F1F5F9"
+              onSelectOrgan={() => {}}
+              onSelectSubPart={(subPartId) => {
+                setActiveSpotlightId(subPartId);
+              }}
+            />
+
+            {/* Active Spotlight floating pill tag if a part is highlighted */}
+            {activeSpotlight && (
+              <View style={styles.spotlightFloatingPill}>
+                <View
+                  style={[
+                    styles.spotlightDot,
+                    { backgroundColor: getSubPartColor(activeSpotlight.id) },
+                  ]}
                 />
+                <Text
+                  style={[
+                    styles.spotlightPillText,
+                    { color: getSubPartColor(activeSpotlight.id) },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {activeSpotlight.name.toUpperCase()}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setActiveSpotlightId(null)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.spotlightCloseBtn}
+                >
+                  <Ionicons name="close-circle" size={16} color="#64748B" />
+                </TouchableOpacity>
               </View>
             )}
-
-            {/* Simulated Callout Pins matching Image 3 */}
-            {organSubParts.slice(0, 5).map((part, pIdx) => {
-              const pinPositions: { top: any; left?: any; right?: any }[] = [
-                { top: 18, left: 18 },
-                { top: 22, right: 18 },
-                { top: 70, left: 14 },
-                { top: 120, left: 22 },
-                { top: 125, right: 26 },
-              ];
-              const pos = pinPositions[pIdx] || { top: 60, left: 20 };
-              const isSelected = activeSpotlightId === part.id;
-
-              return (
-                <TouchableOpacity
-                  key={part.id}
-                  style={[
-                    styles.calloutPin,
-                    pos,
-                    isSelected && styles.calloutPinActive,
-                  ]}
-                  onPress={() => setActiveSpotlightId(part.id)}
-                >
-                  <View
-                    style={[
-                      styles.pinDot,
-                      isSelected && { backgroundColor: '#DC2626' },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.pinText,
-                      isSelected && { color: '#DC2626', fontWeight: '800' },
-                    ]}
-                  >
-                    {part.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </TouchableOpacity>
+          </View>
 
           {/* Bottom Rotation Ribbon */}
           <View style={styles.renderBottomRibbon}>
@@ -406,20 +403,26 @@ export const OrganDetailsScreen: React.FC = () => {
         <View style={styles.histologyList}>
           {organSubParts.map((sp, idx) => {
             const isSpotlighted = activeSpotlightId === sp.id;
+            const partColor = getSubPartColor(sp.id);
             return (
               <TouchableOpacity
                 key={sp.id}
                 style={[
                   styles.histologyCard,
-                  isSpotlighted && styles.histologyCardSpotlighted,
+                  isSpotlighted && {
+                    borderColor: partColor,
+                    backgroundColor: `${partColor}10`,
+                  },
                 ]}
                 activeOpacity={0.88}
-                onPress={() => setActiveSpotlightId(sp.id)}
+                onPress={() =>
+                  setActiveSpotlightId((prev) => (prev === sp.id ? null : sp.id))
+                }
               >
                 <View
                   style={[
                     styles.histologyNumBadge,
-                    isSpotlighted && styles.histologyNumBadgeActive,
+                    isSpotlighted && { backgroundColor: partColor },
                   ]}
                 >
                   <Text
@@ -436,8 +439,20 @@ export const OrganDetailsScreen: React.FC = () => {
                   <View style={styles.histologyTitleRow}>
                     <Text style={styles.histologyTitle}>{sp.name}</Text>
                     {isSpotlighted && (
-                      <View style={styles.spotlightTag}>
-                        <Text style={styles.spotlightTagText}>ACTIVE SPOTLIGHT</Text>
+                      <View
+                        style={[
+                          styles.spotlightTag,
+                          { backgroundColor: `${partColor}22` },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.spotlightTagText,
+                            { color: partColor },
+                          ]}
+                        >
+                          ACTIVE SPOTLIGHT
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -447,7 +462,7 @@ export const OrganDetailsScreen: React.FC = () => {
                 <MaterialCommunityIcons
                   name={isSpotlighted ? 'crosshairs-gps' : 'chevron-right'}
                   size={18}
-                  color={isSpotlighted ? '#0284C7' : '#94A3B8'}
+                  color={isSpotlighted ? partColor : '#94A3B8'}
                 />
               </TouchableOpacity>
             );
@@ -622,7 +637,7 @@ const styles = StyleSheet.create({
   },
   renderCanvasBox: {
     width: '100%',
-    height: 190,
+    height: 235,
     backgroundColor: '#F1F5F9',
     borderRadius: 14,
     alignItems: 'center',
@@ -630,45 +645,37 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  organAvatarBig: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  organRenderImage: {
-    width: '68%',
-    height: '82%',
-  },
-  calloutPin: {
+  spotlightFloatingPill: {
     position: 'absolute',
+    top: 10,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  calloutPinActive: {
-    borderColor: '#DC2626',
-    backgroundColor: '#FEF2F2',
+  spotlightDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
-  pinDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#0284C7',
+  spotlightPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
-  pinText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#0F172A',
+  spotlightCloseBtn: {
+    marginLeft: 2,
   },
   renderBottomRibbon: {
     flexDirection: 'row',

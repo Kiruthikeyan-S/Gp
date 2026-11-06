@@ -55,7 +55,7 @@ export interface QuizQuestion {
 
 export type RootStackParamList = {
   MainTabs: undefined;
-  OrganDetails: { organId: string };
+  OrganDetails: { organId: string; subPartId?: string };
 };
 
 export type TabParamList = {

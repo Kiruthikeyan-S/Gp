@@ -579,6 +579,7 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt) => {
         gestureStateRef.current.startTheta = targetOrbitRef.current.theta;
         gestureStateRef.current.startPhi = targetOrbitRef.current.phi;
