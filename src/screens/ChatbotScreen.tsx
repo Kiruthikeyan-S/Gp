@@ -146,6 +146,7 @@ export const ChatbotScreen: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
+  const isSubmittingRef = useRef<boolean>(false);
   const scrollViewRef = useRef<any>(null);
 
   useEffect(() => {
@@ -176,24 +177,28 @@ export const ChatbotScreen: React.FC = () => {
   }, []);
 
   const handleSendMessage = async (textToSend?: string) => {
+    // Immediate synchronous lock: prevents duplicate triggers from double taps or simultaneous submit events
+    if (isSubmittingRef.current || isTyping) return;
+
     const rawText = textToSend || inputText;
     const trimmed = rawText.trim();
-    if (!trimmed || isTyping) return;
+    if (!trimmed) return;
+
+    isSubmittingRef.current = true;
+    setIsTyping(true);
+    setInputText('');
 
     const userMsg: ChatMessage = {
-      id: `user_${Date.now()}`,
+      id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       sender: 'user',
       text: trimmed,
       timestamp: 'Just now',
     };
 
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
-    setInputText('');
-    setIsTyping(true);
+    setMessages((prev) => [...prev, userMsg]);
 
     try {
-      // Map prior conversation history for context continuity (excluding the latest question to prevent duplication)
+      // Map prior conversation history for context continuity (excluding initial welcome banner)
       const historyPayload = messages
         .filter((m) => m.id !== 'welcome_1')
         .map((m) => ({
@@ -206,7 +211,7 @@ export const ChatbotScreen: React.FC = () => {
       const res = await queryAnatomyAiAssistant(historyPayload, trimmed);
 
       const botMsg: ChatMessage = {
-        id: `bot_${Date.now()}`,
+        id: `bot_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         sender: 'bot',
         text: res.text,
         timestamp: 'Just now',
@@ -223,6 +228,7 @@ export const ChatbotScreen: React.FC = () => {
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
+      isSubmittingRef.current = false;
       setIsTyping(false);
     }
   };
@@ -272,8 +278,9 @@ export const ChatbotScreen: React.FC = () => {
           {QUICK_PROMPTS.map((p, idx) => (
             <TouchableOpacity
               key={idx}
-              style={styles.promptChip}
+              style={[styles.promptChip, isTyping && { opacity: 0.5 }]}
               onPress={() => handleSendMessage(p.query)}
+              disabled={isTyping}
               activeOpacity={0.8}
             >
               <Text style={styles.promptChipText}>{p.label}</Text>
@@ -344,8 +351,10 @@ export const ChatbotScreen: React.FC = () => {
                       {item.suggestedTopics.map((st, sIdx) => (
                         <TouchableOpacity
                           key={sIdx}
-                          style={styles.starterBtn}
+                          style={[styles.starterBtn, isTyping && { opacity: 0.5 }]}
                           onPress={() => handleSendMessage(st)}
+                          disabled={isTyping}
+                          activeOpacity={0.8}
                         >
                           <MaterialCommunityIcons name="chat-question-outline" size={14} color="#0284C7" />
                           <Text style={styles.starterBtnText}>{st}</Text>

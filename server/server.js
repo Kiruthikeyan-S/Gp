@@ -8,8 +8,8 @@ const http = require('http');
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
-const PRIMARY_MODEL = process.env.PRIMARY_MODEL || 'openai/gpt-oss-120b';
-const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'openai/gpt-oss-20b';
+const PRIMARY_MODEL = process.env.PRIMARY_MODEL || 'llama-3.3-70b-versatile';
+const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'llama-3.1-8b-instant';
 
 const EDUCATIONAL_SYSTEM_PROMPT = `You are the Educational Anatomy Assistant for the 3D Human Anatomy Explorer.
 Your purpose is EXCLUSIVELY educational:
