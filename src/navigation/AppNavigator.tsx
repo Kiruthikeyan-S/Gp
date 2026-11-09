@@ -1,15 +1,12 @@
-import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { theme } from '../theme';
 import { RootStackParamList, TabParamList } from '../types';
 
 import { HomeScreen } from '../screens/HomeScreen';
 import { ExplorerScreen } from '../screens/ExplorerScreen';
 import { SystemsScreen } from '../screens/SystemsScreen';
-import { LearningScreen } from '../screens/LearningScreen';
 import { ChatbotScreen } from '../screens/ChatbotScreen';
 import { OrganDetailsScreen } from '../screens/OrganDetailsScreen';
 import { QuizScreen } from '../screens/QuizScreen';

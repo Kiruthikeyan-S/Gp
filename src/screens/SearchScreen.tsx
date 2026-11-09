@@ -173,9 +173,9 @@ export const SearchScreen: React.FC = () => {
         }
         break;
       case 'lesson':
-        (navigation as any).navigate('MainTabs', {
-          screen: 'LearnTab',
-        });
+        if (item.organId) {
+          navigation.navigate('OrganDetails', { organId: item.organId });
+        }
         break;
       case 'flashcard':
         navigation.navigate('Flashcards', { systemId: item.systemId });

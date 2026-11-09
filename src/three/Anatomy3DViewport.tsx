@@ -18,7 +18,6 @@ import {
 import {
   applyCachedGlbOrgansSync,
   ensurePriorityOrganGlbLoaded,
-  loadAllRealMedicalGlbModels,
 } from '../models/realGlbLoader';
 import { ORGAN_SUB_PARTS, getSubPartColorHex } from '../data/organSubParts';
 import { BodySystemId } from '../types';
@@ -142,10 +141,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [glKey, setGlKey] = useState<number>(0);
-  const [glbScanStatus, setGlbScanStatus] = useState<{
-    loaded: number;
-    total: number;
-  }>({ loaded: 0, total: 10 });
   const layoutRef = useRef<{ width: number; height: number }>({
     width: 360,
     height: 520,
@@ -789,9 +784,6 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         if (isMountedRef.current) {
           setIsLoading(false);
         }
-
-        // Demand-based loading: Only load additional models when requested to optimize Android memory and battery
-        setGlbScanStatus({ loaded: 1, total: 1 });
 
         let clock = 0;
 

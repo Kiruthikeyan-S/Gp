@@ -82,7 +82,5 @@ export type TabParamList = {
   HomeTab: undefined;
   ExplorerTab: { targetOrganId?: string; targetSystemId?: BodySystemId } | undefined;
   SystemsTab: undefined;
-  LearnTab: undefined;
   ChatTab: undefined;
-  QuizTab?: undefined;
 };

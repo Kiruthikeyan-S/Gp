@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { useAnatomyStore } from '../state/useAnatomyStore';
-import { BODY_SYSTEMS, ORGANS } from '../data/anatomyData';
+import { ORGANS } from '../data/anatomyData';
 import { SYSTEM_IMAGES } from '../constants/anatomyImages';
 
 type SystemsNavProp = NativeStackNavigationProp<RootStackParamList>;

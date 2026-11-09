@@ -11,9 +11,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, BodySystemId } from '../types';
+import { RootStackParamList } from '../types';
 import { useAnatomyStore } from '../state/useAnatomyStore';
-import { BODY_SYSTEMS, LESSONS, ORGANS } from '../data/anatomyData';
+import { BODY_SYSTEMS, LESSONS } from '../data/anatomyData';
 import { FLASHCARDS } from '../data/flashcardsData';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -54,16 +54,6 @@ export const DashboardScreen: React.FC = () => {
     if (stats && stats.incorrect > 0) {
       const accuracy = Math.round((stats.correct / (stats.correct + stats.incorrect)) * 100);
       return accuracy < 70;
-    }
-    return false;
-  });
-
-  // Identify strong / mastered topics (accuracy >= 75% with at least 3 questions answered or 100% cards known)
-  const masteredTopics = BODY_SYSTEMS.filter((sys) => {
-    const stats = topicStats[sys.id];
-    if (stats && stats.correct + stats.incorrect >= 3) {
-      const accuracy = Math.round((stats.correct / (stats.correct + stats.incorrect)) * 100);
-      return accuracy >= 75;
     }
     return false;
   });

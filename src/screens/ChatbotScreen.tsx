@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { theme } from '../theme';
 import { useAnatomyStore } from '../state/useAnatomyStore';
 import { TabParamList } from '../types';
 import { queryAnatomyAiAssistant } from '../services/medicalAiService';

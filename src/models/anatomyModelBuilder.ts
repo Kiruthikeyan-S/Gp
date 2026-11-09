@@ -1064,7 +1064,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   // Striated Cerebellum (Folia horizontal ridges)
   const cerebellumGeo = new THREE.SphereGeometry(0.125, 32, 24);
   cerebellumGeo.scale(1.38, 0.72, 0.82);
-  applyOrganicVertexShading(cerebellumGeo, 0xdfa099, 0x7a2e3a, (x, y, z) => {
+  applyOrganicVertexShading(cerebellumGeo, 0xdfa099, 0x7a2e3a, (_x, y, z) => {
     const folia = Math.abs(Math.sin(y * 85 + z * 12));
     return { offset: folia * 0.006, colorMix: folia * 0.75 + 0.2 };
   });
@@ -1265,7 +1265,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   });
   const spleenGeo = new THREE.SphereGeometry(0.105, 28, 24);
   spleenGeo.scale(0.58, 1.25, 0.85);
-  applyOrganicVertexShading(spleenGeo, 0x862e73, 0x4c1440, (x, y, z) => {
+  applyOrganicVertexShading(spleenGeo, 0x862e73, 0x4c1440, (_x, y, z) => {
     const l = Math.sin(y * 28 + z * 22) * 0.004;
     return { offset: l, colorMix: 0.5 + 0.4 * Math.cos(y * 15) };
   });

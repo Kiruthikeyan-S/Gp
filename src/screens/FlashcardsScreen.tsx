@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -14,9 +13,6 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList, BodySystemId } from '../types';
 import { FLASHCARDS, Flashcard } from '../data/flashcardsData';
 import { useAnatomyStore } from '../state/useAnatomyStore';
-import { theme } from '../theme';
-
-const { width } = Dimensions.get('window');
 
 const SYSTEM_TABS: { id: BodySystemId | 'all'; label: string }[] = [
   { id: 'all', label: 'All Systems' },
