@@ -256,9 +256,10 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     roughness: 0.40,
     metalness: 0.06,
     coordMode: 'fit',
-    targetBoxCenter: [0, 0, 0],
-    targetMaxDim: 2.75,
-    customFocusRadius: 1.85,
+    targetBoxCenter: [0, 0.18, 0],
+    targetMaxDim: 3.60,
+    customFocusRadius: 2.10,
+    focusYOffset: 0.10,
   },
   {
     organId: 'muscles',
@@ -274,9 +275,10 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     roughness: 0.38,
     metalness: 0.05,
     coordMode: 'fit',
-    targetBoxCenter: [0, 0, 0],
-    targetMaxDim: 2.75,
-    customFocusRadius: 1.85,
+    targetBoxCenter: [0, 0.18, 0],
+    targetMaxDim: 3.60,
+    customFocusRadius: 2.10,
+    focusYOffset: 0.10,
   },
 ];
 
@@ -636,6 +638,32 @@ export function parseGlbBinary(
 }
 
 /**
+ * Splits parsed primitives into chunks containing at most maxVerts vertices
+ * so every merged geometry strictly stays below 65,535 vertices and can safely
+ * use Uint16Array index buffers without crashing on WebGL 1.0 drivers on Android.
+ */
+function chunkPrimitives(
+  primitives: ParsedPrimitive[],
+  maxVerts: number = 60000
+): ParsedPrimitive[][] {
+  const resultChunks: ParsedPrimitive[][] = [];
+  let cur: ParsedPrimitive[] = [];
+  let count = 0;
+  for (const p of primitives) {
+    const v = p.positions.length / 3;
+    if (cur.length > 0 && count + v > maxVerts) {
+      resultChunks.push(cur);
+      cur = [];
+      count = 0;
+    }
+    cur.push(p);
+    count += v;
+  }
+  if (cur.length > 0) resultChunks.push(cur);
+  return resultChunks;
+}
+
+/**
  * Merges parsed GLB primitives into a single optimized THREE.BufferGeometry with rich biological vertex shading.
  */
 function buildMergedOrganGeometry(
@@ -656,10 +684,7 @@ function buildMergedOrganGeometry(
   const mergedPositions = new Float32Array(totalVerts * 3);
   const mergedNormals = new Float32Array(totalVerts * 3);
   const mergedColors = new Float32Array(totalVerts * 3);
-  const mergedIndices =
-    totalVerts > 65535
-      ? new Uint32Array(totalIndices)
-      : new Uint16Array(totalIndices);
+  const mergedIndices = new Uint16Array(totalIndices);
 
   const primaryColor = new THREE.Color(primaryColorHex);
   const secondaryColor = new THREE.Color(secondaryColorHex);
@@ -1353,30 +1378,33 @@ async function buildAndCacheOrganModel(
     const subMeshes: CachedSubMeshSpec[] = [];
 
     for (const [, bucket] of groupedPrims) {
-      const subGeo = buildMergedOrganGeometry(
-        bucket.prims,
-        bucket.primaryHex,
-        bucket.secondaryHex,
-        spec.urls.length > 1
-      );
+      const chunks = chunkPrimitives(bucket.prims, 60000);
+      for (const chunk of chunks) {
+        const subGeo = buildMergedOrganGeometry(
+          chunk,
+          bucket.primaryHex,
+          bucket.secondaryHex,
+          spec.urls.length > 1
+        );
 
-      if (spec.coordMode === 'vhm') {
-        subGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
-        subGeo.translate(0, VHM_Y_OFFSET, 0);
-        subGeo.translate(-finalCenter.x, -finalCenter.y, -finalCenter.z);
-      } else {
-        subGeo.translate(-rawCenter.x, -rawCenter.y, -rawCenter.z);
-        subGeo.scale(fitScaleFactor, fitScaleFactor, fitScaleFactor);
+        if (spec.coordMode === 'vhm') {
+          subGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
+          subGeo.translate(0, VHM_Y_OFFSET, 0);
+          subGeo.translate(-finalCenter.x, -finalCenter.y, -finalCenter.z);
+        } else {
+          subGeo.translate(-rawCenter.x, -rawCenter.y, -rawCenter.z);
+          subGeo.scale(fitScaleFactor, fitScaleFactor, fitScaleFactor);
+        }
+
+        subGeo.computeBoundingBox();
+        subGeo.computeBoundingSphere();
+        subGeo.userData = { isCachedGlb: true };
+
+        subMeshes.push({
+          subPartId: bucket.subPartId,
+          geometry: subGeo,
+        });
       }
-
-      subGeo.computeBoundingBox();
-      subGeo.computeBoundingSphere();
-      subGeo.userData = { isCachedGlb: true };
-
-      subMeshes.push({
-        subPartId: bucket.subPartId,
-        geometry: subGeo,
-      });
     }
 
     // Compute focusCenter in rootGroup local space (Anatomy3DViewport applies the -0.58 rootGroup offset)

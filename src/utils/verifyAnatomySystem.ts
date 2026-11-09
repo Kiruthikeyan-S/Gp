@@ -20,8 +20,8 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
   }
 
   // 1. Verify Organ Data & System Mapping
-  assert(ORGANS.length === 10, `Loaded all 10 required organs (found ${ORGANS.length})`);
-  assert(BODY_SYSTEMS.length === 7, `Loaded all 7 body systems (found ${BODY_SYSTEMS.length})`);
+  assert(ORGANS.length === 15, `Loaded all 15 required organs (found ${ORGANS.length})`);
+  assert(BODY_SYSTEMS.length === 10, `Loaded all 10 body systems (found ${BODY_SYSTEMS.length})`);
 
   const organIds = new Set(ORGANS.map((o) => o.id));
   for (const organ of ORGANS) {
@@ -31,7 +31,7 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
 
   // 2. Verify 3D Scene Graph & Mesh Names
   const graph = buildAnatomySceneGraph();
-  assert(graph.organRecords.size === 10, `3D Scene Graph registered 10 distinct selectable organ groups`);
+  assert(graph.organRecords.size === 15, `3D Scene Graph registered 15 distinct selectable organ groups`);
 
   for (const organ of ORGANS) {
     const record = graph.organRecords.get(organ.id);

@@ -30,6 +30,19 @@ const CAMERA_SEQUENCE: { preset: CameraPreset; label: string }[] = [
   { preset: 'isometric', label: 'ISO' },
 ];
 
+const SYSTEM_PRIMARY_ORGAN: Record<string, string> = {
+  skeletal: 'skeleton',
+  muscular: 'muscles',
+  nervous: 'brain',
+  circulatory: 'heart',
+  respiratory: 'lungs',
+  digestive: 'stomach',
+  urinary: 'kidneys',
+  endocrine: 'thyroid',
+  lymphatic: 'lymph_nodes',
+  reproductive: 'reproductive',
+};
+
 export const ExplorerScreen: React.FC = () => {
   const navigation = useNavigation<ExplorerNavProp>();
   const route = useRoute<ExplorerRouteProp>();
@@ -83,6 +96,55 @@ export const ExplorerScreen: React.FC = () => {
     if (selectedSystemId === 'all') return true;
     return organ.systemId === selectedSystemId;
   });
+
+  const handleSelectSystem = (sysId: string) => {
+    selectSystem(sysId as any);
+    setSelectedSubPartId(null);
+    if (sysId === 'all') {
+      setShowInternalOrgans(true);
+      setShowSkeletal(false);
+      setShowMuscular(false);
+      setShowVascular(true);
+      setShowNervous(true);
+      setViewMode('body');
+    } else {
+      const primaryOrganId = SYSTEM_PRIMARY_ORGAN[sysId];
+      if (primaryOrganId) {
+        selectOrgan(primaryOrganId);
+      }
+      if (sysId === 'skeletal') {
+        setShowSkeletal(true);
+        setShowMuscular(false);
+        setShowInternalOrgans(false);
+        setShowNervous(false);
+        setShowVascular(false);
+      } else if (sysId === 'muscular') {
+        setShowMuscular(true);
+        setShowSkeletal(false);
+        setShowInternalOrgans(false);
+        setShowNervous(false);
+        setShowVascular(false);
+      } else if (sysId === 'nervous') {
+        setShowNervous(true);
+        setShowSkeletal(true);
+        setShowInternalOrgans(false);
+        setShowMuscular(false);
+        setShowVascular(false);
+      } else if (sysId === 'circulatory') {
+        setShowVascular(true);
+        setShowInternalOrgans(true);
+        setShowSkeletal(false);
+        setShowMuscular(false);
+      } else {
+        setShowInternalOrgans(true);
+        setShowSkeletal(false);
+        setShowMuscular(false);
+      }
+      setViewMode('isolate');
+      setZoomLevel(100);
+      setIsCardMinimized(false);
+    }
+  };
 
   const activeOrgan =
     ORGANS.find((o) => o.id === selectedOrganId) || ORGANS[1]; // Default Heart
@@ -173,16 +235,53 @@ export const ExplorerScreen: React.FC = () => {
                 </Text>
               </TouchableOpacity>
 
-              {/* 3D Solo Anatomy View Indicator */}
-              <View style={styles.topAtlasBadge}>
-                <MaterialCommunityIcons
-                  name="cube-scan"
-                  size={15}
-                  color="#0284C7"
-                />
-                <Text style={styles.topAtlasBadgeText}>
-                  Solo 3D Atlas
-                </Text>
+              {/* View Mode Segment: Full Body vs Solo 3D Atlas */}
+              <View style={styles.viewModeSegment}>
+                <TouchableOpacity
+                  style={[
+                    styles.viewModeBtn,
+                    viewMode === 'body' && styles.viewModeBtnActive,
+                  ]}
+                  onPress={() => setViewMode('body')}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons
+                    name="human"
+                    size={14}
+                    color={viewMode === 'body' ? '#FFFFFF' : '#64748B'}
+                  />
+                  <Text
+                    style={[
+                      styles.viewModeBtnText,
+                      viewMode === 'body' && styles.viewModeBtnTextActive,
+                    ]}
+                  >
+                    Full Body
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.viewModeBtn,
+                    viewMode === 'isolate' && styles.viewModeBtnActive,
+                  ]}
+                  onPress={() => setViewMode('isolate')}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons
+                    name="cube-scan"
+                    size={14}
+                    color={viewMode === 'isolate' ? '#FFFFFF' : '#64748B'}
+                  />
+                  <Text
+                    style={[
+                      styles.viewModeBtnText,
+                      viewMode === 'isolate' && styles.viewModeBtnTextActive,
+                    ]}
+                  >
+                    Solo 3D
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               {/* Hide UI Button */}
@@ -206,10 +305,7 @@ export const ExplorerScreen: React.FC = () => {
                     styles.sysChip,
                     selectedSystemId === 'all' && styles.sysChipActive,
                   ]}
-                  onPress={() => {
-                    selectSystem('all');
-                    setViewMode('body');
-                  }}
+                  onPress={() => handleSelectSystem('all')}
                 >
                   <Text
                     style={[
@@ -232,10 +328,7 @@ export const ExplorerScreen: React.FC = () => {
                           borderColor: sys.color,
                         },
                       ]}
-                      onPress={() => {
-                        selectSystem(sys.id);
-                        setViewMode('body');
-                      }}
+                      onPress={() => handleSelectSystem(sys.id)}
                     >
                       <Text
                         style={[
@@ -845,6 +938,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#0F172A',
+  },
+  viewModeSegment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderRadius: 14,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  viewModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  viewModeBtnActive: {
+    backgroundColor: '#0284C7',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  viewModeBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  viewModeBtnTextActive: {
+    color: '#FFFFFF',
   },
   topAtlasBadge: {
     flexDirection: 'row',
