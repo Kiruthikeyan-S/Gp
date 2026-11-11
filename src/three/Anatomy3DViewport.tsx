@@ -83,14 +83,44 @@ export function patchExpoGlForThree(gl: ExpoWebGLRenderingContext) {
   if (typeof gl.pixelStorei === 'function') {
     const origPixelStorei = gl.pixelStorei.bind(gl);
     gl.pixelStorei = ((pname: number, param: any) => {
-      if (
-        pname === gl.UNPACK_ALIGNMENT ||
-        pname === gl.UNPACK_FLIP_Y_WEBGL
-      ) {
-        return origPixelStorei(pname, param);
+      try {
+        if (
+          pname === gl.UNPACK_ALIGNMENT ||
+          pname === gl.UNPACK_FLIP_Y_WEBGL ||
+          pname === (gl as any).UNPACK_PREMULTIPLY_ALPHA_WEBGL
+        ) {
+          return origPixelStorei(pname, param);
+        }
+      } catch {
+        // safe guard against context changes
       }
     }) as any;
   }
+
+  // Safety patch for Android WebGL precision query crashes:
+  // THREE.WebGLCapabilities calls gl.getShaderPrecisionFormat(...).precision
+  // On some Android devices/drivers, this returns null or undefined.
+  const origGetShaderPrecisionFormat =
+    typeof gl.getShaderPrecisionFormat === 'function'
+      ? gl.getShaderPrecisionFormat.bind(gl)
+      : null;
+  gl.getShaderPrecisionFormat = ((shaderType: number, precisionType: number) => {
+    try {
+      if (origGetShaderPrecisionFormat) {
+        const res = origGetShaderPrecisionFormat(shaderType, precisionType);
+        if (res && typeof res.precision === 'number') {
+          return res;
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return {
+      precision: 23,
+      rangeMin: 127,
+      rangeMax: 127,
+    };
+  }) as any;
 
   if (typeof gl.getContextAttributes !== 'function') {
     (gl as any).getContextAttributes = () => ({
@@ -108,6 +138,17 @@ export function patchExpoGlForThree(gl: ExpoWebGLRenderingContext) {
     clientWidth: width,
     clientHeight: height,
     style: {},
+    parentElement: null,
+    parentNode: null,
+    ownerDocument: null,
+    getBoundingClientRect: () => ({
+      top: 0,
+      left: 0,
+      width,
+      height,
+      right: width,
+      bottom: height,
+    }),
     addEventListener: () => {},
     removeEventListener: () => {},
     setAttribute: () => {},
@@ -216,11 +257,11 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     if (mode === 'isolate' && selId && graph) {
       const rec = graph.organRecords.get(selId);
       if (rec) {
-        if (selId === 'muscles' || selId === 'skeleton') {
+        if (selId === 'muscles' || selId === 'skeleton' || selId === 'lymph_nodes') {
           targetOrbitRef.current.lookX = 0;
-          targetOrbitRef.current.lookY = -0.40;
+          targetOrbitRef.current.lookY = selId === 'lymph_nodes' ? -0.15 : -0.40;
           targetOrbitRef.current.lookZ = 0;
-          targetOrbitRef.current.radius = 2.45 / scale;
+          targetOrbitRef.current.radius = (selId === 'lymph_nodes' ? 2.30 : 2.45) / scale;
           return;
         }
         targetOrbitRef.current.lookX = rec.focusCenter.x;
@@ -862,8 +903,12 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
             }
           }
 
-          renderer.render(scene, camera);
-          gl.endFrameEXP();
+          try {
+            renderer.render(scene, camera);
+            gl.endFrameEXP();
+          } catch {
+            // Guard against transient context issues during tab switches or activity lifecycle
+          }
         };
 
         animate();

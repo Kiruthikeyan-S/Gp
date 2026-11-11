@@ -1822,33 +1822,36 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     metalness: 0.08,
   });
   const laryngealCartilageMat = new THREE.MeshStandardMaterial({
-    color: 0xcbd5e1,
-    roughness: 0.32,
-    metalness: 0.06,
+    vertexColors: true,
+    roughness: 0.35,
+    metalness: 0.08,
   });
 
   // 1. Laryngeal Cartilaginous Framework (Thyroid Cartilage Shield & Trachea)
   // Thyroid Cartilage (Adam's Apple) V-shaped shield
-  const thyroidCartGeo = new THREE.CylinderGeometry(0.042, 0.038, 0.075, 12, 1, true, -Math.PI * 0.65, Math.PI * 1.3);
-  const tCartMesh = new THREE.Mesh(thyroidCartGeo, laryngealCartilageMat);
-  tCartMesh.position.set(0, 1.50, 0.16);
+  const thyroidCartGeo = new THREE.CylinderGeometry(0.044, 0.038, 0.082, 16, 1, true, -Math.PI * 0.65, Math.PI * 1.3);
+  applyOrganicVertexShading(thyroidCartGeo, 0x94a3b8, 0x475569);
+  const tCartMesh = new THREE.Mesh(thyroidCartGeo, laryngealCartilageMat.clone());
+  tCartMesh.position.set(0, 1.49, 0.162);
   tCartMesh.rotation.y = Math.PI;
   tCartMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
   thyroidGroup.add(tCartMesh);
 
-  // Cricoid Cartilage Ring
-  const cricoidGeo = new THREE.TorusGeometry(0.032, 0.010, 10, 20);
-  const cricoidMesh = new THREE.Mesh(cricoidGeo, laryngealCartilageMat);
-  cricoidMesh.position.set(0, 1.45, 0.16);
+  // Cricoid Cartilage Ring (Stout signet-ring cartilage)
+  const cricoidGeo = new THREE.TorusGeometry(0.034, 0.011, 12, 22);
+  applyOrganicVertexShading(cricoidGeo, 0x94a3b8, 0x475569);
+  const cricoidMesh = new THREE.Mesh(cricoidGeo, laryngealCartilageMat.clone());
+  cricoidMesh.position.set(0, 1.44, 0.162);
   cricoidMesh.rotation.x = Math.PI / 2;
   cricoidMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
   thyroidGroup.add(cricoidMesh);
 
   // Descending Tracheal Rings (Cartilaginous windpipe rings)
-  for (let t = 0; t < 4; t++) {
-    const ringGeo = new THREE.TorusGeometry(0.030, 0.007, 8, 18);
-    const ringMesh = new THREE.Mesh(ringGeo, laryngealCartilageMat);
-    ringMesh.position.set(0, 1.42 - t * 0.024, 0.16);
+  for (let t = 0; t < 5; t++) {
+    const ringGeo = new THREE.TorusGeometry(0.031, 0.0075, 10, 20);
+    applyOrganicVertexShading(ringGeo, 0xa1a1aa, 0x52525b);
+    const ringMesh = new THREE.Mesh(ringGeo, laryngealCartilageMat.clone());
+    ringMesh.position.set(0, 1.405 - t * 0.022, 0.162);
     ringMesh.rotation.x = Math.PI / 2;
     ringMesh.userData = { subPartId: 'thyroid_isthmus', organId: 'thyroid' };
     thyroidGroup.add(ringMesh);
@@ -1931,75 +1934,138 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   endocrineGroup.add(thyroidGroup);
 
   // =========================================================================
-  // 11. LYMPHATIC SYSTEM: NODAL CHAINS, VESSELS & THORACIC DUCT (Mesh_LymphNodes)
+  // 11. LYMPHATIC SYSTEM: VASCULAR ARCADES, NODAL CHAINS & ORGANS (Mesh_LymphNodes)
   // =========================================================================
   const lymphaticGroup = systemGroups.get('lymphatic')!;
   const lymphNodesGroup = new THREE.Group();
   const lymphMat = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.32,
-    metalness: 0.12,
+    roughness: 0.30,
+    metalness: 0.10,
   });
 
-  // 1. Comprehensive Anatomical Node Chains (44 Distinct Encapsulated Nodes)
-  const fullLymphNodes: { x: number; y: number; z: number; r: number; sub: string }[] = [
-    // Cervical Chains (Deep & superficial internal jugular nodes & submandibular)
-    { x: -0.06, y: 1.54, z: 0.10, r: 0.026, sub: 'cervical_nodes' },
-    { x: 0.06, y: 1.54, z: 0.10, r: 0.026, sub: 'cervical_nodes' },
-    { x: -0.09, y: 1.48, z: 0.08, r: 0.028, sub: 'cervical_nodes' },
-    { x: 0.09, y: 1.48, z: 0.08, r: 0.028, sub: 'cervical_nodes' },
-    { x: -0.11, y: 1.40, z: 0.07, r: 0.030, sub: 'cervical_nodes' },
-    { x: 0.11, y: 1.40, z: 0.07, r: 0.030, sub: 'cervical_nodes' },
-    { x: -0.13, y: 1.32, z: 0.06, r: 0.028, sub: 'cervical_nodes' },
-    { x: 0.13, y: 1.32, z: 0.06, r: 0.028, sub: 'cervical_nodes' },
-    { x: -0.16, y: 1.24, z: 0.06, r: 0.032, sub: 'cervical_nodes' },
-    { x: 0.16, y: 1.24, z: 0.06, r: 0.032, sub: 'cervical_nodes' },
+  // Helper: Constructs a biologically realistic reniform (kidney-bean) lymph node
+  function createLymphNodeGeometry(rx: number, ry: number, rz: number): THREE.BufferGeometry {
+    const geo = new THREE.SphereGeometry(rx, 14, 12);
+    geo.scale(1.35, ry / rx, rz / rx);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      let x = p.getX(i);
+      let y = p.getY(i);
+      let z = p.getZ(i);
+      // Create physiological concave hilum notch
+      if (x > 0 && Math.abs(y) < ry * 0.45) {
+        x *= 0.70;
+      }
+      p.setXYZ(i, x, y, z);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
 
-    // Axillary Clusters (Pectoral, subscapular, central & apical axillary nodes)
-    { x: -0.22, y: 1.18, z: 0.06, r: 0.030, sub: 'axillary_nodes' },
-    { x: 0.22, y: 1.18, z: 0.06, r: 0.030, sub: 'axillary_nodes' },
-    { x: -0.26, y: 1.12, z: 0.04, r: 0.034, sub: 'axillary_nodes' },
-    { x: 0.26, y: 1.12, z: 0.04, r: 0.034, sub: 'axillary_nodes' },
-    { x: -0.30, y: 1.05, z: 0.02, r: 0.032, sub: 'axillary_nodes' },
-    { x: 0.30, y: 1.05, z: 0.02, r: 0.032, sub: 'axillary_nodes' },
-    { x: -0.34, y: 0.98, z: 0.02, r: 0.028, sub: 'axillary_nodes' },
-    { x: 0.34, y: 0.98, z: 0.02, r: 0.028, sub: 'axillary_nodes' },
-    { x: -0.26, y: 0.94, z: 0.05, r: 0.028, sub: 'axillary_nodes' },
-    { x: 0.26, y: 0.94, z: 0.05, r: 0.028, sub: 'axillary_nodes' },
+  // Comprehensive 3D Anatomical Lymph Nodes (76 Distinct Reniform Nodes)
+  const fullLymphNodes: { x: number; y: number; z: number; rx: number; ry: number; rz: number; sub: string }[] = [
+    // --- 1. CERVICAL REGION (Head, Neck & Supraclavicular) ---
+    // Submental & Submandibular Nodes
+    { x: 0, y: 1.60, z: 0.13, rx: 0.020, ry: 0.016, rz: 0.014, sub: 'cervical_nodes' },
+    { x: -0.055, y: 1.57, z: 0.11, rx: 0.022, ry: 0.018, rz: 0.015, sub: 'cervical_nodes' },
+    { x: 0.055, y: 1.57, z: 0.11, rx: 0.022, ry: 0.018, rz: 0.015, sub: 'cervical_nodes' },
+    // Preauricular & Parotid
+    { x: -0.105, y: 1.59, z: 0.05, rx: 0.024, ry: 0.019, rz: 0.016, sub: 'cervical_nodes' },
+    { x: 0.105, y: 1.59, z: 0.05, rx: 0.024, ry: 0.019, rz: 0.016, sub: 'cervical_nodes' },
+    // Superficial Cervical Chain
+    { x: -0.075, y: 1.51, z: 0.09, rx: 0.024, ry: 0.019, rz: 0.016, sub: 'cervical_nodes' },
+    { x: 0.075, y: 1.51, z: 0.09, rx: 0.024, ry: 0.019, rz: 0.016, sub: 'cervical_nodes' },
+    // Deep Superior Cervical (Jugulodigastric)
+    { x: -0.090, y: 1.44, z: 0.07, rx: 0.028, ry: 0.022, rz: 0.018, sub: 'cervical_nodes' },
+    { x: 0.090, y: 1.44, z: 0.07, rx: 0.028, ry: 0.022, rz: 0.018, sub: 'cervical_nodes' },
+    // Deep Middle Cervical
+    { x: -0.115, y: 1.37, z: 0.06, rx: 0.026, ry: 0.020, rz: 0.017, sub: 'cervical_nodes' },
+    { x: 0.115, y: 1.37, z: 0.06, rx: 0.026, ry: 0.020, rz: 0.017, sub: 'cervical_nodes' },
+    // Deep Inferior Cervical (Jugulo-omohyoid)
+    { x: -0.135, y: 1.30, z: 0.05, rx: 0.028, ry: 0.021, rz: 0.018, sub: 'cervical_nodes' },
+    { x: 0.135, y: 1.30, z: 0.05, rx: 0.028, ry: 0.021, rz: 0.018, sub: 'cervical_nodes' },
+    // Supraclavicular Sentinel (Virchow's Node on left)
+    { x: -0.155, y: 1.24, z: 0.06, rx: 0.032, ry: 0.024, rz: 0.020, sub: 'cervical_nodes' },
+    { x: 0.155, y: 1.24, z: 0.06, rx: 0.030, ry: 0.023, rz: 0.019, sub: 'cervical_nodes' },
 
-    // Cubital / Epitrochlear Arm Nodes
-    { x: -0.42, y: 0.72, z: 0.03, r: 0.024, sub: 'axillary_nodes' },
-    { x: 0.42, y: 0.72, z: 0.03, r: 0.024, sub: 'axillary_nodes' },
+    // --- 2. AXILLARY & THORACIC WALL REGION ---
+    // Pectoral (Anterior) Group
+    { x: -0.19, y: 1.16, z: 0.08, rx: 0.028, ry: 0.022, rz: 0.018, sub: 'axillary_nodes' },
+    { x: 0.19, y: 1.16, z: 0.08, rx: 0.028, ry: 0.022, rz: 0.018, sub: 'axillary_nodes' },
+    // Central Axillary Group
+    { x: -0.24, y: 1.14, z: 0.04, rx: 0.032, ry: 0.025, rz: 0.020, sub: 'axillary_nodes' },
+    { x: 0.24, y: 1.14, z: 0.04, rx: 0.032, ry: 0.025, rz: 0.020, sub: 'axillary_nodes' },
+    // Lateral Axillary (Brachial) Group
+    { x: -0.29, y: 1.08, z: 0.02, rx: 0.030, ry: 0.023, rz: 0.019, sub: 'axillary_nodes' },
+    { x: 0.29, y: 1.08, z: 0.02, rx: 0.030, ry: 0.023, rz: 0.019, sub: 'axillary_nodes' },
+    // Subscapular (Posterior) Group
+    { x: -0.23, y: 1.10, z: -0.03, rx: 0.028, ry: 0.021, rz: 0.017, sub: 'axillary_nodes' },
+    { x: 0.23, y: 1.10, z: -0.03, rx: 0.028, ry: 0.021, rz: 0.017, sub: 'axillary_nodes' },
+    // Apical (Subclavicular) Group
+    { x: -0.20, y: 1.22, z: 0.04, rx: 0.026, ry: 0.020, rz: 0.016, sub: 'axillary_nodes' },
+    { x: 0.20, y: 1.22, z: 0.04, rx: 0.026, ry: 0.020, rz: 0.016, sub: 'axillary_nodes' },
+    // Cubital / Epitrochlear (Elbow) Nodes
+    { x: -0.42, y: 0.72, z: 0.03, rx: 0.022, ry: 0.017, rz: 0.014, sub: 'axillary_nodes' },
+    { x: 0.42, y: 0.72, z: 0.03, rx: 0.022, ry: 0.017, rz: 0.014, sub: 'axillary_nodes' },
+    // Parasternal / Internal Mammary Chain
+    { x: -0.045, y: 1.18, z: 0.11, rx: 0.020, ry: 0.015, rz: 0.013, sub: 'axillary_nodes' },
+    { x: 0.045, y: 1.18, z: 0.11, rx: 0.020, ry: 0.015, rz: 0.013, sub: 'axillary_nodes' },
+    { x: -0.040, y: 1.05, z: 0.11, rx: 0.020, ry: 0.015, rz: 0.013, sub: 'axillary_nodes' },
+    { x: 0.040, y: 1.05, z: 0.11, rx: 0.020, ry: 0.015, rz: 0.013, sub: 'axillary_nodes' },
+    { x: -0.035, y: 0.92, z: 0.10, rx: 0.020, ry: 0.015, rz: 0.013, sub: 'axillary_nodes' },
+    { x: 0.035, y: 0.92, z: 0.10, rx: 0.020, ry: 0.015, rz: 0.013, sub: 'axillary_nodes' },
 
-    // Mediastinal, Tracheobronchial & Para-Aortic Truncal Nodes
-    { x: -0.05, y: 0.92, z: 0.02, r: 0.026, sub: 'thoracic_duct' },
-    { x: 0.05, y: 0.92, z: 0.02, r: 0.026, sub: 'thoracic_duct' },
-    { x: -0.04, y: 0.65, z: 0.00, r: 0.028, sub: 'thoracic_duct' },
-    { x: 0.04, y: 0.65, z: 0.00, r: 0.028, sub: 'thoracic_duct' },
-    { x: -0.03, y: 0.38, z: -0.01, r: 0.030, sub: 'thoracic_duct' },
-    { x: 0.03, y: 0.38, z: -0.01, r: 0.030, sub: 'thoracic_duct' },
+    // --- 3. CENTRAL THORACIC & MEDIASTINAL REGION ---
+    // Tracheobronchial Nodes (Carinal)
+    { x: 0, y: 1.02, z: 0.01, rx: 0.026, ry: 0.020, rz: 0.016, sub: 'thoracic_duct' },
+    { x: -0.065, y: 1.00, z: 0.02, rx: 0.026, ry: 0.020, rz: 0.016, sub: 'thoracic_duct' },
+    { x: 0.065, y: 1.00, z: 0.02, rx: 0.026, ry: 0.020, rz: 0.016, sub: 'thoracic_duct' },
+    // Posterior Mediastinal Intercostal Nodes
+    { x: -0.025, y: 0.88, z: -0.02, rx: 0.024, ry: 0.019, rz: 0.015, sub: 'thoracic_duct' },
+    { x: 0.025, y: 0.88, z: -0.02, rx: 0.024, ry: 0.019, rz: 0.015, sub: 'thoracic_duct' },
+    { x: -0.020, y: 0.65, z: -0.02, rx: 0.026, ry: 0.020, rz: 0.016, sub: 'thoracic_duct' },
+    { x: 0.020, y: 0.65, z: -0.02, rx: 0.026, ry: 0.020, rz: 0.016, sub: 'thoracic_duct' },
+    { x: -0.020, y: 0.42, z: -0.02, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'thoracic_duct' },
+    { x: 0.020, y: 0.42, z: -0.02, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'thoracic_duct' },
 
-    // Iliac & Inguinal Groups (Horizontal & vertical superficial and deep inguinal nodes)
-    { x: -0.08, y: -0.18, z: 0.06, r: 0.028, sub: 'inguinal_nodes' },
-    { x: 0.08, y: -0.18, z: 0.06, r: 0.028, sub: 'inguinal_nodes' },
-    { x: -0.12, y: -0.34, z: 0.10, r: 0.032, sub: 'inguinal_nodes' },
-    { x: 0.12, y: -0.34, z: 0.10, r: 0.032, sub: 'inguinal_nodes' },
-    { x: -0.16, y: -0.44, z: 0.13, r: 0.036, sub: 'inguinal_nodes' },
-    { x: 0.16, y: -0.44, z: 0.13, r: 0.036, sub: 'inguinal_nodes' },
-    { x: -0.21, y: -0.40, z: 0.12, r: 0.030, sub: 'inguinal_nodes' },
-    { x: 0.21, y: -0.40, z: 0.12, r: 0.030, sub: 'inguinal_nodes' },
-    { x: -0.15, y: -0.55, z: 0.14, r: 0.034, sub: 'inguinal_nodes' },
-    { x: 0.15, y: -0.55, z: 0.14, r: 0.034, sub: 'inguinal_nodes' },
-
-    // Popliteal Knee Nodes (Deep drainage of lower extremity)
-    { x: -0.18, y: -0.88, z: -0.02, r: 0.026, sub: 'inguinal_nodes' },
-    { x: 0.18, y: -0.88, z: -0.02, r: 0.026, sub: 'inguinal_nodes' },
+    // --- 4. ABDOMINAL, PELVIC & INGUINAL REGION ---
+    // Para-Aortic / Lumbar Truncal Nodes
+    { x: -0.045, y: 0.28, z: -0.01, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'thoracic_duct' },
+    { x: 0.045, y: 0.28, z: -0.01, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'thoracic_duct' },
+    { x: -0.040, y: 0.16, z: -0.01, rx: 0.030, ry: 0.024, rz: 0.018, sub: 'thoracic_duct' },
+    { x: 0.040, y: 0.16, z: -0.01, rx: 0.030, ry: 0.024, rz: 0.018, sub: 'thoracic_duct' },
+    // Common Iliac Nodes (Aortic bifurcation)
+    { x: -0.065, y: -0.04, z: 0.02, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'inguinal_nodes' },
+    { x: 0.065, y: -0.04, z: 0.02, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'inguinal_nodes' },
+    // External Iliac Chain
+    { x: -0.105, y: -0.18, z: 0.05, rx: 0.030, ry: 0.024, rz: 0.018, sub: 'inguinal_nodes' },
+    { x: 0.105, y: -0.18, z: 0.05, rx: 0.030, ry: 0.024, rz: 0.018, sub: 'inguinal_nodes' },
+    { x: -0.135, y: -0.30, z: 0.08, rx: 0.032, ry: 0.025, rz: 0.019, sub: 'inguinal_nodes' },
+    { x: 0.135, y: -0.30, z: 0.08, rx: 0.032, ry: 0.025, rz: 0.019, sub: 'inguinal_nodes' },
+    // Horizontal Superficial Inguinal Group
+    { x: -0.120, y: -0.40, z: 0.12, rx: 0.032, ry: 0.025, rz: 0.019, sub: 'inguinal_nodes' },
+    { x: 0.120, y: -0.40, z: 0.12, rx: 0.032, ry: 0.025, rz: 0.019, sub: 'inguinal_nodes' },
+    { x: -0.165, y: -0.42, z: 0.13, rx: 0.036, ry: 0.028, rz: 0.021, sub: 'inguinal_nodes' },
+    { x: 0.165, y: -0.42, z: 0.13, rx: 0.036, ry: 0.028, rz: 0.021, sub: 'inguinal_nodes' },
+    { x: -0.210, y: -0.41, z: 0.11, rx: 0.030, ry: 0.023, rz: 0.018, sub: 'inguinal_nodes' },
+    { x: 0.210, y: -0.41, z: 0.11, rx: 0.030, ry: 0.023, rz: 0.018, sub: 'inguinal_nodes' },
+    // Vertical Superficial Inguinal Group (Great Saphenous opening)
+    { x: -0.155, y: -0.52, z: 0.14, rx: 0.034, ry: 0.027, rz: 0.020, sub: 'inguinal_nodes' },
+    { x: 0.155, y: -0.52, z: 0.14, rx: 0.034, ry: 0.027, rz: 0.020, sub: 'inguinal_nodes' },
+    { x: -0.145, y: -0.62, z: 0.13, rx: 0.030, ry: 0.024, rz: 0.018, sub: 'inguinal_nodes' },
+    { x: 0.145, y: -0.62, z: 0.13, rx: 0.030, ry: 0.024, rz: 0.018, sub: 'inguinal_nodes' },
+    // Deep Inguinal Group (Node of Cloquet)
+    { x: -0.130, y: -0.44, z: 0.07, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'inguinal_nodes' },
+    { x: 0.130, y: -0.44, z: 0.07, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'inguinal_nodes' },
+    // Popliteal Knee Nodes (Deep posterior drainage)
+    { x: -0.180, y: -0.92, z: -0.03, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'inguinal_nodes' },
+    { x: 0.180, y: -0.92, z: -0.03, rx: 0.028, ry: 0.022, rz: 0.017, sub: 'inguinal_nodes' },
   ];
 
   fullLymphNodes.forEach((nd) => {
-    const nodeGeo = new THREE.SphereGeometry(nd.r, 18, 16);
-    nodeGeo.scale(1.25, 0.92, 0.88);
-    applyOrganicVertexShading(nodeGeo, 0x10b981, 0x064e3b);
+    const nodeGeo = createLymphNodeGeometry(nd.rx, nd.ry, nd.rz);
+    applyOrganicVertexShading(nodeGeo, 0x10b981, 0x059669);
     nodeGeo.computeBoundingBox();
     nodeGeo.computeBoundingSphere();
 
@@ -2009,58 +2075,33 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     lymphNodesGroup.add(nodeMesh);
   });
 
-  // Translucent anatomical torso contour reference (Gives immediate anatomical positioning)
-  const lymphBodyMat = new THREE.MeshBasicMaterial({
-    color: 0x93c5fd,
-    transparent: true,
-    opacity: 0.10,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  const lymphTorsoGeo = new THREE.LatheGeometry(
-    [
-      new THREE.Vector2(0.01, -0.95),
-      new THREE.Vector2(0.38, -0.68),
-      new THREE.Vector2(0.44, -0.32),
-      new THREE.Vector2(0.38, 0.06),
-      new THREE.Vector2(0.44, 0.42),
-      new THREE.Vector2(0.50, 0.85),
-      new THREE.Vector2(0.54, 1.18),
-      new THREE.Vector2(0.22, 1.36),
-      new THREE.Vector2(0.16, 1.56),
-      new THREE.Vector2(0.01, 1.62),
-    ],
-    28
-  );
-  lymphTorsoGeo.scale(1.0, 1.0, 0.58);
-  const lymphBodyMesh = new THREE.Mesh(lymphTorsoGeo, lymphBodyMat);
-  lymphBodyMesh.position.set(0, 0, 0);
-  lymphNodesGroup.add(lymphBodyMesh);
-
-  // 2. Cisterna Chyli (Dilated lymphatic sac at T12-L2)
-  const cisternaGeo = new THREE.CylinderGeometry(0.024, 0.032, 0.15, 16);
+  // --- 2. CISTERNA CHYLI (Elongated saccular reservoir at L1-L2) ---
+  const cisternaGeo = new THREE.CylinderGeometry(0.026, 0.034, 0.16, 16);
+  cisternaGeo.scale(1.20, 1.0, 0.85);
   applyOrganicVertexShading(cisternaGeo, 0x34d399, 0x059669);
   cisternaGeo.computeBoundingBox();
   cisternaGeo.computeBoundingSphere();
   const cisternaMesh = new THREE.Mesh(cisternaGeo, lymphMat.clone());
-  cisternaMesh.position.set(0.015, 0.08, -0.025);
+  cisternaMesh.position.set(0.015, 0.10, -0.025);
   cisternaMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
   lymphNodesGroup.add(cisternaMesh);
 
-  // 3. Main Thoracic Lymphatic Duct (Ascending from cisterna chyli to left subclavian junction)
+  // --- 3. MAIN THORACIC LYMPHATIC DUCT (Ascending & Arched Left Venous Termination) ---
   const thoracicDuctCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.015, 0.08, -0.025),
-    new THREE.Vector3(0.018, 0.42, -0.03),
-    new THREE.Vector3(0.012, 0.85, -0.035),
-    new THREE.Vector3(-0.015, 1.18, -0.02),
-    new THREE.Vector3(-0.045, 1.34, 0.02),
-    new THREE.Vector3(-0.08, 1.38, 0.04),
+    new THREE.Vector3(0.015, 0.10, -0.025),
+    new THREE.Vector3(0.018, 0.35, -0.028),
+    new THREE.Vector3(0.016, 0.65, -0.030),
+    new THREE.Vector3(0.010, 0.95, -0.032),
+    new THREE.Vector3(-0.015, 1.20, -0.020),
+    new THREE.Vector3(-0.045, 1.32, 0.015),
+    new THREE.Vector3(-0.080, 1.36, 0.035),
+    new THREE.Vector3(-0.115, 1.32, 0.045), // Graceful arched entrance into left subclavian angle
   ]);
   const ductGeo = createVariableTubeGeometry(
     thoracicDuctCurve,
-    28,
+    32,
     8,
-    () => 0.009,
+    (t) => 0.007 + Math.sin(t * Math.PI * 14) * 0.0018, // Physiological beaded valvular appearance
     0x34d399,
     0x059669
   );
@@ -2068,17 +2109,18 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   ductMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
   lymphNodesGroup.add(ductMesh);
 
-  // 4. Right Lymphatic Duct (Drains upper right quadrant)
+  // --- 4. RIGHT LYMPHATIC DUCT (Upper Right Quadrant Drainage) ---
   const rightDuctCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.02, 1.22, 0.02),
-    new THREE.Vector3(0.05, 1.32, 0.03),
-    new THREE.Vector3(0.08, 1.36, 0.04),
+    new THREE.Vector3(0.020, 1.20, 0.015),
+    new THREE.Vector3(0.045, 1.28, 0.025),
+    new THREE.Vector3(0.075, 1.33, 0.035),
+    new THREE.Vector3(0.105, 1.30, 0.045),
   ]);
   const rDuctGeo = createVariableTubeGeometry(
     rightDuctCurve,
-    14,
+    16,
     8,
-    () => 0.008,
+    () => 0.006,
     0x34d399,
     0x059669
   );
@@ -2086,19 +2128,21 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   rDuctMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
   lymphNodesGroup.add(rDuctMesh);
 
-  // 5. Bilateral Jugular Lymphatic Trunks (Descending from cervical nodes to lymphatic junctions)
+  // --- 5. BILATERAL JUGULAR LYMPHATIC TRUNKS (Neck / Cervical Drainage) ---
   [-1, 1].forEach((side) => {
     const jugularCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.07, 1.54, 0.10),
-      new THREE.Vector3(side * 0.10, 1.44, 0.08),
-      new THREE.Vector3(side * 0.13, 1.34, 0.06),
-      new THREE.Vector3(side * (side < 0 ? 0.08 : 0.06), 1.36, 0.04),
+      new THREE.Vector3(side * 0.055, 1.57, 0.11),
+      new THREE.Vector3(side * 0.075, 1.51, 0.09),
+      new THREE.Vector3(side * 0.090, 1.44, 0.07),
+      new THREE.Vector3(side * 0.115, 1.37, 0.06),
+      new THREE.Vector3(side * 0.135, 1.30, 0.05),
+      new THREE.Vector3(side * (side < 0 ? 0.115 : 0.105), 1.32, 0.045),
     ]);
     const jugularGeo = createVariableTubeGeometry(
       jugularCurve,
-      18,
+      24,
       8,
-      () => 0.006,
+      () => 0.0055,
       0x10b981,
       0x059669
     );
@@ -2107,40 +2151,63 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     lymphNodesGroup.add(jugularMesh);
   });
 
-  // 6. Bilateral Subclavian Lymphatic Trunks (Connecting axillary clusters to thoracic ducts)
+  // --- 6. BILATERAL SUBCLAVIAN & BRACHIAL LYMPHATIC TRUNKS (Arms & Chest Drainage) ---
   [-1, 1].forEach((side) => {
+    // Axilla to subclavian confluence
     const subclavianCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.28, 1.05, 0.03),
-      new THREE.Vector3(side * 0.20, 1.18, 0.05),
-      new THREE.Vector3(side * 0.12, 1.28, 0.04),
-      new THREE.Vector3(side * (side < 0 ? 0.08 : 0.06), 1.36, 0.04),
+      new THREE.Vector3(side * 0.29, 1.08, 0.02),
+      new THREE.Vector3(side * 0.24, 1.14, 0.04),
+      new THREE.Vector3(side * 0.20, 1.22, 0.04),
+      new THREE.Vector3(side * 0.16, 1.28, 0.05),
+      new THREE.Vector3(side * (side < 0 ? 0.115 : 0.105), 1.32, 0.045),
     ]);
     const subclavianGeo = createVariableTubeGeometry(
       subclavianCurve,
-      20,
+      22,
       8,
-      () => 0.006,
+      () => 0.0055,
       0x059669,
       0x047857
     );
     const subclavianMesh = new THREE.Mesh(subclavianGeo, lymphMat.clone());
     subclavianMesh.userData = { subPartId: 'axillary_nodes', organId: 'lymph_nodes' };
     lymphNodesGroup.add(subclavianMesh);
+
+    // Brachial vessel connecting elbow cubital nodes to axilla
+    const armCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.42, 0.72, 0.03),
+      new THREE.Vector3(side * 0.36, 0.90, 0.02),
+      new THREE.Vector3(side * 0.29, 1.08, 0.02),
+    ]);
+    const armGeo = createVariableTubeGeometry(
+      armCurve,
+      16,
+      8,
+      () => 0.0048,
+      0x059669,
+      0x047857
+    );
+    const armMesh = new THREE.Mesh(armGeo, lymphMat.clone());
+    armMesh.userData = { subPartId: 'axillary_nodes', organId: 'lymph_nodes' };
+    lymphNodesGroup.add(armMesh);
   });
 
-  // 7. Bilateral Inguinal-to-Cisterna Lymphatic Trunks (Ascending fluid conduits)
+  // --- 7. BILATERAL LUMBAR & INGUINAL CONDUITS (Lower Body Drainage) ---
   [-1, 1].forEach((side) => {
+    // Inguinal to iliac to cisterna chyli
     const ingCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.16, -0.46, 0.13),
-      new THREE.Vector3(side * 0.11, -0.25, 0.08),
-      new THREE.Vector3(side * 0.06, -0.06, 0.02),
-      new THREE.Vector3(0.015, 0.08, -0.025),
+      new THREE.Vector3(side * 0.165, -0.42, 0.13),
+      new THREE.Vector3(side * 0.135, -0.30, 0.08),
+      new THREE.Vector3(side * 0.105, -0.18, 0.05),
+      new THREE.Vector3(side * 0.065, -0.04, 0.02),
+      new THREE.Vector3(side * 0.040, 0.16, -0.01),
+      new THREE.Vector3(0.015, 0.10, -0.025),
     ]);
     const ingGeo = createVariableTubeGeometry(
       ingCurve,
-      18,
+      26,
       8,
-      () => 0.006,
+      () => 0.0058,
       0x34d399,
       0x059669
     );
@@ -2148,15 +2215,17 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     ingMesh.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
     lymphNodesGroup.add(ingMesh);
 
-    // Popliteal to inguinal leg channel
+    // Popliteal knee to superficial vertical inguinal thigh channel
     const legCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.18, -0.88, -0.02),
-      new THREE.Vector3(side * 0.17, -0.70, 0.06),
-      new THREE.Vector3(side * 0.15, -0.55, 0.14),
+      new THREE.Vector3(side * 0.180, -0.92, -0.03),
+      new THREE.Vector3(side * 0.170, -0.76, 0.05),
+      new THREE.Vector3(side * 0.145, -0.62, 0.13),
+      new THREE.Vector3(side * 0.155, -0.52, 0.14),
+      new THREE.Vector3(side * 0.165, -0.42, 0.13),
     ]);
     const legGeo = createVariableTubeGeometry(
       legCurve,
-      16,
+      20,
       8,
       () => 0.005,
       0x10b981,
@@ -2167,12 +2236,39 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     lymphNodesGroup.add(legMesh);
   });
 
+  // --- 8. PRIMARY & SECONDARY LYMPHOID ORGANS (Thymus & Spleen integration) ---
+  // Thymus Gland (Bilobed lymphoid organ in anterior superior mediastinum)
+  [-1, 1].forEach((side) => {
+    const thymusLobeGeo = new THREE.SphereGeometry(0.038, 14, 12);
+    thymusLobeGeo.scale(0.70, 1.45, 0.60);
+    applyOrganicVertexShading(thymusLobeGeo, 0x10b981, 0x047857);
+    thymusLobeGeo.computeBoundingBox();
+    thymusLobeGeo.computeBoundingSphere();
+    const thymusMesh = new THREE.Mesh(thymusLobeGeo, lymphMat.clone());
+    thymusMesh.position.set(side * 0.018, 1.15, 0.065);
+    thymusMesh.rotation.z = side * -0.12;
+    thymusMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+    lymphNodesGroup.add(thymusMesh);
+  });
+
+  // Spleen (Largest secondary lymphoid organ, left hypochondrium)
+  const lymphSpleenGeo = new THREE.SphereGeometry(0.062, 16, 14);
+  lymphSpleenGeo.scale(1.28, 0.90, 0.68);
+  applyOrganicVertexShading(lymphSpleenGeo, 0x059669, 0x022c22);
+  lymphSpleenGeo.computeBoundingBox();
+  lymphSpleenGeo.computeBoundingSphere();
+  const lymphSpleenMesh = new THREE.Mesh(lymphSpleenGeo, lymphMat.clone());
+  lymphSpleenMesh.position.set(-0.21, 0.46, -0.02);
+  lymphSpleenMesh.rotation.set(0.35, -0.42, 0.28);
+  lymphSpleenMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+  lymphNodesGroup.add(lymphSpleenMesh);
+
   registerOrganGroup(
     'lymph_nodes',
     'Mesh_LymphNodes',
     'lymphatic',
     lymphNodesGroup,
-    new THREE.Vector3(0, 0.40, 0.05),
+    new THREE.Vector3(0, 0.35, 0.05),
     1.45,
     organRecords
   );

@@ -251,8 +251,8 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     urls: [
       'https://raw.githubusercontent.com/Charleeh/ecorche/master/model/ecorche.glb',
     ],
-    primaryColorHex: 0xf3f4f6,
-    secondaryColorHex: 0x94a3b8,
+    primaryColorHex: 0xefece6,
+    secondaryColorHex: 0xd9d2c5,
     roughness: 0.40,
     metalness: 0.06,
     coordMode: 'fit',
@@ -270,8 +270,8 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     urls: [
       'https://raw.githubusercontent.com/Charleeh/ecorche/master/model/ecorche.glb',
     ],
-    primaryColorHex: 0x991b1b,
-    secondaryColorHex: 0x5c0911,
+    primaryColorHex: 0x9e2a2b,
+    secondaryColorHex: 0x6a1318,
     roughness: 0.38,
     metalness: 0.05,
     coordMode: 'fit',
@@ -992,6 +992,10 @@ function mapNodeNameToSubPart(
   }
 
   if (organId === 'skeleton') {
+    // Natural uniform bone coloring (ivory / off-white with deeper trabecular shading)
+    const bonePrimary = 0xefece6;
+    const boneSecondary = 0xd9d2c5;
+
     if (
       /skull|cranium|facial|mandible|maxilla|frontal|parietal|occipital|temporal|sphenoid|ethmoid|nasal|zygomatic|lacrimal|ear|teeth|tooth|incisor|molar|canine|premolar|hyoid|vomer|palatine|concha|cornea|sclera|cartilage|alar/.test(
         n
@@ -999,29 +1003,29 @@ function mapNodeNameToSubPart(
     ) {
       return {
         subPartId: 'cranium',
-        primaryHex: 0x0284c7,
-        secondaryHex: 0x075985,
+        primaryHex: bonePrimary,
+        secondaryHex: boneSecondary,
       };
     }
     if (/vertebra|atlas|axis|cervical|sacrum|coccyx|thoracic vertebra|lumbar vertebra|spine/.test(n)) {
       return {
         subPartId: 'vertebral_column',
-        primaryHex: 0xeab308,
-        secondaryHex: 0x854d0e,
+        primaryHex: bonePrimary,
+        secondaryHex: boneSecondary,
       };
     }
     if (/rib|sternum|costal|manubrium|xiphoid/.test(n)) {
       return {
         subPartId: 'ribcage',
-        primaryHex: 0x10b981,
-        secondaryHex: 0x064e3b,
+        primaryHex: bonePrimary,
+        secondaryHex: boneSecondary,
       };
     }
     if (/pelvis|ilium|ischium|pubis|hip|sacroiliac/.test(n)) {
       return {
         subPartId: 'pelvis_girdle',
-        primaryHex: 0xec4899,
-        secondaryHex: 0x9d174d,
+        primaryHex: bonePrimary,
+        secondaryHex: boneSecondary,
       };
     }
     if (
@@ -1031,23 +1035,27 @@ function mapNodeNameToSubPart(
     ) {
       return {
         subPartId: 'upper_limbs',
-        primaryHex: 0x38bdf8,
-        secondaryHex: 0x0284c7,
+        primaryHex: bonePrimary,
+        secondaryHex: boneSecondary,
       };
     }
     return {
       subPartId: 'lower_limbs',
-      primaryHex: 0xa855f7,
-      secondaryHex: 0x6b21a8,
+      primaryHex: bonePrimary,
+      secondaryHex: boneSecondary,
     };
   }
 
   if (organId === 'muscles') {
+    // Natural uniform muscle coloring (deep anatomical muscle crimson with deep fascia shading)
+    const musclePrimary = 0x9e2a2b;
+    const muscleSecondary = 0x6a1318;
+
     if (/pectoral|subclavius|serratus|intercostal/.test(n)) {
       return {
         subPartId: 'pectoralis',
-        primaryHex: 0xef4444,
-        secondaryHex: 0x991b1b,
+        primaryHex: musclePrimary,
+        secondaryHex: muscleSecondary,
       };
     }
     if (
@@ -1057,8 +1065,8 @@ function mapNodeNameToSubPart(
     ) {
       return {
         subPartId: 'rectus_abdominis',
-        primaryHex: 0xf59e0b,
-        secondaryHex: 0xb45309,
+        primaryHex: musclePrimary,
+        secondaryHex: muscleSecondary,
       };
     }
     if (
@@ -1068,8 +1076,8 @@ function mapNodeNameToSubPart(
     ) {
       return {
         subPartId: 'deltoids',
-        primaryHex: 0x8b5cf6,
-        secondaryHex: 0x5b21b6,
+        primaryHex: musclePrimary,
+        secondaryHex: muscleSecondary,
       };
     }
     if (
@@ -1079,8 +1087,8 @@ function mapNodeNameToSubPart(
     ) {
       return {
         subPartId: 'trapezius',
-        primaryHex: 0x10b981,
-        secondaryHex: 0x047857,
+        primaryHex: musclePrimary,
+        secondaryHex: muscleSecondary,
       };
     }
     if (
@@ -1090,14 +1098,14 @@ function mapNodeNameToSubPart(
     ) {
       return {
         subPartId: 'biceps_brachii',
-        primaryHex: 0xec4899,
-        secondaryHex: 0xbe185d,
+        primaryHex: musclePrimary,
+        secondaryHex: muscleSecondary,
       };
     }
     return {
       subPartId: 'quadriceps',
-      primaryHex: 0x06b6d4,
-      secondaryHex: 0x0e7490,
+      primaryHex: musclePrimary,
+      secondaryHex: muscleSecondary,
     };
   }
 
