@@ -1940,14 +1940,15 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const lymphaticGroup = systemGroups.get('lymphatic')!;
   const lymphNodesGroup = new THREE.Group();
   const lymphMat = new THREE.MeshStandardMaterial({
-    color: 0x10b981,
+    color: 0xffffff,
     vertexColors: true,
     roughness: 0.30,
     metalness: 0.10,
   });
 
   const lymphVesselMat = new THREE.MeshStandardMaterial({
-    color: 0x10b981,
+    color: 0xffffff,
+    vertexColors: true,
     roughness: 0.28,
     metalness: 0.12,
   });
@@ -2051,7 +2052,14 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
         new THREE.Vector3(side * 0.07, ribY - 0.01, 0.025),
         new THREE.Vector3(side * 0.015, ribY + 0.02, 0.032),
       ]);
-      const icGeo = new THREE.TubeGeometry(icCurve, 14, 0.0038, 8, false);
+      const icGeo = createVariableTubeGeometry(
+        icCurve,
+        14,
+        8,
+        () => 0.0038,
+        0x34d399,
+        0x059669
+      );
       const icMesh = new THREE.Mesh(icGeo, lymphVesselMat.clone());
       icMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
       lymphNodesGroup.add(icMesh);
@@ -2151,7 +2159,14 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
           new THREE.Vector3(side * prev.x, prev.y, prev.z),
           new THREE.Vector3(side * coord.x, coord.y, coord.z),
         ]);
-        const vGeo = new THREE.TubeGeometry(vCurve, 8, 0.0035, 6, false);
+        const vGeo = createVariableTubeGeometry(
+          vCurve,
+          10,
+          8,
+          () => 0.0035,
+          0x34d399,
+          0x059669
+        );
         const vMesh = new THREE.Mesh(vGeo, lymphVesselMat.clone());
         vMesh.userData = { subPartId: 'axillary_nodes', organId: 'lymph_nodes' };
         lymphNodesGroup.add(vMesh);
@@ -2204,7 +2219,14 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
           new THREE.Vector3(side * prev.x, prev.y, prev.z),
           new THREE.Vector3(side * coord.x, coord.y, coord.z),
         ]);
-        const ivGeo = new THREE.TubeGeometry(ingCurve, 8, 0.0035, 6, false);
+        const ivGeo = createVariableTubeGeometry(
+          ingCurve,
+          10,
+          8,
+          () => 0.0035,
+          0x34d399,
+          0x059669
+        );
         const ivMesh = new THREE.Mesh(ivGeo, lymphVesselMat.clone());
         ivMesh.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
         lymphNodesGroup.add(ivMesh);
