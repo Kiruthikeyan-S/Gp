@@ -157,17 +157,19 @@ export const ExplorerScreen: React.FC = () => {
           canvasBackgroundColor="#ffebff"
           isActive={isFocused}
           onSelectOrgan={(organId) => {
-            if (organId !== activeOrgan.id || viewMode !== 'isolate') {
+            if (organId !== activeOrgan.id) {
               setSelectedSubPartId(null);
+              selectOrgan(organId);
+              setViewMode('isolate');
+              setZoomLevel(100);
+              setIsCardMinimized(false);
             }
-            selectOrgan(organId);
-            setViewMode('isolate');
-            setZoomLevel(100);
-            setIsCardMinimized(false);
           }}
           onSelectSubPart={(subPartId) => {
-            setSelectedSubPartId(subPartId);
-            setIsCardMinimized(false);
+            if (selectedSubPartId !== subPartId) {
+              setSelectedSubPartId(subPartId);
+              setIsCardMinimized(false);
+            }
           }}
         />
 

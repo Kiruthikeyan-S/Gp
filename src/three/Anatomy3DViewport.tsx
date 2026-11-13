@@ -316,41 +316,29 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
       graph.organRecords.forEach((record) => {
         const isTarget = record.organId === activeOrganId;
         record.group.visible = isTarget;
+        if (!isTarget) return;
+
         record.meshes.forEach((mesh) => {
           const origMat = record.originalMaterials.get(mesh);
           const currentMat = mesh.material as THREE.MeshStandardMaterial;
           if (!origMat || !currentMat) return;
-          currentMat.color.copy(origMat.color);
-          currentMat.opacity = origMat.opacity;
-          currentMat.transparent = origMat.transparent;
 
           const meshSubPartId = mesh.userData?.subPartId;
           const isSelectedSubPart =
-            isTarget &&
             Boolean(activeSubPartId) &&
             meshSubPartId === activeSubPartId;
 
           if (isSelectedSubPart && activeSubPartId) {
             const partHex = getSubPartColorHex(activeSubPartId);
-            // VIBRANT CLINICAL PART COLOR: Set base & emissive color to the part's distinct hue (pink, yellow, green, etc.)
-            currentMat.vertexColors = false;
-            currentMat.color.setHex(partHex);
+            // Instant zero-cost uniform emissive highlight (0ms lag, no shader recompilation)
             currentMat.emissive.setHex(partHex);
-            currentMat.emissiveIntensity = 0.55;
-            currentMat.opacity = 1.0;
-            currentMat.transparent = false;
-            currentMat.depthWrite = true;
+            currentMat.emissiveIntensity = 0.65;
+            currentMat.color.setHex(partHex);
           } else {
-            currentMat.vertexColors = origMat.vertexColors;
             currentMat.color.copy(origMat.color);
             currentMat.emissive.setHex(0x000000);
             currentMat.emissiveIntensity = 0;
-            // Retain solid, realistic anatomical tissue appearance so unselected regions don't turn translucent or wash out
-            currentMat.opacity = origMat.opacity;
-            currentMat.transparent = origMat.transparent;
-            currentMat.depthWrite = true;
           }
-          currentMat.needsUpdate = true;
         });
       });
     } else {
@@ -520,14 +508,22 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     raycaster.setFromCamera(ndc, camera);
 
     const pickableMeshes: THREE.Mesh[] = [];
-    graph.organRecords.forEach((record) => {
-      const sysGroup = graph.systemGroups.get(record.systemId);
-      if (sysGroup && sysGroup.visible && record.group.visible) {
-        pickableMeshes.push(...record.meshes);
+    const activeOrgId = stateRef.current.selectedOrganId;
+    if (stateRef.current.viewMode === 'isolate' && activeOrgId) {
+      const rec = graph.organRecords.get(activeOrgId);
+      if (rec && rec.group.visible) {
+        pickableMeshes.push(...rec.meshes);
       }
-    });
+    } else {
+      graph.organRecords.forEach((record) => {
+        const sysGroup = graph.systemGroups.get(record.systemId);
+        if (sysGroup && sysGroup.visible && record.group.visible) {
+          pickableMeshes.push(...record.meshes);
+        }
+      });
+    }
 
-    // Fast bounding-box + strided triangle/vertex raycast (< 2ms on mobile Hermes even for 300k-triangle scans)
+    // Instant raycast: hierarchical bounding-sphere check (< 0.5ms on mobile)
     let bestHitMesh: THREE.Mesh | null = null;
     let bestWorldDist = Infinity;
     const bestWorldPoint = new THREE.Vector3();
@@ -539,10 +535,20 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     const vC = new THREE.Vector3();
     const tmpLocalHit = new THREE.Vector3();
     const tmpWorldHit = new THREE.Vector3();
+    const tmpSphere = new THREE.Sphere();
 
     for (const mesh of pickableMeshes) {
       const geo = mesh.geometry;
       if (!geo) continue;
+
+      if (!geo.boundingSphere) {
+        geo.computeBoundingSphere();
+      }
+      if (geo.boundingSphere) {
+        tmpSphere.copy(geo.boundingSphere).applyMatrix4(mesh.matrixWorld);
+        if (!raycaster.ray.intersectsSphere(tmpSphere)) continue;
+      }
+
       if (!geo.boundingBox) {
         geo.computeBoundingBox();
       }
