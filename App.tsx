@@ -12,7 +12,11 @@ export default function App() {
 
   useEffect(() => {
     loadPersistedData();
-    preloadAllRealGlbModels();
+    // Preload models in background after app has smoothly mounted
+    const timer = setTimeout(() => {
+      preloadAllRealGlbModels().catch(() => {});
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [loadPersistedData]);
 
   return (

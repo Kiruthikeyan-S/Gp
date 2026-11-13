@@ -1265,15 +1265,16 @@ async function buildAndCacheOrganModel(
   }
 
   const buildPromise = (async (): Promise<CachedOrganModel | null> => {
-    // Download all GLB buffers for this organ in parallel
-    const buffers = await Promise.all(spec.urls.map((url) => fetchGlbBuffer(url)));
-    const allPrimitives: ParsedPrimitive[] = [];
-    for (const buf of buffers) {
-      const prims = parseGlbBinary(buf, spec.organId);
-      allPrimitives.push(...prims);
-    }
+    try {
+      // Download all GLB buffers for this organ in parallel
+      const buffers = await Promise.all(spec.urls.map((url) => fetchGlbBuffer(url)));
+      const allPrimitives: ParsedPrimitive[] = [];
+      for (const buf of buffers) {
+        const prims = parseGlbBinary(buf, spec.organId);
+        allPrimitives.push(...prims);
+      }
 
-    if (allPrimitives.length === 0) return null;
+      if (allPrimitives.length === 0) return null;
 
     const rotMat = spec.preRotationEuler
       ? new THREE.Matrix4().makeRotationFromEuler(
@@ -1460,7 +1461,10 @@ async function buildAndCacheOrganModel(
 
     prebuiltOrganCache.set(spec.organId, cachedModel);
     return cachedModel;
-  })();
+  } catch {
+    return null;
+  }
+})();
 
   inflightOrganCache.set(spec.organId, buildPromise);
   try {
@@ -1562,15 +1566,9 @@ export function applyCachedGlbOrgansSync(graph: AnatomySceneGraph): number {
  */
 export async function preloadAllRealGlbModels(): Promise<void> {
   try {
-    // Prioritize high-demand skeleton and muscular systems first so ecorche.glb is cached immediately
-    const priorityFirstSpecs = [...REAL_GLB_ORGAN_SPECS].sort((a, b) => {
-      if (a.organId === 'skeleton' || a.organId === 'muscles') return -1;
-      if (b.organId === 'skeleton' || b.organId === 'muscles') return 1;
-      return 0;
-    });
-    const batchSize = 4;
-    for (let i = 0; i < priorityFirstSpecs.length; i += batchSize) {
-      const batch = priorityFirstSpecs.slice(i, i + batchSize);
+    const batchSize = 2;
+    for (let i = 0; i < REAL_GLB_ORGAN_SPECS.length; i += batchSize) {
+      const batch = REAL_GLB_ORGAN_SPECS.slice(i, i + batchSize);
       await Promise.all(
         batch.map((spec) => buildAndCacheOrganModel(spec).catch(() => null))
       );

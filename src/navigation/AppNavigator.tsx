@@ -1,8 +1,5 @@
-import React, { useEffect } from 'react';
-import { BackHandler } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { RootStackParamList, TabParamList } from '../types';
@@ -22,23 +19,8 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function BottomTabs() {
-  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 10);
-
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        if (navigation.canGoBack()) {
-          navigation.goBack();
-          return true;
-        }
-        return false;
-      }
-    );
-    return () => subscription.remove();
-  }, [navigation]);
 
   return (
     <Tab.Navigator
