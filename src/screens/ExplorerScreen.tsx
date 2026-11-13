@@ -39,7 +39,7 @@ const SYSTEM_PRIMARY_ORGAN: Record<string, string> = {
   digestive: 'stomach',
   urinary: 'kidneys',
   endocrine: 'thyroid',
-  lymphatic: 'lymph_nodes',
+  lymphatic: 'spleen',
   reproductive: 'reproductive',
 };
 
@@ -106,7 +106,7 @@ export const ExplorerScreen: React.FC = () => {
       setShowMuscular(false);
       setShowVascular(true);
       setShowNervous(true);
-      setViewMode('body');
+      setViewMode('isolate');
     } else {
       const primaryOrganId = SYSTEM_PRIMARY_ORGAN[sysId];
       if (primaryOrganId) {
@@ -235,53 +235,16 @@ export const ExplorerScreen: React.FC = () => {
                 </Text>
               </TouchableOpacity>
 
-              {/* View Mode Segment: Full Body vs Solo 3D Atlas */}
-              <View style={styles.viewModeSegment}>
-                <TouchableOpacity
-                  style={[
-                    styles.viewModeBtn,
-                    viewMode === 'body' && styles.viewModeBtnActive,
-                  ]}
-                  onPress={() => setViewMode('body')}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons
-                    name="human"
-                    size={14}
-                    color={viewMode === 'body' ? '#FFFFFF' : '#64748B'}
-                  />
-                  <Text
-                    style={[
-                      styles.viewModeBtnText,
-                      viewMode === 'body' && styles.viewModeBtnTextActive,
-                    ]}
-                  >
-                    Full Body
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.viewModeBtn,
-                    viewMode === 'isolate' && styles.viewModeBtnActive,
-                  ]}
-                  onPress={() => setViewMode('isolate')}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons
-                    name="cube-scan"
-                    size={14}
-                    color={viewMode === 'isolate' ? '#FFFFFF' : '#64748B'}
-                  />
-                  <Text
-                    style={[
-                      styles.viewModeBtnText,
-                      viewMode === 'isolate' && styles.viewModeBtnTextActive,
-                    ]}
-                  >
-                    Solo 3D
-                  </Text>
-                </TouchableOpacity>
+              {/* Dedicated Solo 3D Atlas Mode Indicator (Organ Focus Only) */}
+              <View style={styles.soloModeBadge}>
+                <MaterialCommunityIcons
+                  name="cube-scan"
+                  size={15}
+                  color="#0284C7"
+                />
+                <Text style={styles.soloModeBadgeText}>
+                  Solo 3D Atlas
+                </Text>
               </View>
 
               {/* Hide UI Button */}
@@ -938,6 +901,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#0F172A',
+  },
+  soloModeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  soloModeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0284C7',
   },
   viewModeSegment: {
     flexDirection: 'row',

@@ -257,11 +257,11 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
     if (mode === 'isolate' && selId && graph) {
       const rec = graph.organRecords.get(selId);
       if (rec) {
-        if (selId === 'muscles' || selId === 'skeleton' || selId === 'lymph_nodes') {
+        if (selId === 'muscles' || selId === 'skeleton') {
           targetOrbitRef.current.lookX = 0;
-          targetOrbitRef.current.lookY = selId === 'lymph_nodes' ? -0.15 : -0.40;
+          targetOrbitRef.current.lookY = -0.40;
           targetOrbitRef.current.lookZ = 0;
-          targetOrbitRef.current.radius = (selId === 'lymph_nodes' ? 2.30 : 2.45) / scale;
+          targetOrbitRef.current.radius = 2.45 / scale;
           return;
         }
         targetOrbitRef.current.lookX = rec.focusCenter.x;
