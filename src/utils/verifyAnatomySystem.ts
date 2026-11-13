@@ -50,12 +50,8 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
   const hasVertexColors = brainRecord.meshes.some((m) => !!m.geometry.getAttribute('color'));
   assert(hasVertexColors, 'Sculpted 3D organ geometries contain multi-toned biological vertex color attributes');
 
-  graph.setShellMode('solid');
-  assert(graph.bodyShellGroup.visible === true, 'Body shell switches to solid skin mode');
   graph.setShellMode('hidden');
-  assert(graph.bodyShellGroup.visible === false, 'Body shell hides cleanly in hidden/isolate mode');
-  graph.setShellMode('xray');
-  assert(graph.bodyShellGroup.visible === true, 'Body shell restores X-ray translucent silhouette mode');
+  assert(graph.bodyShellGroup.visible === false, 'Body shell stays cleanly hidden in pure Solo 3D Atlas organ mode');
   assert(graph.vascularGroup.children.length > 0, `Systemic 3D vascular tree built (${graph.vascularGroup.children.length} vessels)`);
 
   // 3. Verify Non-Destructive Material Highlighting & Restoration

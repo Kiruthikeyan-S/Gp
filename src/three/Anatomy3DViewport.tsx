@@ -354,12 +354,12 @@ export const Anatomy3DViewport: React.FC<Anatomy3DViewportProps> = ({
         });
       });
     } else {
-      // Full Body 3D View
+      // Solo 3D Atlas View — Keep floor pedestal and body shell permanently hidden
       if (pedestalGroupRef.current) {
-        pedestalGroupRef.current.visible = true;
+        pedestalGroupRef.current.visible = false;
       }
 
-      graph.setShellMode(activeShellMode);
+      graph.bodyShellGroup.visible = false;
       graph.vascularGroup.visible = vascularVisible;
 
       const nervousVisible = stateRef.current.showNervous ?? true;

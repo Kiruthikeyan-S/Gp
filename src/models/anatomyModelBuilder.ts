@@ -206,6 +206,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   // =========================================================================
   const bodyShellGroup = new THREE.Group();
   bodyShellGroup.name = 'Layer_BodyShell';
+  bodyShellGroup.visible = false; // Permanently hidden for pure Solo 3D Atlas organ views
 
   const shellMaterials: THREE.MeshStandardMaterial[] = [];
   const createShellMat = (opacity = 0.22) => {
@@ -1962,218 +1963,261 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
     metalness: 0.08,
   });
 
-  function createLymphNodeGeometry(rx: number, ry: number, rz: number): THREE.BufferGeometry {
+  // -------------------------------------------------------------------------
+  // FULL 3D ANATOMICAL LYMPHATIC SYSTEM NETWORK (Mesh_LymphNodes)
+  // Comprehensive organic 3D tree: Thoracic Duct, Cisterna Chyli, Cervical Nodes,
+  // Axillary Nodes, and Inguinal-Pelvic Lymphatic Chains (Pure standalone 3D complex)
+  // -------------------------------------------------------------------------
+  function createOrganicLymphNode(rx: number, ry: number, rz: number): THREE.BufferGeometry {
     const geo = new THREE.SphereGeometry(rx, 16, 14);
-    geo.scale(1.35, ry / rx, rz / rx);
+    geo.scale(1.25, ry / rx, rz / rx);
     const p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) {
       let x = p.getX(i);
       let y = p.getY(i);
       let z = p.getZ(i);
-      if (x < 0 && Math.abs(y) < ry * 0.45) {
-        x *= 0.72;
+      // Subtle bean-shaped indentation (hilum)
+      if (x < 0 && Math.abs(y) < ry * 0.4) {
+        x *= 0.78;
       }
       p.setXYZ(i, x, y, z);
     }
     geo.computeVertexNormals();
+    applyOrganicVertexShading(geo, 0x10b981, 0x047857);
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
     return geo;
   }
 
-  // 1. PRIMARY LYMPH NODE BODY: Reniform (Kidney-Bean) Capsule & Cortex
-  const mainNodeGeo = new THREE.SphereGeometry(0.145, 32, 28);
-  mainNodeGeo.scale(1.42, 0.96, 0.82);
-  const nodePos = mainNodeGeo.attributes.position;
-  for (let i = 0; i < nodePos.count; i++) {
-    let x = nodePos.getX(i);
-    let y = nodePos.getY(i);
-    let z = nodePos.getZ(i);
+  // 1. THORACIC DUCT & CISTERNA CHYLI (subPartId: 'thoracic_duct')
+  // Main thoracic collecting duct running from cisterna chyli up to left venous angle
+  const thoracicDuctSpline = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.015, -0.22, 0.02),
+    new THREE.Vector3(-0.010, -0.05, 0.025),
+    new THREE.Vector3(-0.012, 0.12, 0.03),
+    new THREE.Vector3(-0.018, 0.28, 0.035),
+    new THREE.Vector3(-0.025, 0.44, 0.04),
+    new THREE.Vector3(-0.045, 0.54, 0.045),
+    new THREE.Vector3(-0.085, 0.60, 0.045),
+    new THREE.Vector3(-0.130, 0.58, 0.04),
+  ]);
+  const tdGeo = createVariableTubeGeometry(
+    thoracicDuctSpline,
+    36,
+    8,
+    (t) => 0.0075 + Math.sin(t * Math.PI * 10) * 0.0018, // Valvular segments along thoracic duct
+    0x34d399,
+    0x059669
+  );
+  const tdMesh = new THREE.Mesh(tdGeo, lymphVesselMat.clone());
+  tdMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+  lymphNodesGroup.add(tdMesh);
 
-    // Anatomical Hilum: Deep natural concavity on the inferior-medial aspect
-    if (x < 0.02 && y < 0.04) {
-      const hilumDepth = Math.max(0, 1 - Math.hypot(x + 0.04, y + 0.02) / 0.12);
-      x += hilumDepth * 0.055;
-      z -= hilumDepth * 0.035;
+  // Cisterna Chyli: Anatomical dilated lymphatic reservoir at L1/L2
+  const ccGeo = new THREE.SphereGeometry(0.034, 18, 16);
+  ccGeo.scale(1.15, 2.2, 0.85);
+  applyOrganicVertexShading(ccGeo, 0x10b981, 0x059669);
+  const ccMesh = new THREE.Mesh(ccGeo, lymphMat.clone());
+  ccMesh.position.set(-0.015, -0.25, 0.02);
+  ccMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+  lymphNodesGroup.add(ccMesh);
+
+  // Right Lymphatic Duct entering right venous angle
+  const rightDuctSpline = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.015, 0.44, 0.035),
+    new THREE.Vector3(0.040, 0.52, 0.04),
+    new THREE.Vector3(0.075, 0.58, 0.042),
+    new THREE.Vector3(0.115, 0.57, 0.038),
+  ]);
+  const rdGeo = createVariableTubeGeometry(
+    rightDuctSpline,
+    20,
+    8,
+    (t) => 0.006 + Math.sin(t * Math.PI * 6) * 0.0015,
+    0x34d399,
+    0x059669
+  );
+  const rdMesh = new THREE.Mesh(rdGeo, lymphVesselMat.clone());
+  rdMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+  lymphNodesGroup.add(rdMesh);
+
+  // Mediastinal and Parasternal Intercostal Lymphatic Trunks
+  [-1, 1].forEach((side) => {
+    for (let r = 0; r < 4; r++) {
+      const ribY = 0.10 + r * 0.10;
+      const icCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.16, ribY - 0.02, 0.01),
+        new THREE.Vector3(side * 0.08, ribY, 0.025),
+        new THREE.Vector3(side * 0.015, ribY + 0.01, 0.03),
+      ]);
+      const icGeo = new THREE.TubeGeometry(icCurve, 12, 0.0035, 6, false);
+      const icMesh = new THREE.Mesh(icGeo, lymphVesselMat.clone());
+      icMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+      lymphNodesGroup.add(icMesh);
+
+      // Mediastinal lymph node
+      const medNodeGeo = createOrganicLymphNode(0.018, 0.014, 0.012);
+      const medMesh = new THREE.Mesh(medNodeGeo, lymphMat.clone());
+      medMesh.position.set(side * 0.045, ribY + 0.01, 0.03);
+      medMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
+      lymphNodesGroup.add(medMesh);
     }
-    // Subcapsular sinus undulating curvature
-    const sinusWobble = 1 + 0.035 * Math.sin(x * 30) * Math.cos(y * 30);
-    x *= sinusWobble;
-    y *= sinusWobble;
-    z *= sinusWobble;
-
-    nodePos.setXYZ(i, x, y, z);
-  }
-  mainNodeGeo.computeVertexNormals();
-  applyOrganicVertexShading(mainNodeGeo, 0x10b981, 0x047857);
-  mainNodeGeo.computeBoundingBox();
-  mainNodeGeo.computeBoundingSphere();
-
-  const mainNodeMesh = new THREE.Mesh(mainNodeGeo, lymphMat.clone());
-  mainNodeMesh.position.set(0, 0.44, 0.04);
-  mainNodeMesh.userData = { subPartId: 'axillary_nodes', organId: 'lymph_nodes' };
-  lymphNodesGroup.add(mainNodeMesh);
-
-  // 2. CORTICAL LYMPHOID FOLLICLES (Germinal Centers in Outer Cortex)
-  const follicleLocations = [
-    { x: -0.11, y: 0.51, z: 0.08, r: 0.028, sub: 'cervical_nodes' },
-    { x: -0.05, y: 0.54, z: 0.09, r: 0.032, sub: 'cervical_nodes' },
-    { x: 0.03, y: 0.53, z: 0.08, r: 0.030, sub: 'cervical_nodes' },
-    { x: 0.11, y: 0.49, z: 0.07, r: 0.032, sub: 'cervical_nodes' },
-    { x: 0.16, y: 0.42, z: 0.05, r: 0.028, sub: 'axillary_nodes' },
-    { x: 0.14, y: 0.35, z: 0.04, r: 0.026, sub: 'axillary_nodes' },
-    { x: -0.12, y: 0.37, z: 0.05, r: 0.027, sub: 'axillary_nodes' },
-  ];
-
-  follicleLocations.forEach((loc) => {
-    const fGeo = new THREE.SphereGeometry(loc.r, 16, 14);
-    fGeo.scale(1.15, 1.0, 0.75);
-    applyOrganicVertexShading(fGeo, 0x34d399, 0x059669);
-    fGeo.computeBoundingBox();
-    fGeo.computeBoundingSphere();
-
-    const fMesh = new THREE.Mesh(fGeo, lymphMat.clone());
-    fMesh.position.set(loc.x, loc.y, loc.z);
-    fMesh.userData = { subPartId: loc.sub, organId: 'lymph_nodes' };
-    lymphNodesGroup.add(fMesh);
   });
 
-  // 3. AFFERENT LYMPHATIC VESSELS (Superior & Convex Arch Inlets with One-Way Valves)
-  const afferentSplines = [
-    // Superior Cervical Inflow 1
-    new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-0.06, 0.68, 0.09),
-      new THREE.Vector3(-0.055, 0.61, 0.09),
-      new THREE.Vector3(-0.05, 0.55, 0.085),
-    ]),
-    // Superior Cervical Inflow 2
-    new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.04, 0.69, 0.08),
-      new THREE.Vector3(0.035, 0.62, 0.085),
-      new THREE.Vector3(0.03, 0.54, 0.08),
-    ]),
-    // Lateral Axillary Inflow 1
-    new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.24, 0.52, 0.06),
-      new THREE.Vector3(0.18, 0.48, 0.065),
-      new THREE.Vector3(0.12, 0.45, 0.06),
-    ]),
-    // Lateral Axillary Inflow 2
-    new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-0.22, 0.55, 0.07),
-      new THREE.Vector3(-0.17, 0.50, 0.075),
-      new THREE.Vector3(-0.11, 0.46, 0.07),
-    ]),
-  ];
-
-  afferentSplines.forEach((curve, idx) => {
-    const tubeGeo = createVariableTubeGeometry(
-      curve,
-      18,
+  // 2. CERVICAL LYMPH NODES & JUGULAR TRUNKS (subPartId: 'cervical_nodes')
+  [-1, 1].forEach((side) => {
+    // Cervical jugular lymphatic trunk
+    const jugularSpline = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.055, 0.82, 0.035),
+      new THREE.Vector3(side * 0.065, 0.74, 0.040),
+      new THREE.Vector3(side * 0.075, 0.66, 0.042),
+      new THREE.Vector3(side * 0.090, 0.58, 0.040),
+    ]);
+    const jugGeo = createVariableTubeGeometry(
+      jugularSpline,
+      20,
       8,
-      (t) => 0.007 + Math.sin(t * Math.PI * 6) * 0.0018, // Biconical valve cusps along vessel
+      () => 0.0055,
       0x34d399,
       0x059669
     );
-    const tubeMesh = new THREE.Mesh(tubeGeo, lymphVesselMat.clone());
-    tubeMesh.userData = {
-      subPartId: idx < 2 ? 'cervical_nodes' : 'axillary_nodes',
-      organId: 'lymph_nodes',
-    };
-    lymphNodesGroup.add(tubeMesh);
+    const jugMesh = new THREE.Mesh(jugGeo, lymphVesselMat.clone());
+    jugMesh.userData = { subPartId: 'cervical_nodes', organId: 'lymph_nodes' };
+    lymphNodesGroup.add(jugMesh);
+
+    // Chain of 6 cervical lymph nodes along the internal jugular vein
+    const cervicalPositions = [
+      { y: 0.82, x: 0.055, z: 0.035, r: 0.024 },
+      { y: 0.77, x: 0.062, z: 0.038, r: 0.027 },
+      { y: 0.72, x: 0.068, z: 0.040, r: 0.030 },
+      { y: 0.67, x: 0.074, z: 0.042, r: 0.028 },
+      { y: 0.62, x: 0.082, z: 0.041, r: 0.032 }, // Jugulodigastric node
+      { y: 0.58, x: 0.092, z: 0.039, r: 0.025 }, // Supraclavicular node
+    ];
+
+    cervicalPositions.forEach((pos) => {
+      const cGeo = createOrganicLymphNode(pos.r, pos.r * 0.8, pos.r * 0.7);
+      const cMesh = new THREE.Mesh(cGeo, lymphMat.clone());
+      cMesh.position.set(side * pos.x, pos.y, pos.z);
+      cMesh.userData = { subPartId: 'cervical_nodes', organId: 'lymph_nodes' };
+      lymphNodesGroup.add(cMesh);
+    });
   });
 
-  // 4. MAIN EFFERENT LYMPHATIC DUCT (Thoracic Collecting Trunk Exiting at Hilum)
-  const efferentDuctCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.03, 0.38, 0.02),
-    new THREE.Vector3(-0.045, 0.32, 0.015),
-    new THREE.Vector3(-0.05, 0.24, 0.01),
-    new THREE.Vector3(-0.04, 0.16, 0.005),
-    new THREE.Vector3(-0.02, 0.08, 0.0),
-  ]);
-  const efferentGeo = createVariableTubeGeometry(
-    efferentDuctCurve,
-    26,
-    8,
-    (t) => 0.010 + Math.sin(t * Math.PI * 8) * 0.0022, // Prominent valves along lymphatic trunk
-    0x34d399,
-    0x059669
-  );
-  const efferentMesh = new THREE.Mesh(efferentGeo, lymphVesselMat.clone());
-  efferentMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
-  lymphNodesGroup.add(efferentMesh);
+  // 3. AXILLARY LYMPH NODES & SUBCLAVIAN TRUNKS (subPartId: 'axillary_nodes')
+  [-1, 1].forEach((side) => {
+    // Subclavian lymphatic trunk connecting axillary nodes to the venous angle
+    const subclavSpline = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.28, 0.44, 0.03),
+      new THREE.Vector3(side * 0.20, 0.48, 0.035),
+      new THREE.Vector3(side * 0.13, 0.52, 0.038),
+      new THREE.Vector3(side * 0.09, 0.56, 0.040),
+    ]);
+    const subclavGeo = createVariableTubeGeometry(
+      subclavSpline,
+      20,
+      8,
+      () => 0.0055,
+      0x34d399,
+      0x059669
+    );
+    const subMesh = new THREE.Mesh(subclavGeo, lymphVesselMat.clone());
+    subMesh.userData = { subPartId: 'axillary_nodes', organId: 'lymph_nodes' };
+    lymphNodesGroup.add(subMesh);
 
-  // Secondary efferent tributary joining the main trunk
-  const efferentTributary = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.01, 0.37, 0.025),
-    new THREE.Vector3(-0.015, 0.30, 0.02),
-    new THREE.Vector3(-0.045, 0.24, 0.01),
-  ]);
-  const tribGeo = createVariableTubeGeometry(
-    efferentTributary,
-    16,
-    8,
-    () => 0.0065,
-    0x34d399,
-    0x059669
-  );
-  const tribMesh = new THREE.Mesh(tribGeo, lymphVesselMat.clone());
-  tribMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
-  lymphNodesGroup.add(tribMesh);
+    // Axillary cluster: 7 nodes (Central, Pectoral, Lateral, Subscapular, Apical)
+    const axillaryCoords = [
+      { x: 0.30, y: 0.43, z: 0.025, r: 0.028 },
+      { x: 0.26, y: 0.46, z: 0.032, r: 0.032 },
+      { x: 0.22, y: 0.48, z: 0.036, r: 0.030 },
+      { x: 0.32, y: 0.47, z: 0.020, r: 0.026 },
+      { x: 0.25, y: 0.41, z: 0.035, r: 0.029 },
+      { x: 0.20, y: 0.43, z: 0.040, r: 0.027 },
+      { x: 0.16, y: 0.50, z: 0.038, r: 0.031 }, // Apical node
+    ];
 
-  // 5. HILAR MICROVASCULAR PEDICLE (Artery & Vein entering Medullary Hilum)
-  const hilarArteryCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.06, 0.18, 0.03),
-    new THREE.Vector3(-0.045, 0.26, 0.03),
-    new THREE.Vector3(-0.03, 0.36, 0.03),
-    new THREE.Vector3(-0.015, 0.40, 0.035),
-  ]);
-  const hArtGeo = new THREE.TubeGeometry(hilarArteryCurve, 16, 0.0055, 8, false);
-  const hArtMesh = new THREE.Mesh(hArtGeo, hilarArteryMat);
-  hArtMesh.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
-  lymphNodesGroup.add(hArtMesh);
+    axillaryCoords.forEach((coord, i) => {
+      const aGeo = createOrganicLymphNode(coord.r, coord.r * 0.82, coord.r * 0.72);
+      const aMesh = new THREE.Mesh(aGeo, lymphMat.clone());
+      aMesh.position.set(side * coord.x, coord.y, coord.z);
+      aMesh.userData = { subPartId: 'axillary_nodes', organId: 'lymph_nodes' };
+      lymphNodesGroup.add(aMesh);
 
-  const hilarVeinCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.01, 0.40, 0.025),
-    new THREE.Vector3(-0.025, 0.35, 0.02),
-    new THREE.Vector3(-0.04, 0.25, 0.015),
-    new THREE.Vector3(-0.05, 0.17, 0.01),
-  ]);
-  const hVeinGeo = new THREE.TubeGeometry(hilarVeinCurve, 16, 0.0065, 8, false);
-  const hVeinMesh = new THREE.Mesh(hVeinGeo, hilarVeinMat);
-  hVeinMesh.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
-  lymphNodesGroup.add(hVeinMesh);
+      // Connecting feeder vessel between adjacent axillary nodes
+      if (i > 0) {
+        const prev = axillaryCoords[i - 1];
+        const vCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(side * prev.x, prev.y, prev.z),
+          new THREE.Vector3(side * coord.x, coord.y, coord.z),
+        ]);
+        const vGeo = new THREE.TubeGeometry(vCurve, 8, 0.0035, 6, false);
+        const vMesh = new THREE.Mesh(vGeo, lymphVesselMat.clone());
+        vMesh.userData = { subPartId: 'axillary_nodes', organId: 'lymph_nodes' };
+        lymphNodesGroup.add(vMesh);
+      }
+    });
+  });
 
-  // 6. CONNECTED SATELLITE NODULES (Regional Nodal Chain Cascade)
-  // Superior satellite nodule (sentinel cascade)
-  const satGeo1 = createLymphNodeGeometry(0.042, 0.030, 0.025);
-  applyOrganicVertexShading(satGeo1, 0x10b981, 0x059669);
-  const satMesh1 = new THREE.Mesh(satGeo1, lymphMat.clone());
-  satMesh1.position.set(-0.06, 0.70, 0.09);
-  satMesh1.userData = { subPartId: 'cervical_nodes', organId: 'lymph_nodes' };
-  lymphNodesGroup.add(satMesh1);
+  // 4. INGUINAL & PELVIC LYMPHATIC CHAINS (subPartId: 'inguinal_nodes')
+  [-1, 1].forEach((side) => {
+    // Common & External Iliac lymphatic trunks connecting inguinal nodes to cisterna chyli
+    const iliacSpline = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.15, -0.48, 0.05),
+      new THREE.Vector3(side * 0.11, -0.40, 0.04),
+      new THREE.Vector3(side * 0.07, -0.32, 0.03),
+      new THREE.Vector3(-0.015, -0.25, 0.02), // Joins cisterna chyli
+    ]);
+    const iliacGeo = createVariableTubeGeometry(
+      iliacSpline,
+      22,
+      8,
+      () => 0.006,
+      0x34d399,
+      0x059669
+    );
+    const iliacMesh = new THREE.Mesh(iliacGeo, lymphVesselMat.clone());
+    iliacMesh.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
+    lymphNodesGroup.add(iliacMesh);
 
-  // Lateral satellite nodule
-  const satGeo2 = createLymphNodeGeometry(0.040, 0.028, 0.024);
-  applyOrganicVertexShading(satGeo2, 0x10b981, 0x059669);
-  const satMesh2 = new THREE.Mesh(satGeo2, lymphMat.clone());
-  satMesh2.position.set(0.25, 0.53, 0.06);
-  satMesh2.userData = { subPartId: 'axillary_nodes', organId: 'lymph_nodes' };
-  lymphNodesGroup.add(satMesh2);
+    // Inguinal & Iliac Lymph Nodes (Superficial horizontal & vertical chains, Deep inguinal)
+    const inguinalCoords = [
+      { x: 0.16, y: -0.48, z: 0.055, r: 0.032 },
+      { x: 0.20, y: -0.49, z: 0.060, r: 0.030 },
+      { x: 0.24, y: -0.50, z: 0.062, r: 0.028 },
+      { x: 0.17, y: -0.55, z: 0.058, r: 0.031 },
+      { x: 0.18, y: -0.62, z: 0.055, r: 0.027 },
+      { x: 0.12, y: -0.41, z: 0.045, r: 0.029 }, // External iliac node
+      { x: 0.08, y: -0.34, z: 0.035, r: 0.028 }, // Common iliac node
+    ];
 
-  // Inferior efferent chain nodule
-  const satGeo3 = createLymphNodeGeometry(0.046, 0.032, 0.026);
-  applyOrganicVertexShading(satGeo3, 0x10b981, 0x059669);
-  const satMesh3 = new THREE.Mesh(satGeo3, lymphMat.clone());
-  satMesh3.position.set(-0.02, 0.07, 0.0);
-  satMesh3.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
-  lymphNodesGroup.add(satMesh3);
+    inguinalCoords.forEach((coord, i) => {
+      const ingGeo = createOrganicLymphNode(coord.r, coord.r * 0.85, coord.r * 0.75);
+      const ingMesh = new THREE.Mesh(ingGeo, lymphMat.clone());
+      ingMesh.position.set(side * coord.x, coord.y, coord.z);
+      ingMesh.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
+      lymphNodesGroup.add(ingMesh);
+
+      if (i > 0 && i < 5) {
+        const prev = inguinalCoords[i - 1];
+        const ingCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(side * prev.x, prev.y, prev.z),
+          new THREE.Vector3(side * coord.x, coord.y, coord.z),
+        ]);
+        const ivGeo = new THREE.TubeGeometry(ingCurve, 8, 0.0035, 6, false);
+        const ivMesh = new THREE.Mesh(ivGeo, lymphVesselMat.clone());
+        ivMesh.userData = { subPartId: 'inguinal_nodes', organId: 'lymph_nodes' };
+        lymphNodesGroup.add(ivMesh);
+      }
+    });
+  });
 
   registerOrganGroup(
     'lymph_nodes',
     'Mesh_LymphNodes',
     'lymphatic',
     lymphNodesGroup,
-    new THREE.Vector3(0, 0.44, 0.04),
-    0.54,
+    new THREE.Vector3(0, 0.08, 0.04),
+    0.98,
     organRecords
   );
   lymphaticGroup.add(lymphNodesGroup);
@@ -2302,27 +2346,9 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   // Center entire human model vertically around y=0
   rootGroup.position.set(0, -0.58, 0);
 
-  const setShellMode = (mode: 'xray' | 'solid' | 'hidden') => {
-    if (mode === 'hidden') {
-      bodyShellGroup.visible = false;
-      return;
-    }
-    bodyShellGroup.visible = true;
-    shellMaterials.forEach((m) => {
-      if (mode === 'xray') {
-        m.color.setHex(0x94a3b8);
-        m.emissive.setHex(0x0284c7);
-        m.opacity = 0.22;
-        m.depthWrite = false;
-      } else {
-        // Clinical frosted glass silhouette
-        m.color.setHex(0x64748b);
-        m.emissive.setHex(0x0284c7);
-        m.opacity = 0.45;
-        m.depthWrite = false;
-      }
-      m.needsUpdate = true;
-    });
+  const setShellMode = (_mode: 'xray' | 'solid' | 'hidden') => {
+    // Pure Solo 3D Atlas: Mannequin body shell is permanently hidden
+    bodyShellGroup.visible = false;
   };
 
   const dispose = () => {

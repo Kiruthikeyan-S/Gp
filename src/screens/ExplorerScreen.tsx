@@ -100,50 +100,16 @@ export const ExplorerScreen: React.FC = () => {
   const handleSelectSystem = (sysId: string) => {
     selectSystem(sysId as any);
     setSelectedSubPartId(null);
-    if (sysId === 'all') {
-      setShowInternalOrgans(true);
-      setShowSkeletal(false);
-      setShowMuscular(false);
-      setShowVascular(true);
-      setShowNervous(true);
-      setViewMode('isolate');
-    } else {
-      const primaryOrganId = SYSTEM_PRIMARY_ORGAN[sysId];
-      if (primaryOrganId) {
-        selectOrgan(primaryOrganId);
-      }
-      if (sysId === 'skeletal') {
-        setShowSkeletal(true);
-        setShowMuscular(false);
-        setShowInternalOrgans(false);
-        setShowNervous(false);
-        setShowVascular(false);
-      } else if (sysId === 'muscular') {
-        setShowMuscular(true);
-        setShowSkeletal(false);
-        setShowInternalOrgans(false);
-        setShowNervous(false);
-        setShowVascular(false);
-      } else if (sysId === 'nervous') {
-        setShowNervous(true);
-        setShowSkeletal(true);
-        setShowInternalOrgans(false);
-        setShowMuscular(false);
-        setShowVascular(false);
-      } else if (sysId === 'circulatory') {
-        setShowVascular(true);
-        setShowInternalOrgans(true);
-        setShowSkeletal(false);
-        setShowMuscular(false);
-      } else {
-        setShowInternalOrgans(true);
-        setShowSkeletal(false);
-        setShowMuscular(false);
-      }
-      setViewMode('isolate');
-      setZoomLevel(100);
-      setIsCardMinimized(false);
-    }
+    const primaryOrganId = SYSTEM_PRIMARY_ORGAN[sysId] || 'heart';
+    selectOrgan(primaryOrganId);
+    setShowInternalOrgans(true);
+    setShowSkeletal(sysId === 'skeletal');
+    setShowMuscular(sysId === 'muscular');
+    setShowVascular(false);
+    setShowNervous(sysId === 'nervous');
+    setViewMode('isolate');
+    setZoomLevel(100);
+    setIsCardMinimized(false);
   };
 
   const activeOrgan =
@@ -263,22 +229,6 @@ export const ExplorerScreen: React.FC = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.systemsRibbon}
               >
-                <TouchableOpacity
-                  style={[
-                    styles.sysChip,
-                    selectedSystemId === 'all' && styles.sysChipActive,
-                  ]}
-                  onPress={() => handleSelectSystem('all')}
-                >
-                  <Text
-                    style={[
-                      styles.sysChipText,
-                      selectedSystemId === 'all' && styles.sysChipTextActive,
-                    ]}
-                  >
-                    All Systems
-                  </Text>
-                </TouchableOpacity>
                 {BODY_SYSTEMS.map((sys) => {
                   const active = selectedSystemId === sys.id;
                   return (

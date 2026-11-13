@@ -102,7 +102,13 @@ export const QuizScreen: React.FC = () => {
         <View style={styles.headerTopRow}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                (navigation as any).navigate('MainTabs');
+              }
+            }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Ionicons name="arrow-back" size={20} color={theme.colors.textPrimary} />

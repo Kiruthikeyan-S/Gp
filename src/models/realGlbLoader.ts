@@ -249,7 +249,7 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     sketchfabReferenceUrl:
       'https://sketchfab.com/3d-models/human-skeleton-highresolution-model-657a31ed9704423c8c4e752fb2506a74',
     urls: [
-      'https://raw.githubusercontent.com/Charleeh/ecorche/master/model/ecorche.glb',
+      'https://cdn.jsdelivr.net/gh/Charleeh/ecorche@master/model/ecorche.glb',
     ],
     primaryColorHex: 0xefece6,
     secondaryColorHex: 0xd9d2c5,
@@ -268,7 +268,7 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     sketchfabReferenceUrl:
       'https://sketchfab.com/3d-models/ecorche-anatomy-human-male-musculature-9bfa112a99844626ac2480fff6276f0e',
     urls: [
-      'https://raw.githubusercontent.com/Charleeh/ecorche/master/model/ecorche.glb',
+      'https://cdn.jsdelivr.net/gh/Charleeh/ecorche@master/model/ecorche.glb',
     ],
     primaryColorHex: 0x9e2a2b,
     secondaryColorHex: 0x6a1318,
@@ -775,13 +775,35 @@ async function fetchGlbBuffer(url: string): Promise<ArrayBuffer> {
   }
 
   const promise = (async () => {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} fetching ${url}`);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} fetching ${url}`);
+      }
+      const buffer = await response.arrayBuffer();
+      rawBufferCache.set(url, buffer);
+      return buffer;
+    } catch (err) {
+      // Fallback mirror if jsDelivr or GitHub Raw fails
+      let fallbackUrl: string | null = null;
+      if (url.includes('cdn.jsdelivr.net/gh/Charleeh/ecorche')) {
+        fallbackUrl =
+          'https://raw.githubusercontent.com/Charleeh/ecorche/master/model/ecorche.glb';
+      } else if (url.includes('raw.githubusercontent.com/Charleeh/ecorche')) {
+        fallbackUrl =
+          'https://cdn.jsdelivr.net/gh/Charleeh/ecorche@master/model/ecorche.glb';
+      }
+      if (fallbackUrl) {
+        const fbRes = await fetch(fallbackUrl);
+        if (fbRes.ok) {
+          const buffer = await fbRes.arrayBuffer();
+          rawBufferCache.set(url, buffer);
+          rawBufferCache.set(fallbackUrl, buffer);
+          return buffer;
+        }
+      }
+      throw err;
     }
-    const buffer = await response.arrayBuffer();
-    rawBufferCache.set(url, buffer);
-    return buffer;
   })();
 
   inflightFetchCache.set(url, promise);
@@ -1540,9 +1562,15 @@ export function applyCachedGlbOrgansSync(graph: AnatomySceneGraph): number {
  */
 export async function preloadAllRealGlbModels(): Promise<void> {
   try {
+    // Prioritize high-demand skeleton and muscular systems first so ecorche.glb is cached immediately
+    const priorityFirstSpecs = [...REAL_GLB_ORGAN_SPECS].sort((a, b) => {
+      if (a.organId === 'skeleton' || a.organId === 'muscles') return -1;
+      if (b.organId === 'skeleton' || b.organId === 'muscles') return 1;
+      return 0;
+    });
     const batchSize = 4;
-    for (let i = 0; i < REAL_GLB_ORGAN_SPECS.length; i += batchSize) {
-      const batch = REAL_GLB_ORGAN_SPECS.slice(i, i + batchSize);
+    for (let i = 0; i < priorityFirstSpecs.length; i += batchSize) {
+      const batch = priorityFirstSpecs.slice(i, i + batchSize);
       await Promise.all(
         batch.map((spec) => buildAndCacheOrganModel(spec).catch(() => null))
       );
@@ -1648,28 +1676,7 @@ async function loadStructuralGlbLayers(
     if (cachedPelvisGeometry && !isCancelled()) {
       attachPelvisGeometryToGraph(cachedPelvisGeometry, graph);
     }
-
-    // 2. Real 3D Full Human Body Skin Scan (.glb)
-    if (!cachedSkinGeometry) {
-      const skinBuf = await fetchGlbBuffer(SKIN_GLB_URL);
-      if (isCancelled()) return;
-      const skinPrims = parseGlbBinary(skinBuf);
-      if (skinPrims.length > 0) {
-        const skinGeo = buildMergedOrganGeometry(
-          skinPrims,
-          0x334155,
-          0x1e293b,
-          false
-        );
-        skinGeo.scale(VHM_SCALE, VHM_SCALE, VHM_SCALE);
-        skinGeo.translate(0, VHM_Y_OFFSET, 0);
-        skinGeo.userData = { isCachedGlb: true };
-        cachedSkinGeometry = skinGeo;
-      }
-    }
-    if (cachedSkinGeometry && !isCancelled()) {
-      attachSkinGeometryToGraph(cachedSkinGeometry, graph);
-    }
+    // Full body skin silhouette completely omitted to maintain pure Solo 3D Atlas organ views
   } catch {
     // Keep procedural fallback if offline
   }

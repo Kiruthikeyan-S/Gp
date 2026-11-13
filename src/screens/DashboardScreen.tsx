@@ -82,7 +82,13 @@ export const DashboardScreen: React.FC = () => {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('MainTabs');
+            }
+          }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="arrow-back" size={20} color="#0F172A" />
