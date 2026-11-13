@@ -1940,13 +1940,14 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   const lymphaticGroup = systemGroups.get('lymphatic')!;
   const lymphNodesGroup = new THREE.Group();
   const lymphMat = new THREE.MeshStandardMaterial({
+    color: 0x10b981,
     vertexColors: true,
     roughness: 0.30,
     metalness: 0.10,
   });
 
   const lymphVesselMat = new THREE.MeshStandardMaterial({
-    vertexColors: true,
+    color: 0x10b981,
     roughness: 0.28,
     metalness: 0.12,
   });
@@ -2041,16 +2042,16 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
   rdMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
   lymphNodesGroup.add(rdMesh);
 
-  // Mediastinal and Parasternal Intercostal Lymphatic Trunks
+  // Mediastinal and Parasternal Intercostal Lymphatic Trunks (Ascending anatomical drainage)
   [-1, 1].forEach((side) => {
-    for (let r = 0; r < 4; r++) {
-      const ribY = 0.10 + r * 0.10;
+    for (let r = 0; r < 3; r++) {
+      const ribY = 0.12 + r * 0.13;
       const icCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(side * 0.16, ribY - 0.02, 0.01),
-        new THREE.Vector3(side * 0.08, ribY, 0.025),
-        new THREE.Vector3(side * 0.015, ribY + 0.01, 0.03),
+        new THREE.Vector3(side * 0.14, ribY - 0.04, 0.015),
+        new THREE.Vector3(side * 0.07, ribY - 0.01, 0.025),
+        new THREE.Vector3(side * 0.015, ribY + 0.02, 0.032),
       ]);
-      const icGeo = new THREE.TubeGeometry(icCurve, 12, 0.0035, 6, false);
+      const icGeo = new THREE.TubeGeometry(icCurve, 14, 0.0038, 8, false);
       const icMesh = new THREE.Mesh(icGeo, lymphVesselMat.clone());
       icMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
       lymphNodesGroup.add(icMesh);
@@ -2058,7 +2059,7 @@ export function buildAnatomySceneGraph(): AnatomySceneGraph {
       // Mediastinal lymph node
       const medNodeGeo = createOrganicLymphNode(0.018, 0.014, 0.012);
       const medMesh = new THREE.Mesh(medNodeGeo, lymphMat.clone());
-      medMesh.position.set(side * 0.045, ribY + 0.01, 0.03);
+      medMesh.position.set(side * 0.05, ribY + 0.005, 0.03);
       medMesh.userData = { subPartId: 'thoracic_duct', organId: 'lymph_nodes' };
       lymphNodesGroup.add(medMesh);
     }

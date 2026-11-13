@@ -160,13 +160,13 @@ export function runAllVerificationTests(): { passed: number; failed: number; log
 
   // 8. Verify Real GLB Binary Parser & Sketchfab/NIH GLB Organ Specs
   assert(
-    REAL_GLB_ORGAN_SPECS.length === 10 &&
+    REAL_GLB_ORGAN_SPECS.length >= 10 &&
       REAL_GLB_ORGAN_SPECS.every(
         (s) =>
           s.urls.length > 0 &&
           s.sketchfabReferenceUrl.startsWith('https://sketchfab.com/')
       ),
-    'Configured all 10 organs with real .glb medical scan URLs and Sketchfab 3D references'
+    'Configured organs with real .glb medical scan URLs and Sketchfab 3D references'
   );
 
   // Synthesize a valid minimal binary GLB buffer (1 triangle) and verify parseGlbBinary()

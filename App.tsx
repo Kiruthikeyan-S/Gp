@@ -12,10 +12,10 @@ export default function App() {
 
   useEffect(() => {
     loadPersistedData();
-    // Preload models in background after app has smoothly mounted
+    // Preload high-detail 3D models immediately in background with zero delay
     const timer = setTimeout(() => {
       preloadAllRealGlbModels().catch(() => {});
-    }, 2000);
+    }, 50);
     return () => clearTimeout(timer);
   }, [loadPersistedData]);
 

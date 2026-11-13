@@ -280,6 +280,26 @@ export const REAL_GLB_ORGAN_SPECS: RealGlbOrganSpec[] = [
     customFocusRadius: 2.10,
     focusYOffset: 0.10,
   },
+  {
+    organId: 'lymph_nodes',
+    title: 'Anatomical Lymphatic System & Nodes (GLB Scan)',
+    sourceCredit: 'NIH 3D / HuBMAP Visible Human Reference (CC-BY)',
+    sketchfabReferenceUrl:
+      'https://sketchfab.com/3d-models/lymphatic-system-600ffebad40342bab13741c631981a8b',
+    urls: [
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Male/v1.2/NIH_M_Lymph_Node.glb',
+      'https://raw.githubusercontent.com/hubmapconsortium/ccf-3d-reference-object-library/main/VH_Male/v1.2/VH_M_Thymus.glb',
+    ],
+    primaryColorHex: 0x10b981,
+    secondaryColorHex: 0x059669,
+    roughness: 0.35,
+    metalness: 0.08,
+    coordMode: 'fit',
+    targetBoxCenter: [0, 0.15, 0.04],
+    targetMaxDim: 1.10,
+    customFocusRadius: 0.85,
+    focusYOffset: 0.05,
+  },
 ];
 
 const SKIN_GLB_URL =
@@ -1011,6 +1031,22 @@ function mapNodeNameToSubPart(
       return { subPartId: 'duct_network', primaryHex: 0xe11d48, secondaryHex: 0x9f1239 };
     }
     return { subPartId: 'genital_tract', primaryHex: 0xf472b6, secondaryHex: 0x9d174d };
+  }
+
+  if (organId === 'lymph_nodes') {
+    if (n.includes('cervical') || n.includes('jugular') || n.includes('neck') || n.includes('head') || n.includes('paracortex')) {
+      return { subPartId: 'cervical_nodes', primaryHex: 0x10b981, secondaryHex: 0x047857 };
+    }
+    if (n.includes('axillary') || n.includes('subclavian') || n.includes('arm') || n.includes('pectoral') || n.includes('thymus') || n.includes('follicle')) {
+      return { subPartId: 'axillary_nodes', primaryHex: 0x059669, secondaryHex: 0x065f46 };
+    }
+    if (n.includes('thoracic') || n.includes('duct') || n.includes('cisterna') || n.includes('chyli') || n.includes('vessel') || n.includes('afferent') || n.includes('efferent')) {
+      return { subPartId: 'thoracic_duct', primaryHex: 0x0d9488, secondaryHex: 0x115e59 };
+    }
+    if (n.includes('inguinal') || n.includes('pelvic') || n.includes('iliac') || n.includes('leg') || n.includes('femoral') || n.includes('capsule')) {
+      return { subPartId: 'inguinal_nodes', primaryHex: 0x34d399, secondaryHex: 0x059669 };
+    }
+    return { subPartId: 'thoracic_duct', primaryHex: defaultPrimaryHex, secondaryHex: defaultSecondaryHex };
   }
 
   if (organId === 'skeleton') {
